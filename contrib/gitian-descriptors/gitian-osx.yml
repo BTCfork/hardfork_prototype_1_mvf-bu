@@ -1,5 +1,5 @@
 ---
-name: "BitcoinUnlimited-osx-0.12.1"
+name: "Bitcoin-MVF-BU-osx-0.12.1"
 enable_cache: true
 suites:
 - "trusty"
@@ -23,7 +23,7 @@ packages:
 - "python"
 reference_datetime: "2016-01-01 00:00:00"
 remotes:
-- "url": "https://github.com/BitcoinUnlimited/BitcoinUnlimited.git"
+- "url": "https://github.com/BTCfork/hardfork_prototype_1_mvf-bu.git"
   "dir": "bitcoin"
 files:
 - "MacOSX10.9.sdk.tar.gz"
@@ -86,7 +86,9 @@ script: |
   ./autogen.sh
   ./configure --prefix=${BASEPREFIX}/`echo "${HOSTS}" | awk '{print $1;}'`
   make dist
-  SOURCEDIST=`echo bitcoinUnlimited-*.tar.gz`
+  # MVF-BU begin change client name in filename (MVHF-BU-DES-IDME-6)
+  SOURCEDIST=`echo bitcoinMVF-BU-*.tar.gz`
+  # MVF-BU end
   DISTNAME=`echo ${SOURCEDIST} | sed 's/.tar.*//'`
 
   # Correct tar file order
@@ -123,7 +125,9 @@ script: |
     popd
 
     make deploy
-    ${WRAP_DIR}/dmg dmg Bitcoin-Unlimited.dmg ${OUTDIR}/${DISTNAME}-osx-unsigned.dmg
+    # MVF-BU begin change client name in filename (MVHF-BU-DES-IDME-6)
+    ${WRAP_DIR}/dmg dmg Bitcoin-MVF-BU.dmg ${OUTDIR}/${DISTNAME}-osx-unsigned.dmg
+    # MVF-BU end
 
     cd installed
     find . -name "lib*.la" -delete
