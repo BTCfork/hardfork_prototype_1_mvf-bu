@@ -70,11 +70,11 @@ static bool AppInitRPC(int argc, char* argv[])
     //
     ParseParameters(argc, argv);
     if (argc<2 || mapArgs.count("-?") || mapArgs.count("-h") || mapArgs.count("-help") || mapArgs.count("-version")) {
-        // BU remove branding
-        std::string strUsage = _("Bitcoin RPC client version") + " " + FormatFullVersion() + "\n";
+
+        std::string strUsage = _("Bitcoin MVF-BU RPC client version") + " " + FormatFullVersion() + "\n";  // MVF-BU client name (MVHF-BU-DES-IDME-1)
         if (!mapArgs.count("-version")) {
             strUsage += "\n" + _("Usage:") + "\n" +
-                  "  bitcoin-cli [options] <command> [params]  " + _("Send command to Bitcoin") + "\n" +
+                  "  bitcoin-cli [options] <command> [params]  " + _("Send command to Bitcoin") + "\n" +   // BU remove branding
                   "  bitcoin-cli [options] help                " + _("List commands") + "\n" +
                   "  bitcoin-cli [options] help <command>      " + _("Get help for a command") + "\n";
 
