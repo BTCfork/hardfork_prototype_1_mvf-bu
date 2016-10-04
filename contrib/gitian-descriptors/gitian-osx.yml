@@ -86,7 +86,9 @@ script: |
   ./autogen.sh
   ./configure --prefix=${BASEPREFIX}/`echo "${HOSTS}" | awk '{print $1;}'`
   make dist
+  # MVF-BU begin change client name in filename (MVHF-BU-DES-IDME-6)
   SOURCEDIST=`echo bitcoinMVF-BU-*.tar.gz`
+  # MVF-BU end
   DISTNAME=`echo ${SOURCEDIST} | sed 's/.tar.*//'`
 
   # Correct tar file order
@@ -123,7 +125,9 @@ script: |
     popd
 
     make deploy
+    # MVF-BU begin change client name in filename (MVHF-BU-DES-IDME-6)
     ${WRAP_DIR}/dmg dmg Bitcoin-MVF-BU.dmg ${OUTDIR}/${DISTNAME}-osx-unsigned.dmg
+    # MVF-BU end
 
     cd installed
     find . -name "lib*.la" -delete
