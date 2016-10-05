@@ -24,13 +24,11 @@ these guidelines where necessary. Please contact us on the #dev channel on
 Some of the general rules and those formulated by BU are documented in the
 following files in this doc/ folder:
 
-[ TODO: list the files and what info they contain that should be paid
-        attention to: ]
-
 1. developer-notes.md: general coding rules and some guidelines for
    Bitcoin Unlimited (and therefore MVF-BU too)
-2. TODO: filename - description of what important rules it contains
-3. TODO: filename - description of what important rules it contains
+
+[ TODO: list any additional files and what info they contain that should
+be paid attention to: ]
 
 
 ## MVF-BU repositories and branching model
@@ -167,16 +165,25 @@ not in the referenced docs e.g. developer-notes.md.
 
 ## BU-specific rules
 
-The BU project lead developer, Andrew Stone, has in the past given the specific advice \[1\], which is summarized in this section.
+The BU project lead developer, Andrew Stone, has in the past given the
+specific advice \[1\], which is summarized in this section.
 
 This advice largely stems from Unlimited being periodically rebased onto Core.
-This is a difficult operation that can be greatly helped by certain coding techniques that might otherwise not be seen as "better" programming.
+This is a difficult operation that can be greatly helped by certain coding
+techniques that might otherwise not be seen as "better" programming.
 
-1. As much as possible, we \[BU\] isolate new logic into Unlimited-specific files and make a single function call in common code.
-MVF-BU should follow a similar guideline, isolating code into new MVF-BU-specific files where possible.
-Rationale: Having complex logic in isolated files means that it gets pulled in verbatim during a rebase.
+1. As much as possible, we \[BU\] isolate new logic into Unlimited-specific
+   files and make a single function call in common code.
+   MVF-BU should follow a similar guideline, isolating code into new
+   MVF-BU-specific files where possible.
+   Rationale: Having complex logic in isolated files means that it gets
+   pulled in verbatim during a rebase.
 
-2. \[code removal\] Once code is removed in BU, during a rebase it cannot distinguish it from code that is added in the new Core version. So the code will risk getting automatically added back in during every rebase. The solution is to "additively remove" the code.  In other words, comment it out.  For example, rather than deleting:
+2. \[code removal\] Once code is removed in BU, during a rebase it cannot
+   distinguish it from code that is added in the new Core version.
+   So the code will risk getting automatically added back in during every
+   rebase. The solution is to "additively remove" the code.
+   In other words, comment it out.  For example, rather than deleting:
 
        `const int MAX_OUTBOUND_CONNECTIONS = 8;`
 
@@ -184,7 +191,11 @@ Rationale: Having complex logic in isolated files means that it gets pulled in v
 
        `// const int MAX_OUTBOUND_CONNECTIONS = 8;  // BU constant replaced by configurable param.`
 
-3. Finally, all changes to common code are marked with a // BU or // BUIPXXX comment, so the BU developers know to pay extra attention to these areas if they see merge conflicts in them.
+3. Finally, all changes to common code are marked with a `// BU` or
+   `// BUIPXXX comment`, so the BU developers know to pay extra attention to
+   these areas if they see merge conflicts in them.
+
+   [MVF-BU note: we use the comment tag `// MVF-BU` instead of `// BU`
 
 [1] https://github.com/BitcoinUnlimited/BitcoinUnlimited/pull/73#issuecomment-239594663
 
@@ -198,6 +209,20 @@ Rationale: Having complex logic in isolated files means that it gets pulled in v
    requirements for them, in which case that needs changing first.
    Raise GH issues where necessary.
 
-   [ TODO: example of how to trace design element in the actual code. ]
+   Example of tracing back to a design element from a code change:
 
-2. Placeholder for further MVF-BU specific rule
+   `strClient = "Bitcoin MVF-BU client";  // MVF-BU client name (MVHF-BU-DES-IDME-1)`
+
+   Please participate to make the design complete and precise where you
+   want to make a change that is not presently described.
+
+   In the final review we will look at all code changes and check that
+   they are traceable.
+
+2. Instead of `// BU` comments, we use `// MVF-BU` tags.
+
+   This should generally be completed with some description of the change,
+   preferably citing the associated design element (preferably) or requirement.
+
+   If `// BU` tags need to be moved around, preserve their contents
+   (including the BU tag).
