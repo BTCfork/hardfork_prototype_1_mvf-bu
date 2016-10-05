@@ -35,7 +35,7 @@ following files in this doc/ folder:
 
 ## MVF-BU repositories and branching model
 
-The original repository at <https://BTCfork/hardfork_prototype_1_mvf-bu>
+The original repository at <https://github.com/BTCfork/hardfork_prototype_1_mvf-bu>
 is considered the main development repository for now.
 
 If you want to develop, please clone from there or fork this repository
