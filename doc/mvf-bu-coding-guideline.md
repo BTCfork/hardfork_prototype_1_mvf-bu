@@ -211,7 +211,7 @@ techniques that might otherwise not be seen as "better" programming.
 
    Example of tracing back to a design element from a code change:
 
-   `std::string strUsage = _("Bitcoin MVF-BU RPC client version") + " " + FormatFullVersion() + "\n";  // MVF-BU client name (MVHF-BU-DES-IDME-1)`
+   `strClient = "Bitcoin MVF-BU client";  // MVF-BU client name (MVHF-BU-DES-IDME-1)`
 
    Please participate to make the design complete and precise where you
    want to make a change that is not presently described.
