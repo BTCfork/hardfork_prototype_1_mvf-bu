@@ -2784,6 +2784,29 @@ void static UpdateTip(CBlockIndex *pindexNew) {
       Checkpoints::GuessVerificationProgress(chainParams.Checkpoints(), chainActive.Tip()), pcoinsTip->DynamicMemoryUsage() * (1.0 / (1<<20)), pcoinsTip->GetCacheSize());
 
     cvBlockChange.notify_all();
+    
+    
+
+    // MVHF-BU
+    const int MVHF_FORK_BLOCK = 50000;
+
+    //// 	Auto Backup At Block 		////
+    // Test autobackupwalletpath argument
+    std::string strWalletBackupFile = GetArg("-autobackupwalletpath", "");
+    int BackupBlock = GetArg("-autobackupblock", MVHF_FORK_BLOCK - 1);
+
+    //LogPrintf("DEBUG: autobackupwalletpath=%s\n",strWalletBackupFile);
+    //LogPrintf("DEBUG: autobackupblock=%d\n",BackupBlock);
+
+    if(strWalletBackupFile != "") { 
+		// Auto Backup defined so check block height
+		if (chainActive.Height() >= BackupBlock )
+		{
+			if (!GetMainSignals().BackupWalletAuto(strWalletBackupFile, BackupBlock))
+				throw std::runtime_error("CWallet::BackupWalletAuto() : Auto wallet backup failed!");
+		}
+		
+    } // if(strWalletBackupFile != "") 
 
     // Check the version of the last 100 blocks to see if we need to upgrade:
     static bool fWarned = false;

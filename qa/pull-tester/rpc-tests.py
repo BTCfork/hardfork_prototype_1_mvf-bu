@@ -97,6 +97,7 @@ testScripts = [
     'fundrawtransaction.py',
     'signrawtransactions.py',
     'walletbackup.py',
+    'walletbackupauto.py',
     'nodehandling.py',
     'reindex.py',
     'decodescript.py',

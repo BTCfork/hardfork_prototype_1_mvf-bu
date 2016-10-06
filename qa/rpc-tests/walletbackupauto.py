@@ -196,12 +196,6 @@ class WalletBackupTest(BitcoinTestFramework):
 
         logging.info("Re-starting nodes")
         self.start_three()
-
-        logging.info("Node0 balance:" + str(self.nodes[0].getbalance()))
-        logging.info("Node1 balance:" + str(self.nodes[1].getbalance()))
-        logging.info("Node2 balance:" + str(self.nodes[2].getbalance()))
-
-
         sync_blocks(self.nodes)
 
 
@@ -210,11 +204,10 @@ class WalletBackupTest(BitcoinTestFramework):
         logging.info("Node2 balance:" + str(self.nodes[2].getbalance()))
 
 
-
-        # balances should match the 114 block auto backup balances
-        assert_equal(self.nodes[0].getbalance(), balance0)
-        assert_equal(self.nodes[1].getbalance(), balance1)
-        assert_equal(self.nodes[2].getbalance(), balance2)
+        # balances should be greater than the 114 block auto backup balances
+        assert_greaterthan(self.nodes[0].getbalance(), balance0)
+        assert_greaterthan(self.nodes[1].getbalance(), balance1)
+        assert_greaterthan(self.nodes[2].getbalance(), balance2)
 
 
 if __name__ == '__main__':

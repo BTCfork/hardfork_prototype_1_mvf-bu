@@ -291,6 +291,9 @@ bool CWallet::ChangeWalletPassphrase(const SecureString& strOldWalletPassphrase,
     return false;
 }
 
+
+
+
 void CWallet::SetBestChain(const CBlockLocator& loc)
 {
     CWalletDB walletdb(strWalletFile);
@@ -1039,6 +1042,38 @@ CAmount CWallet::GetChange(const CTransaction& tx) const
     }
     return nChange;
 }
+
+
+
+// MVHF-BU Auto wallet backup
+bool CWallet::BackupWalletAuto(const std::string& strDest, int BackupBlock)
+{
+
+    boost::filesystem::path pathBackupWallet = strDest;
+
+    // Test for directory only, if so add default filename
+	if (boost::filesystem::is_directory(strDest))
+		pathBackupWallet = pathBackupWallet / strprintf("%s%s",strWalletFile,".auto.#.bak");
+
+	std::string strBackupFile = pathBackupWallet.string();
+
+	// replace # with BackupBlock number
+	boost::replace_all(strBackupFile,"#", boost::to_string_stub(BackupBlock));
+
+	//skip if already done
+	if (!boost::filesystem::exists(strBackupFile))
+	{
+		// Call common backup wallet function
+		if (BackupWallet(*this, strBackupFile))
+			LogPrintf("Wallet automatically backed up to: %s\n",strBackupFile);
+		else
+			return false;
+	}
+
+	return true;
+}
+
+
 
 int64_t CWalletTx::GetTxTime() const
 {
@@ -3058,3 +3093,5 @@ bool CMerkleTx::AcceptToMemoryPool(bool fLimitFree, bool fRejectAbsurdFee)
     CValidationState state;
     return ::AcceptToMemoryPool(mempool, state, *this, fLimitFree, NULL, false, fRejectAbsurdFee);
 }
+
+
