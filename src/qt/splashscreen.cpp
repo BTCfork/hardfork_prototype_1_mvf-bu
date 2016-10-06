@@ -40,10 +40,11 @@ SplashScreen::SplashScreen(Qt::WindowFlags f, const NetworkStyle *networkStyle) 
 #endif
 
     // define text to place
-    QString titleText       = tr("Bitcoin Unlimited");
+    QString titleText       = tr("Bitcoin MVF-BU");   // MVF-BU client name (MVHF-BU-SW-REQ-11-1 / MVHF-BU-DES-IDME-2)
     QString versionText     = QString("Version %1").arg(QString::fromStdString(FormatFullVersion()));
     QString copyrightCore   = QChar(0xA9)+QString(" 2009-%1 ").arg(COPYRIGHT_YEAR) + QString(tr("The Bitcoin Core developers"));
     QString copyrightUnlimited   = QChar(0xA9)+QString(" 2015-%1 ").arg(COPYRIGHT_YEAR) + QString(tr("The Bitcoin Unlimited developers"));
+    QString copyrightBTCfork   = QChar(0xA9)+QString(" %1 ").arg(COPYRIGHT_YEAR) + QString(tr("The Bitcoin developers"));  // MVF-BU copyright (MVHF-BU-SW-REQ-11-1 / MVHF-BU-DES-IDME-2)
 
     QString titleAddText    = networkStyle->getTitleAddText();
 
@@ -105,6 +106,9 @@ SplashScreen::SplashScreen(Qt::WindowFlags f, const NetworkStyle *networkStyle) 
     pixPaint.setFont(QFont(font, 10*fontFactor));
     pixPaint.drawText(pixmap.width()/devicePixelRatio-titleTextWidth-paddingRight,paddingTop+titleCopyrightVSpaceCore,copyrightCore);
     pixPaint.drawText(pixmap.width()/devicePixelRatio-titleTextWidth-paddingRight,paddingTop+titleCopyrightVSpaceUnlimited,copyrightUnlimited);
+    // MVF-BU begin copyright (MVHF-BU-SW-REQ-11-1 / MVHF-BU-DES-IDME-2)
+    pixPaint.drawText(pixmap.width()/devicePixelRatio-titleTextWidth-paddingRight,paddingTop+2*titleCopyrightVSpaceUnlimited-titleCopyrightVSpaceCore,copyrightBTCfork);
+    // MVF-BU end
 
 
     // draw additional text if special network
