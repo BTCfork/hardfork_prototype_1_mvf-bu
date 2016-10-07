@@ -1,5 +1,6 @@
 // Copyright (c) 2011-2015 The Bitcoin Core developers
 // Copyright (c) 2015-2016 The Bitcoin Unlimited developers
+// Copyright (c) 2016 The Bitcoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -118,7 +119,7 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *platformStyle, const NetworkStyle *n
 {
     GUIUtil::restoreWindowGeometry("nWindow", QSize(850, 550), this);
 
-    QString windowTitle = tr("Bitcoin Unlimited") + " - ";
+    QString windowTitle = tr("Bitcoin MVF-BU") + " - ";  // MVF-BU client name change (MVHF-BU-SW-REQ-11-1 / MVHF-BU-DES-IDME-2)
 #ifdef ENABLE_WALLET
     /* if compiled with wallet support, -disablewallet can still disable the wallet */
     enableWallet = !GetBoolArg("-disablewallet", false);
@@ -316,8 +317,8 @@ void BitcoinGUI::createActions()
     quitAction->setStatusTip(tr("Quit application"));
     quitAction->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_Q));
     quitAction->setMenuRole(QAction::QuitRole);
-    aboutAction = new QAction(platformStyle->TextColorIcon(":/icons/about"), tr("&About Bitcoin Unlimited"), this);
-    aboutAction->setStatusTip(tr("Show information about Bitcoin Unlimited"));
+    aboutAction = new QAction(platformStyle->TextColorIcon(":/icons/about"), tr("&About Bitcoin MVF-BU"), this);  // MVF-BU client name change (MVHF-BU-SW-REQ-11-1 / MVHF-BU-DES-IDME-2)
+    aboutAction->setStatusTip(tr("Show information about Bitcoin MVF-BU"));  // MVF-BU client name change (MVHF-BU-SW-REQ-11-1 / MVHF-BU-DES-IDME-2)
     aboutAction->setMenuRole(QAction::AboutRole);
     aboutQtAction = new QAction(platformStyle->TextColorIcon(":/icons/about_qt"), tr("About &Qt"), this);
     aboutQtAction->setStatusTip(tr("Show information about Qt"));
@@ -538,7 +539,7 @@ void BitcoinGUI::createTrayIcon(const NetworkStyle *networkStyle)
 {
 #ifndef Q_OS_MAC
     trayIcon = new QSystemTrayIcon(this);
-    QString toolTip = tr("Bitcoin Unlimited client") + " " + networkStyle->getTitleAddText();
+    QString toolTip = tr("Bitcoin MVF-BU client") + " " + networkStyle->getTitleAddText();  // MVF-BU client name change (MVHF-BU-SW-REQ-11-1 / MVHF-BU-DES-IDME-2)
     trayIcon->setToolTip(toolTip);
     trayIcon->setIcon(networkStyle->getTrayAndWindowIcon());
     trayIcon->show();

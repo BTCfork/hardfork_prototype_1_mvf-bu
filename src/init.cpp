@@ -2,6 +2,7 @@
 // Copyright (c) 2009-2015 The Bitcoin Core developers
 // Copyright (c) 2015-2016 The Bitcoin Unlimited developers
 // Copyright (c) 2016 Bitcoin Unlimited developers
+// Copyright (c) 2016 The Bitcoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -800,7 +801,7 @@ void InitLogging()
     fLogIPs = GetBoolArg("-logips", DEFAULT_LOGIPS);
 
     LogPrintf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
-    LogPrintf("Bitcoin version %s (%s)\n", FormatFullVersion(), CLIENT_DATE);
+    LogPrintf("Bitcoin MVF-BU version %s (%s)\n", FormatFullVersion(), CLIENT_DATE);  // MVF-BU identify client (MVHF-BU-SW-REQ-11-1 / MVHF-BU-DES-IDME-4)
 }
 
 /** Initialize bitcoin.

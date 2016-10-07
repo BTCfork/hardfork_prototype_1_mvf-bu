@@ -1,4 +1,5 @@
 // Copyright (c) 2015 G. Andrew Stone
+// Copyright (c) 2016 The Bitcoin Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -628,6 +629,7 @@ std::string LicenseInfo()
     return FormatParagraph(strprintf(_("Copyright (C) 2015-%i The Bitcoin Unlimited Developers"), COPYRIGHT_YEAR)) + "\n\n" +
            FormatParagraph(strprintf(_("Portions Copyright (C) 2009-%i The Bitcoin Core Developers"), COPYRIGHT_YEAR)) + "\n\n" +
            FormatParagraph(strprintf(_("Portions Copyright (C) 2014-%i The Bitcoin XT Developers"), COPYRIGHT_YEAR)) + "\n\n" +
+           FormatParagraph(strprintf(_("Portions Copyright (C) %i The Bitcoin Developers"), COPYRIGHT_YEAR)) + "\n\n" +  // MVF-BU copyright (MVHF-BU-DES-IDME-1)
            "\n" +
            FormatParagraph(_("This is experimental software.")) + "\n" +
            "\n" +

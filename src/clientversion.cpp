@@ -14,7 +14,7 @@
  * for both bitcoind and bitcoin-core, to make it harder for attackers to
  * target servers or GUI users specifically.
  */
-const std::string CLIENT_NAME("BitcoinUnlimited");
+const std::string CLIENT_NAME("MVF-BU");  // client network id change (MVHF-BU-SW-REQ-11-1 / MVHF-BU-DES-IDME-3)
 
 /**
  * Client version number
