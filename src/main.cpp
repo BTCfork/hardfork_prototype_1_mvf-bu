@@ -82,6 +82,7 @@ size_t nCoinCacheUsage = 5000 * 300;
 uint64_t nPruneTarget = 0;
 bool fAlerts = DEFAULT_ALERTS;
 bool fEnableReplacement = DEFAULT_ENABLE_REPLACEMENT;
+bool fAutoBackupDone = false;
 
 /** Fees smaller than this (in satoshi) are considered zero fee (for relaying, mining and transaction creation) */
 CFeeRate minRelayTxFee = CFeeRate(DEFAULT_MIN_RELAY_TX_FEE);
@@ -2792,21 +2793,34 @@ void static UpdateTip(CBlockIndex *pindexNew) {
 
     //// 	Auto Backup At Block 		////
     // Test autobackupwalletpath argument
-    std::string strWalletBackupFile = GetArg("-autobackupwalletpath", "");
-    int BackupBlock = GetArg("-autobackupblock", MVHF_FORK_BLOCK - 1);
+    if (!fAutoBackupDone)
+    {
+    	std::string strWalletBackupFile = GetArg("-autobackupwalletpath", "");
 
-    //LogPrintf("DEBUG: autobackupwalletpath=%s\n",strWalletBackupFile);
-    //LogPrintf("DEBUG: autobackupblock=%d\n",BackupBlock);
+		int BackupBlock = GetArg("-autobackupblock", MVHF_FORK_BLOCK - 1);
 
-    if(strWalletBackupFile != "") { 
-		// Auto Backup defined so check block height
-		if (chainActive.Height() >= BackupBlock )
-		{
-			if (!GetMainSignals().BackupWalletAuto(strWalletBackupFile, BackupBlock))
-				throw std::runtime_error("CWallet::BackupWalletAuto() : Auto wallet backup failed!");
-		}
-		
-    } // if(strWalletBackupFile != "") 
+		//LogPrintf("DEBUG: autobackupwalletpath=%s\n",strWalletBackupFile);
+		//LogPrintf("DEBUG: autobackupblock=%d\n",BackupBlock);
+
+		if(strWalletBackupFile != "") {
+
+			if (GetBoolArg("-disablewallet", false)) {
+				LogPrintf("-disablewallet and -autobackupwalletpath conflict so automatic backup disabled.");
+				fAutoBackupDone = true;
+			}
+			else
+				// Auto Backup defined so check block height
+				if (chainActive.Height() >= BackupBlock )
+				{
+					if (GetMainSignals().BackupWalletAuto(strWalletBackupFile, BackupBlock))
+						fAutoBackupDone = true;
+					else
+						throw std::runtime_error("CWallet::BackupWalletAuto() : Auto wallet backup failed!");
+
+				}
+
+		} // if(strWalletBackupFile != "")
+    } // if (!fAutoBackupDone)
 
     // Check the version of the last 100 blocks to see if we need to upgrade:
     static bool fWarned = false;
