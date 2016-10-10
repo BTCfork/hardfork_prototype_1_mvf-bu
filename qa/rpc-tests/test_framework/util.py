@@ -264,6 +264,16 @@ def start_nodes(num_nodes, dirname, extra_args=None, rpchost=None, binary=None):
 def log_filename(dirname, n_node, logname):
     return os.path.join(dirname, "node"+str(n_node), "regtest", logname)
 
+
+def search_file(searchfilepath, searchtext):
+    searchfile = open(searchfilepath, "r")
+    searchlines=list()
+    for line in searchfile:
+        if searchtext in line: searchlines.append(line)
+    searchfile.close()
+    return searchlines
+
+
 def stop_node(node, i):
     node.stop()
     bitcoind_processes[i].wait()

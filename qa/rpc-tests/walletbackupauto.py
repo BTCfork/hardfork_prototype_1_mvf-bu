@@ -8,13 +8,11 @@
 Exercise the auto backup wallet code.  Ported from walletbackup.sh.
 
 Test case is:
-4 nodes. 1 2 and 3 send transactions between each other,
-fourth node is a miner
-5th node does nothing and tests disabled wallet
+4 nodes. 1 2 and 3 send transactions between each other, fourth node is a miner
+5th node does no transactions and only tests the -disablewallet
 .
 1 2 3 each mine a block to start, then
-Miner creates 100 blocks so 1 2 3 each have 50 mature
-coins to spend.
+Miner creates 100 blocks so 1 2 3 each have 50 mature coins to spend.
 Then 5 iterations of 1/2/3 sending coins amongst
 themselves to get transactions in the wallets,
 and the miner mining one block.
@@ -37,7 +35,8 @@ transaction fees paid mature.
 1/2/3 are shutdown, and their wallets erased.
 Then restored using wallet.dat.auto.114.bak backup.
 Sanity check to confirm 1/2/3 balances match the 114 block balances.
-Sanity check to confirm 5th node does not perform the auto backup
+Sanity check to confirm 5th node does NOT perform the auto backup
+and that the debug.log contains a conflict message
 """
 
 import os
@@ -219,11 +218,15 @@ class WalletBackupTest(BitcoinTestFramework):
             logging.info("Error: Auto backup performed on node4 with -disablewallet!")
 
 
+        # Test Node4 debug.log contains a conflict message - length test should be > 0
+        debugmsg_list = search_file(tmpdir + "/node4/regtest/debug.log","-disablewallet and -autobackupwalletpath conflict")
+
         # balances should equal the 114 block auto backup balances
         assert_equal(self.nodes[0].getbalance(), balance0)
         assert_equal(self.nodes[1].getbalance(), balance1)
         assert_equal(self.nodes[2].getbalance(), balance2)
         assert_equal(0,node4backupexists)
+        assert_greater_than(len(debugmsg_list),0)
 
 if __name__ == '__main__':
     WalletBackupTest().main()
