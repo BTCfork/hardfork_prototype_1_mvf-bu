@@ -1,6 +1,7 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2015 The Bitcoin Core developers
 // Copyright (c) 2015-2016 The Bitcoin Unlimited developers
+// Copyright (c) 2016 The Bitcoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -17,6 +18,7 @@ enum DeploymentPos
 {
     DEPLOYMENT_TESTDUMMY,
     DEPLOYMENT_CSV, // Deployment of BIP68, BIP112, and BIP113.
+    DEPLOYMENT_SEGWIT, // MVF-BU added for trigger on SegWit (BIP141) activation
     MAX_VERSION_BITS_DEPLOYMENTS
 };
 
@@ -61,6 +63,12 @@ struct Params {
     int64_t nPowTargetTimespan;
     int64_t DifficultyAdjustmentInterval() const { return nPowTargetTimespan / nPowTargetSpacing; }
     int64_t SizeForkExpiration() const { return 1514764800; } // BU (classic compatibility) 2018-01-01 00:00:00 GMT
+    // MVF-BU begin (MVHF-BU-DES-TRIG-3)
+    int nMVFActivateForkHeight;     // trigger block height
+
+    int MVFActivateForkHeight() const { return nMVFActivateForkHeight; };
+    // MVF-BU end
+
 };
 } // namespace Consensus
 

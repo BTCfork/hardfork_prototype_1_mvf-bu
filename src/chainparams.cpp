@@ -1,11 +1,13 @@
 // Copyright (c) 2010 Satoshi Nakamoto
 // Copyright (c) 2009-2015 The Bitcoin Core developers
 // Copyright (c) 2015-2016 The Bitcoin Unlimited developers
+// Copyright (c) 2016 The Bitcoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "chainparams.h"
 #include "consensus/merkle.h"
+#include "mvf-bu.h"            // MVF-BU added (needed for TRIG, DIAD, ...)
 
 #include "tinyformat.h"
 #include "util.h"
@@ -115,6 +117,12 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nStartTime = 1462060800; // May 1st, 2016
         consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nTimeout = 1493596800; // May 1st, 2017
 
+        // MVF-BU begin: added deployment of BIP141 (MVHF-BU-DES-TRIG-2)
+        consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].bit = 1;
+        consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nStartTime = 0;
+        consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nTimeout = 0;   // Never / undefined
+        // MVF-BU end
+
         /**
          * The message start string is designed to be unlikely to occur in normal data.
          * The characters are rarely used upper ASCII, not valid as UTF-8, and produce
@@ -131,6 +139,11 @@ public:
 
         genesis = CreateGenesisBlock(1231006505, 2083236893, 0x1d00ffff, 1, 50 * COIN);
         consensus.hashGenesisBlock = genesis.GetHash();
+        // MVF-BU begin (MVHF-BU-DES-TRIG-3)
+        // block height at which MVF-BU hard fork activates
+        consensus.nMVFActivateForkHeight = HARDFORK_HEIGHT_MAINNET;
+        // MVF-BU end
+
         assert(consensus.hashGenesisBlock == uint256S("0x000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"));
         assert(genesis.hashMerkleRoot == uint256S("0x4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"));
 
@@ -218,6 +231,10 @@ public:
         const CScript genesisOutputScript = CScript() << ParseHex("76a91472ecf500e25c73965301f43ee94fbec073cd8eed88ac");
         genesis = CreateGenesisBlock("Bigger blocks FTW (for the world)", genesisOutputScript, 1467923406, 131338110, 486604799, 536870912, CAmount(5000000000));
         consensus.hashGenesisBlock = genesis.GetHash();
+        // MVF-BU begin (MVHF-BU-DES-TRIG-3)
+        // block height at which MVF-BU hard fork activates
+        consensus.nMVFActivateForkHeight = HARDFORK_HEIGHT_NOLNET;
+        // MVF-BU end
 
         //assert(consensus.hashGenesisBlock == uint256S("0x000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"));
         //assert(genesis.hashMerkleRoot == uint256S("0x4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"));
@@ -285,6 +302,12 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nStartTime = 1456790400; // March 1st, 2016
         consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nTimeout = 1493596800; // May 1st, 2017
 
+        // MVF-BU begin: added deployment of BIP141 (MVHF-BU-DES-TRIG-2)
+        consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].bit = 1;
+        consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nStartTime = 1462060800; // dummy value while BIP is TBD: Nov 1st, 2016
+        consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nTimeout = 1493596800; // May 1st, 2017
+        // MVF-BU end
+
         pchMessageStart[0] = 0x0b;
         pchMessageStart[1] = 0x11;
         pchMessageStart[2] = 0x09;
@@ -296,6 +319,11 @@ public:
 
         genesis = CreateGenesisBlock(1296688602, 414098458, 0x1d00ffff, 1, 50 * COIN);
         consensus.hashGenesisBlock = genesis.GetHash();
+        // MVF-BU begin (MVHF-BU-DES-TRIG-3)
+        // block height at which MVF-BU hard fork activates
+        consensus.nMVFActivateForkHeight = HARDFORK_HEIGHT_TESTNET;
+        // MVF-BU end
+
         assert(consensus.hashGenesisBlock == uint256S("0x000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943"));
         assert(genesis.hashMerkleRoot == uint256S("0x4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"));
 
@@ -357,6 +385,11 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_CSV].bit = 0;
         consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nStartTime = 0;
         consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nTimeout = 999999999999ULL;
+        // MVF-BU begin: added deployment of BIP141 (MVHF-BU-DES-TRIG-2)
+        consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].bit = 1;
+        consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nStartTime = 0;
+        consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nTimeout = 999999999999ULL;
+        // MVF-BU end
 
         pchMessageStart[0] = 0xfa;
         pchMessageStart[1] = 0xbf;
@@ -368,6 +401,11 @@ public:
 
         genesis = CreateGenesisBlock(1296688602, 2, 0x207fffff, 1, 50 * COIN);
         consensus.hashGenesisBlock = genesis.GetHash();
+        // MVF-BU begin (MVHF-BU-DES-TRIG-3)
+        // block height at which MVF-BU hard fork activates
+        consensus.nMVFActivateForkHeight = HARDFORK_HEIGHT_REGTEST;
+        // MVF-BU end
+
         assert(consensus.hashGenesisBlock == uint256S("0x0f9188f13cb7b2c71f2a335e3a4fc328bf5beb436012afca590b1a11466e2206"));
         assert(genesis.hashMerkleRoot == uint256S("0x4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"));
 
