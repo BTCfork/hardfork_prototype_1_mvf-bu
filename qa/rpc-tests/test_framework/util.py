@@ -1,5 +1,6 @@
 # Copyright (c) 2014-2015 The Bitcoin Core developers
 # Copyright (c) 2015-2016 The Bitcoin Unlimited developers
+# Copyright (c) 2016 The Bitcoin developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 #
@@ -264,7 +265,7 @@ def start_nodes(num_nodes, dirname, extra_args=None, rpchost=None, binary=None):
 def log_filename(dirname, n_node, logname):
     return os.path.join(dirname, "node"+str(n_node), "regtest", logname)
 
-
+#MVHF-BU
 def search_file(searchfilepath, searchtext):
     searchfile = open(searchfilepath, "r")
     searchlines=list()
