@@ -53,12 +53,11 @@ void UnregisterAllValidationInterfaces() {
     g_signals.Broadcast.disconnect_all_slots();
     g_signals.Inventory.disconnect_all_slots();
     g_signals.SetBestChain.disconnect_all_slots();
-    g_signals.BackupWalletAuto.disconnect_all_slots();  //MVHF-BU
+    g_signals.BackupWalletAuto.disconnect_all_slots();  // MVHF-BU
 	g_signals.UpdatedTransaction.disconnect_all_slots();
     g_signals.SyncTransaction.disconnect_all_slots();
     g_signals.UpdatedBlockTip.disconnect_all_slots();
 }
-
 
 void SyncWithWallets(const CTransaction &tx, const CBlock *pblock) {
     g_signals.SyncTransaction(tx, pblock);

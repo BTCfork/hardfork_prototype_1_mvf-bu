@@ -98,7 +98,7 @@ testScripts = [
     'fundrawtransaction.py',
     'signrawtransactions.py',
     'walletbackup.py',
-    'walletbackupauto.py', #MVHF-BU
+    'walletbackupauto.py', # MVHF-BU
     'nodehandling.py',
     'reindex.py',
     'decodescript.py',

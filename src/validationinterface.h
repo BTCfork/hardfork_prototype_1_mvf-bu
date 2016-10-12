@@ -37,7 +37,7 @@ protected:
     virtual void SyncTransaction(const CTransaction &tx, const CBlock *pblock) {}
     virtual void SetBestChain(const CBlockLocator &locator) {}
 
-    //MVHF-BU
+    // MVHF-BU
     virtual bool BackupWalletAuto(const std::string& strDest, int BackupBlock) {return true;}
 
     virtual void UpdatedTransaction(const uint256 &hash) {}

@@ -9,8 +9,8 @@
 Exercise the auto backup wallet code.  Ported from walletbackup.sh.
 
 Test case is:
-4 nodes. 1 2 and 3 send transactions between each other, fourth node is a miner
-5th node does no transactions and only tests the -disablewallet
+5 nodes. 1 2 and 3 send transactions between each other, fourth node is a miner.
+The 5th node does no transactions and only tests for the -disablewallet conflict.
 .
 1 2 3 each mine a block to start, then
 Miner creates 100 blocks so 1 2 3 each have 50 mature coins to spend.

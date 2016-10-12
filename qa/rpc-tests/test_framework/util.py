@@ -265,14 +265,16 @@ def start_nodes(num_nodes, dirname, extra_args=None, rpchost=None, binary=None):
 def log_filename(dirname, n_node, logname):
     return os.path.join(dirname, "node"+str(n_node), "regtest", logname)
 
-#MVHF-BU
+# MVHF-BU begin: Function used for searching text files such as debug.log
 def search_file(searchfilepath, searchtext):
+    """Pass in the file to search and the search text and this returns a list of lines in the file which include the search text. """
     searchfile = open(searchfilepath, "r")
     searchlines=list()
     for line in searchfile:
         if searchtext in line: searchlines.append(line)
     searchfile.close()
     return searchlines
+# MVHF-BU end
 
 
 def stop_node(node, i):
