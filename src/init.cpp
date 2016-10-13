@@ -402,6 +402,9 @@ std::string HelpMessage(HelpMessageMode mode)
 
 #ifdef ENABLE_WALLET
     strUsage += HelpMessageGroup(_("Wallet options:"));
+
+    strUsage += HelpMessageOpt("-autobackupwalletpath=<path>", _("Default: Enabled. Automatically backup the wallet to the autobackupwalletfile path after the block specified becomes the best block (-autobackupblock)."));
+    strUsage += HelpMessageOpt("-autobackupblock=<n>", _("Default: MVHF-BU FORKBLOCK-1. Specify the block number that triggers the automatic wallet backup."));
     strUsage += HelpMessageOpt("-disablewallet", _("Do not load the wallet and disable wallet RPC calls"));
     strUsage += HelpMessageOpt("-keypool=<n>", strprintf(_("Set key pool size to <n> (default: %u)"), DEFAULT_KEYPOOL_SIZE));
     strUsage += HelpMessageOpt("-fallbackfee=<amt>", strprintf(_("A fee rate (in %s/kB) that will be used when fee estimation has insufficient data (default: %s)"),
@@ -784,6 +787,11 @@ void InitParameterInteraction()
         if (SoftSetBoolArg("-walletbroadcast", false))
             LogPrintf("%s: parameter interaction: -blocksonly=1 -> setting -walletbroadcast=0\n", __func__);
 #endif
+    }
+
+    if (GetArg("-autobackupwalletpath","") != "" && (GetBoolArg("-disablewallet", false)) ) {
+    	LogPrintf("%s: parameter interaction: -disablewallet and -autobackupwalletpath conflict so automatic backup disabled.=0\n");
+
     }
 
     // Forcing relay from whitelisted hosts implies we will accept relays from them in the first place.
