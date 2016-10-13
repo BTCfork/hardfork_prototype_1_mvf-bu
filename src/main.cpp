@@ -2801,24 +2801,21 @@ void static UpdateTip(CBlockIndex *pindexNew) {
 		//LogPrintf("DEBUG: autobackupwalletpath=%s\n",strWalletBackupFile);
 		//LogPrintf("DEBUG: autobackupblock=%d\n",BackupBlock);
 
-		if(strWalletBackupFile != "") {
+		if (GetBoolArg("-disablewallet", false)) {
+			LogPrintf("-disablewallet and -autobackupwalletpath conflict so automatic backup disabled.");
+			fAutoBackupDone = true;
+		}
+		else
+			// Auto Backup defined so check block height
+			if (chainActive.Height() >= BackupBlock )
+			{
+				if (GetMainSignals().BackupWalletAuto(strWalletBackupFile, BackupBlock))
+					fAutoBackupDone = true;
+				else
+					throw std::runtime_error("CWallet::BackupWalletAuto() : Auto wallet backup failed!");
 
-			if (GetBoolArg("-disablewallet", false)) {
-				LogPrintf("-disablewallet and -autobackupwalletpath conflict so automatic backup disabled.");
-				fAutoBackupDone = true;
 			}
-			else
-				// Auto Backup defined so check block height
-				if (chainActive.Height() >= BackupBlock )
-				{
-					if (GetMainSignals().BackupWalletAuto(strWalletBackupFile, BackupBlock))
-						fAutoBackupDone = true;
-					else
-						throw std::runtime_error("CWallet::BackupWalletAuto() : Auto wallet backup failed!");
 
-				}
-
-		} // if(strWalletBackupFile != "")
     } // if (!fAutoBackupDone)
 
     // Check the version of the last 100 blocks to see if we need to upgrade:

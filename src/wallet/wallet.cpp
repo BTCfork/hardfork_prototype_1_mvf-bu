@@ -1049,25 +1049,43 @@ CAmount CWallet::GetChange(const CTransaction& tx) const
 // MVHF-BU Auto wallet backup
 bool CWallet::BackupWalletAuto(const std::string& strDest, int BackupBlock)
 {
-
     boost::filesystem::path pathBackupWallet = strDest;
 
-    // Test for directory only, if so add default filename
-	if (boost::filesystem::is_directory(strDest))
-		pathBackupWallet = pathBackupWallet / strprintf("%s%s",strWalletFile,".auto.#.bak");
+    //if the backup destination is blank
+    if (strDest == "")
+    	// then prefix it with the existing data dir and wallet filename
+    	pathBackupWallet = GetDataDir() / strprintf("%s.%s",strWalletFile,"auto.@.bak");
 
-	std::string strBackupFile = pathBackupWallet.string();
+    else {
+        if (pathBackupWallet.is_relative())
+        	// prefix existing data dir
+        	pathBackupWallet = GetDataDir() / pathBackupWallet;
+
+        if (pathBackupWallet.extension() == "")
+        	// no custom filename so append the default filename
+        	pathBackupWallet /= strprintf("%s.%s",strWalletFile,"auto.@.bak");
+
+        if (pathBackupWallet.branch_path() != "")
+			// create directories if they don't exist
+			boost::filesystem::create_directories(pathBackupWallet.branch_path());
+
+    }
+
+
+    std::string strBackupFile = pathBackupWallet.string();
 
 	// replace # with BackupBlock number
-	boost::replace_all(strBackupFile,"#", boost::to_string_stub(BackupBlock));
+    boost::replace_all(strBackupFile,"@", boost::to_string_stub(BackupBlock));
+    //LogPrintf("DEBUG: strBackupFile=%s\n",strBackupFile);
 
 	//skip if already done
-	if (!boost::filesystem::exists(strBackupFile))
+    if (!boost::filesystem::exists(strBackupFile))
 	{
 		// Call common backup wallet function
 		if (BackupWallet(*this, strBackupFile))
 			LogPrintf("Wallet automatically backed up to: %s\n",strBackupFile);
 		else
+			// backup failed
 			return false;
 	}
 

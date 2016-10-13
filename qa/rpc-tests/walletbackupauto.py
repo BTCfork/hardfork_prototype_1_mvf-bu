@@ -6,6 +6,8 @@
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 # MVHF-BU
 """
+See https://github.com/BTCfork/hardfork_prototype_1_mvf-bu/blob/master/doc/mvf-bu-test-design.md#411
+
 Exercise the auto backup wallet code.  Ported from walletbackup.sh.
 
 Test case is:
@@ -20,22 +22,15 @@ and the miner mining one block.
 
 Then 5 more iterations of transactions and mining a block.
 
-Miner then generates 101 more blocks, so any
-transaction fees paid mature.
-
-The node config sets wallets to automatically back up at block 114.
+The node config sets wallets to automatically back up
+as defined in the backupblock constant 114.
 
 Balances are saved for sanity check:
   Sum(1,2,3,4 balances) == 114*50
 
-Then 5 more iterations of transactions and mining a block.
-
-Miner then generates 101 more blocks, so any
-transaction fees paid mature.
-
-1/2/3 are shutdown, and their wallets erased.
-Then restored using wallet.dat.auto.114.bak backup.
-Sanity check to confirm 1/2/3 balances match the 114 block balances.
+1/2/3/4 are shutdown, and their wallets erased.
+Then restored using the auto backup wallets eg wallet.dat.auto.114.bak.
+Sanity check to confirm 1/2/3/4 balances match the 114 block balances.
 Sanity check to confirm 5th node does NOT perform the auto backup
 and that the debug.log contains a conflict message
 """
@@ -47,6 +42,9 @@ from random import randint
 import logging
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
+# backup block must be > 113 as these blocks are used for context setup
+backupblock = 114
+
 class WalletBackupTest(BitcoinTestFramework):
 
     def setup_chain(self):
@@ -55,31 +53,31 @@ class WalletBackupTest(BitcoinTestFramework):
 
     # This mirrors how the network was setup in the bash test
     def setup_network(self, split=False):
-        # nodes 1, 2,3 are spenders, let's give them a keypool=100
-        # and configure option autobackupwalletpath enabled for block 114
-
         logging.info("Starting nodes")
 
+        # nodes 1, 2,3 are spenders, let's give them a keypool=100
+        # and configure option autobackupwalletpath
+        # testing each file path variant
+        # as per the test design at sw-req-10-1
         extra_args = [
             ["-keypool=100",
-                "-autobackupwalletpath="+self.options.tmpdir+"/node0",
-                "-autobackupblock=114"],
+                "-autobackupwalletpath=%s"%(self.options.tmpdir + "/node0/newabsdir/pathandfile.@.bak"),
+                "-autobackupblock=%s"%(backupblock)],
             ["-keypool=100",
-                "-autobackupwalletpath="+self.options.tmpdir+"/node1",
-                "-autobackupblock=114"],
+                "-autobackupwalletpath=filenameonly.@.bak",
+                "-autobackupblock=%s"%(backupblock)],
             ["-keypool=100",
-                "-autobackupwalletpath="+self.options.tmpdir+"/node2",
-                "-autobackupblock=114"],
-            [],
+                "-autobackupwalletpath=./newreldir/",
+                "-autobackupblock=%s"%(backupblock)],
+            ["-autobackupblock=%s"%(backupblock)],
             ["-disablewallet",
                 "-autobackupwalletpath="+self.options.tmpdir+"/node4",
-                "-autobackupblock=114"]]
+                "-autobackupblock=%s"%(backupblock)]]
 
         self.nodes = start_nodes(5, self.options.tmpdir, extra_args)
         connect_nodes(self.nodes[0], 3)
         connect_nodes(self.nodes[1], 3)
         connect_nodes(self.nodes[2], 3)
-        connect_nodes(self.nodes[2], 0)
         connect_nodes(self.nodes[4], 3)
         self.is_network_split=False
         self.sync_all()
@@ -107,28 +105,40 @@ class WalletBackupTest(BitcoinTestFramework):
         self.nodes[3].generate(1)
 
     # As above, this mirrors the original bash test.
-    def start_three(self):
+    def start_four(self):
 
         self.nodes[0] = start_node(0, self.options.tmpdir)
         self.nodes[1] = start_node(1, self.options.tmpdir)
         self.nodes[2] = start_node(2, self.options.tmpdir)
+        self.nodes[3] = start_node(3, self.options.tmpdir)
 
         connect_nodes(self.nodes[0], 3)
         connect_nodes(self.nodes[1], 3)
         connect_nodes(self.nodes[2], 3)
-        connect_nodes(self.nodes[2], 0)
 
-    def stop_three(self):
+
+    def stop_four(self):
         stop_node(self.nodes[0], 0)
         stop_node(self.nodes[1], 1)
         stop_node(self.nodes[2], 2)
+        stop_node(self.nodes[3], 3)
 
-    def erase_three(self):
+    def erase_four(self):
         os.remove(self.options.tmpdir + "/node0/regtest/wallet.dat")
         os.remove(self.options.tmpdir + "/node1/regtest/wallet.dat")
         os.remove(self.options.tmpdir + "/node2/regtest/wallet.dat")
+        os.remove(self.options.tmpdir + "/node3/regtest/wallet.dat")
 
     def run_test(self):
+        logging.info("Automatic backup configured for block %s"%(backupblock))
+        assert_greater_than(backupblock, 113)
+
+        # target backup files
+        node0backupfile = self.options.tmpdir + "/node0/newabsdir/pathandfile.%s.bak"%(backupblock)
+        node1backupfile = self.options.tmpdir + "/node1/regtest/filenameonly.%s.bak"%(backupblock)
+        node2backupfile = self.options.tmpdir + "/node2/regtest/newreldir/wallet.dat.auto.%s.bak"%(backupblock)
+        node3backupfile = self.options.tmpdir + "/node3/regtest/wallet.dat.auto.%s.bak"%(backupblock)
+
         logging.info("Generating initial blockchain")
         self.nodes[0].generate(1)
         sync_blocks(self.nodes)
@@ -137,7 +147,9 @@ class WalletBackupTest(BitcoinTestFramework):
         self.nodes[2].generate(1)
         sync_blocks(self.nodes)
         self.nodes[3].generate(100)
+
         sync_blocks(self.nodes)
+        logging.info("Generated %s blocks"%(self.nodes[0].getblockcount()))
 
         assert_equal(self.nodes[0].getbalance(), 50)
         assert_equal(self.nodes[1].getbalance(), 50)
@@ -151,17 +163,80 @@ class WalletBackupTest(BitcoinTestFramework):
         for i in range(5):
             self.do_one_round()
 
-
         logging.info("More transactions")
         for i in range(5):
             self.do_one_round()
 
-        # Generate 101 more blocks, so any fees paid mature
-        self.nodes[3].generate(101)
+        # At this point should be 113 blocks
         self.sync_all()
+        logging.info("Generated %s blocks"%(self.nodes[0].getblockcount()))
 
-        logging.info("Reached block 114. Auto backup triggered.")
+        # Generate any further blocks to reach the backup block
+        blocks_remaining = backupblock - self.nodes[0].getblockcount() - 1
+        if (blocks_remaining) > 0:
+            self.nodes[3].generate(blocks_remaining)
 
+        self.sync_all()
+        logging.info("Generated %s blocks"%(self.nodes[0].getblockcount()))
+
+        # Only 1 more block until the auto backup is triggered
+        # Test the auto backup files do NOT exist yet
+        node0backupexists = 0
+        node1backupexists = 0
+        node2backupexists = 0
+        node3backupexists = 0
+
+        if os.path.isfile(node0backupfile):
+            node0backupexists = 1
+            logging.info("Error backup exists too early: %s"%(node0backupfile))
+
+        if os.path.isfile(node1backupfile):
+            node1backupexists = 1
+            logging.info("Error backup exists too early: %s"%(node1backupfile))
+
+        if os.path.isfile(node2backupfile):
+            node2backupexists = 1
+            logging.info("Error backup exists too early: %s"%(node2backupfile))
+
+        if os.path.isfile(node3backupfile):
+            node3backupexists = 1
+            logging.info("Error backup exists too early: %s"%(node3backupfile))
+
+        assert_equal(0, node0backupexists)
+        assert_equal(0, node1backupexists)
+        assert_equal(0, node2backupexists)
+        assert_equal(0, node3backupexists)
+
+        # Generate the block that should trigger the auto backup
+        self.nodes[3].generate(1)
+        self.sync_all()
+        assert_equal(self.nodes[0].getblockcount(),backupblock)
+
+        logging.info("Reached backup block %s automatic backup triggered"%(self.nodes[0].getblockcount()))
+
+        # Test if the backup files exist
+        if os.path.isfile(node0backupfile): node0backupexists = 1
+        else: logging.info("Error backup does not exist: %s"%(node0backupfile))
+
+        if os.path.isfile(node1backupfile): node1backupexists = 1
+        else: logging.info("Error backup does not exist: %s"%(node1backupfile))
+
+        if os.path.isfile(node2backupfile): node2backupexists = 1
+        else: logging.info("Error backup does not exist: %s"%(node2backupfile))
+
+        if os.path.isfile(node3backupfile): node3backupexists = 1
+        else: logging.info("Error backup does not exist: %s"%(node3backupfile))
+
+        assert_equal(1, node0backupexists)
+        assert_equal(1, node1backupexists)
+        assert_equal(1, node2backupexists)
+        assert_equal(1, node3backupexists)
+
+        ##
+        # Calculate wallet balances for comparison after restore
+        ##
+
+        # Balance of each wallet
         balance0 = self.nodes[0].getbalance()
         balance1 = self.nodes[1].getbalance()
         balance2 = self.nodes[2].getbalance()
@@ -174,58 +249,51 @@ class WalletBackupTest(BitcoinTestFramework):
         logging.info("Node2 balance:" + str(balance2))
         logging.info("Node3 balance:" + str(balance3))
 
-        logging.info("Total: " + str(total))
-
-        # At this point, there are 214 blocks (103 for setup, then 10 rounds, then 101.)
-        # 114 are mature, so the sum of all wallets should be 114 * 50 = 5700.
-        assert_equal(total, 5700)
+        logging.info("Original Wallet Total: " + str(total))
 
         ##
         # Test restoring spender wallets from backups
         ##
-        logging.info("Restoring using wallet.dat.auto.114.bak")
-        self.stop_three()
-        self.erase_three()
-
-        # Start node2 with no chain
-        shutil.rmtree(self.options.tmpdir + "/node2/regtest/blocks")
-        shutil.rmtree(self.options.tmpdir + "/node2/regtest/chainstate")
+        logging.info("Switching wallets. Restoring using automatic wallet backups...")
+        self.stop_four()
+        self.erase_four()
 
         # Restore wallets from backup
-        shutil.copyfile(tmpdir + "/node0/wallet.dat.auto.114.bak", tmpdir + "/node0/regtest/wallet.dat")
-        shutil.copyfile(tmpdir + "/node1/wallet.dat.auto.114.bak", tmpdir + "/node1/regtest/wallet.dat")
-        shutil.copyfile(tmpdir + "/node2/wallet.dat.auto.114.bak", tmpdir + "/node2/regtest/wallet.dat")
+        shutil.copyfile(node0backupfile, tmpdir + "/node0/regtest/wallet.dat")
+        shutil.copyfile(node1backupfile, tmpdir + "/node1/regtest/wallet.dat")
+        shutil.copyfile(node2backupfile, tmpdir + "/node2/regtest/wallet.dat")
+        shutil.copyfile(node3backupfile, tmpdir + "/node3/regtest/wallet.dat")
 
         logging.info("Re-starting nodes")
-        self.start_three()
-        sync_blocks(self.nodes, 10)
+        self.start_four()
+        self.sync_all()
 
-        total2 = total = self.nodes[0].getbalance() + self.nodes[1].getbalance() + self.nodes[2].getbalance() + self.nodes[3].getbalance()
+        total2 = self.nodes[0].getbalance() + self.nodes[1].getbalance() + self.nodes[2].getbalance() + self.nodes[3].getbalance()
         logging.info("Node0 balance:" + str(self.nodes[0].getbalance()))
         logging.info("Node1 balance:" + str(self.nodes[1].getbalance()))
         logging.info("Node2 balance:" + str(self.nodes[2].getbalance()))
         logging.info("Node3.balance:" + str(self.nodes[3].getbalance()))
 
-        logging.info("Total: " + str(total2))
+        logging.info("Backup Wallet Total: " + str(total2))
 
+        # balances should equal the auto backup balances
+        assert_equal(self.nodes[0].getbalance(), balance0)
+        assert_equal(self.nodes[1].getbalance(), balance1)
+        assert_equal(self.nodes[2].getbalance(), balance2)
+        assert_equal(self.nodes[3].getbalance(), balance3)
+        assert_equal(total,total2)
 
-
-        # Test Node4 auto backup wallet does NOT exist: tmpdir + "/node3/wallet.dat.auto.114.bak"
+        # Test Node4 auto backup wallet does NOT exist: tmpdir + "/node4/wallet.dat.auto.114.bak"
         # when -disablewallet is enabled then no backup file should be created and graceful exit happens
         # without causing a runtime error
         node4backupexists = 0
-        if os.path.isfile(tmpdir + "/node4/wallet.dat.auto.114.bak"):
+        if os.path.isfile(tmpdir + "/node4/regtest/wallet.dat.auto.%s.bak"%(backupblock)):
             node4backupexists = 1
             logging.info("Error: Auto backup performed on node4 with -disablewallet!")
-
 
         # Test Node4 debug.log contains a conflict message - length test should be > 0
         debugmsg_list = search_file(tmpdir + "/node4/regtest/debug.log","-disablewallet and -autobackupwalletpath conflict")
 
-        # balances should equal the 114 block auto backup balances
-        assert_equal(self.nodes[0].getbalance(), balance0)
-        assert_equal(self.nodes[1].getbalance(), balance1)
-        assert_equal(self.nodes[2].getbalance(), balance2)
         assert_equal(0,node4backupexists)
         assert_greater_than(len(debugmsg_list),0)
 
