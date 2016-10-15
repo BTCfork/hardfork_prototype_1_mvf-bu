@@ -1,5 +1,6 @@
 # Copyright (c) 2014-2015 The Bitcoin Core developers
 # Copyright (c) 2015-2016 The Bitcoin Unlimited developers
+# Copyright (c) 2016 The Bitcoin developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 #
@@ -230,6 +231,10 @@ def start_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=
     # RPC tests still depend on free transactions
     args = [ binary, "-datadir="+datadir, "-server", "-keypool=1", "-discover=0", "-rest", "-blockprioritysize=50000" ]
     if extra_args is not None: args.extend(extra_args)
+    if os.getenv("PYTHON_DEBUG", ""):
+        for i in range(len(args)):
+            print "bitcoind args: " + args[i]
+
     bitcoind_processes[i] = subprocess.Popen(args)
     devnull = open(os.devnull, "w")
     if os.getenv("PYTHON_DEBUG", ""):
@@ -259,6 +264,18 @@ def start_nodes(num_nodes, dirname, extra_args=None, rpchost=None, binary=None):
 
 def log_filename(dirname, n_node, logname):
     return os.path.join(dirname, "node"+str(n_node), "regtest", logname)
+
+# MVHF-BU begin: Function used for searching text files such as debug.log
+def search_file(searchfilepath, searchtext):
+    """Pass in the file to search and the search text and this returns a list of lines in the file which include the search text. """
+    searchfile = open(searchfilepath, "r")
+    searchlines=list()
+    for line in searchfile:
+        if searchtext in line: searchlines.append(line)
+    searchfile.close()
+    return searchlines
+# MVHF-BU end
+
 
 def stop_node(node, i):
     node.stop()
