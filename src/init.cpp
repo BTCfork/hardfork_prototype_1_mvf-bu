@@ -39,6 +39,7 @@
 #include "utilstrencodings.h"
 #include "validationinterface.h"
 #include "unlimited.h"
+#include "mvf-bu.h"  // MVF-BU
 #ifdef ENABLE_WALLET
 #include "wallet/db.h"
 #include "wallet/wallet.h"
@@ -402,9 +403,6 @@ std::string HelpMessage(HelpMessageMode mode)
 
 #ifdef ENABLE_WALLET
     strUsage += HelpMessageGroup(_("Wallet options:"));
-
-    strUsage += HelpMessageOpt("-autobackupwalletpath=<path>", _("Default: Enabled. Automatically backup the wallet to the autobackupwalletfile path after the block specified becomes the best block (-autobackupblock)."));
-    strUsage += HelpMessageOpt("-autobackupblock=<n>", _("Default: MVHF-BU FORKBLOCK-1. Specify the block number that triggers the automatic wallet backup."));
     strUsage += HelpMessageOpt("-disablewallet", _("Do not load the wallet and disable wallet RPC calls"));
     strUsage += HelpMessageOpt("-keypool=<n>", strprintf(_("Set key pool size to <n> (default: %u)"), DEFAULT_KEYPOOL_SIZE));
     strUsage += HelpMessageOpt("-fallbackfee=<amt>", strprintf(_("A fee rate (in %s/kB) that will be used when fee estimation has insufficient data (default: %s)"),
@@ -551,6 +549,7 @@ std::string HelpMessage(HelpMessageMode mode)
     // END 0.11.2 options
 
     strUsage += UnlimitedCmdLineHelp();
+    strUsage += ForkCmdLineHelp();  // MVF-BU (MVHF-BU-DES-TRIG-8)
 
     return strUsage;
 }
@@ -789,10 +788,12 @@ void InitParameterInteraction()
 #endif
     }
 
-    if (GetArg("-autobackupwalletpath","") != "" && (GetBoolArg("-disablewallet", false)) ) {
-    	LogPrintf("%s: parameter interaction: -disablewallet and -autobackupwalletpath conflict so automatic backup disabled.=0\n");
-
+    // MVF-BU begin warn user at start of log file if -disablewallet has turned off the wallet auto backup
+    if (GetArg("-autobackupwalletpath","") != "" && (GetBoolArg("-disablewallet", false)) )
+    {
+        LogPrintf("%s: parameter interaction: -disablewallet and -autobackupwalletpath conflict so automatic backup disabled.\n");
     }
+    // MVF-BU end
 
     // Forcing relay from whitelisted hosts implies we will accept relays from them in the first place.
     if (GetBoolArg("-whitelistforcerelay", DEFAULT_WHITELISTFORCERELAY)) {
@@ -1571,6 +1572,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
             else
                 pindexRescan = chainActive.Genesis();
         }
+        // MVF-BU TODO: do we need code here to handle fork-active case?
         if (chainActive.Tip() && chainActive.Tip() != pindexRescan)
         {
             //We can't rescan beyond non-pruned blocks, stop and throw an error
@@ -1662,6 +1664,15 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
         while (!fRequestShutdown && chainActive.Tip() == NULL)
             MilliSleep(10);
     }
+    // MVF-BU begin
+    else {
+        if (chainActive.Height() >= Params().GetConsensus().nMVFActivateForkHeight)
+        {
+            LogPrintf("MVF: AppInit2: ChainActive.Tip() exceeds fork activation height - do stuff?\n");
+            // MVF-BU TODO: perform any init actions needed
+        }
+    }
+    // MVF-BU end
 
     // ********************************************************* Step 11: start node
 
