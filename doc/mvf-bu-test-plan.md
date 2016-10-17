@@ -418,11 +418,22 @@ this must be clearly documented, with justification, in drafts and
 final versions of the MVF-BU release notes.
 
 
+
 ##8. Features not tested <a id="8-features-not-tested"></a>
 
 Any features which are implemented but not tested must be clearly
 documented in this section, with justification, and mentioned in drafts
 and final versions of the MVF-BU release notes.
+
+
+###8.1 Safe shutdown on failure to backup wallet
+
+Currently the method of exiting (runtime error) cannot be caught by
+the qa test framework, making the expected shutdown of a client
+not possible to test in the automatic test.
+
+It might be necessary to change how the node exits, or to adapt the
+test framework to be able to handle this case.
 
 
 ##9. Risks and mitigations <a id="9-risks-and-mitigations"></a>
