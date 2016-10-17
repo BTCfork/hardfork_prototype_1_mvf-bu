@@ -22,6 +22,7 @@
 #include "splashscreen.h"
 #include "utilitydialog.h"
 #include "winshutdownmonitor.h"
+#include "mvf-bu.h" // MVF-BU
 
 #ifdef ENABLE_WALLET
 #include "paymentserver.h"
@@ -624,7 +625,6 @@ int main(int argc, char *argv[])
     QApplication::setApplicationName(networkStyle->getAppName());
     // Re-initialize translations after changing application name (language in network-specific settings can be different)
     initTranslations(qtTranslatorBase, qtTranslator, translatorBase, translator);
-
 #ifdef ENABLE_WALLET
     /// 8. URI IPC sending
     // - Do this early as we don't want to bother initializing if we are just calling IPC
@@ -666,6 +666,7 @@ int main(int argc, char *argv[])
         app.createSplashScreen(networkStyle.data());
 
     UnlimitedSetup();
+    ForkSetup(Params());  // MVF-BU
 
     try
     {

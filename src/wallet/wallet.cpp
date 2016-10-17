@@ -26,6 +26,7 @@
 #include "txmempool.h"
 #include "util.h"
 #include "utilmoneystr.h"
+#include "mvf-bu.h"  // MVF-BU
 
 #include <assert.h>
 
@@ -1046,52 +1047,51 @@ CAmount CWallet::GetChange(const CTransaction& tx) const
 
 
 
-// MVHF-BU Auto wallet backup
+// MVF-BU begin auto wallet backup procedure (MVHF-BU-DES-WABU-4)
 bool CWallet::BackupWalletAuto(const std::string& strDest, int BackupBlock)
 {
     boost::filesystem::path pathBackupWallet = strDest;
 
     //if the backup destination is blank
     if (strDest == "")
-    	// then prefix it with the existing data dir and wallet filename
-    	pathBackupWallet = GetDataDir() / strprintf("%s.%s",strWalletFile,"auto.@.bak");
-
+    {
+        // then prefix it with the existing data dir and wallet filename
+        pathBackupWallet = GetDataDir() / strprintf("%s.%s",strWalletFile, autoWalletBackupSuffix);
+    }
     else {
         if (pathBackupWallet.is_relative())
         	// prefix existing data dir
         	pathBackupWallet = GetDataDir() / pathBackupWallet;
 
         if (pathBackupWallet.extension() == "")
-        	// no custom filename so append the default filename
-        	pathBackupWallet /= strprintf("%s.%s",strWalletFile,"auto.@.bak");
+            // no custom filename so append the default filename
+            pathBackupWallet /= strprintf("%s.%s",strWalletFile, autoWalletBackupSuffix);
 
         if (pathBackupWallet.branch_path() != "")
-			// create directories if they don't exist
-			boost::filesystem::create_directories(pathBackupWallet.branch_path());
-
+            // create directories if they don't exist
+            boost::filesystem::create_directories(pathBackupWallet.branch_path());
     }
-
 
     std::string strBackupFile = pathBackupWallet.string();
 
-	// replace # with BackupBlock number
+    // replace # with BackupBlock number
     boost::replace_all(strBackupFile,"@", boost::to_string_stub(BackupBlock));
     //LogPrintf("DEBUG: strBackupFile=%s\n",strBackupFile);
 
-	//skip if already done
+    // skip if already done
     if (!boost::filesystem::exists(strBackupFile))
-	{
-		// Call common backup wallet function
-		if (BackupWallet(*this, strBackupFile))
-			LogPrintf("Wallet automatically backed up to: %s\n",strBackupFile);
-		else
-			// backup failed
-			return false;
-	}
+    {
+        // call common backup wallet function
+        if (BackupWallet(*this, strBackupFile))
+            LogPrintf("Wallet automatically backed up to: %s\n",strBackupFile);
+        else
+            // backup failed
+            return false;
+    }
 
-	return true;
+    return true;
 }
-
+// MVF-BU end
 
 
 int64_t CWalletTx::GetTxTime() const

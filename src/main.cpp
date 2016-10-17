@@ -40,6 +40,7 @@
 #include "validationinterface.h"
 #include "versionbits.h"
 #include "unlimited.h" // This is here because many files include util, so hopefully it will minimize diffs
+#include "mvf-bu.h"    // MVF-BU
 
 #include <sstream>
 #include <algorithm>
@@ -2787,36 +2788,47 @@ void static UpdateTip(CBlockIndex *pindexNew) {
 
     cvBlockChange.notify_all();
 
-    // MVHF-BU
-    const int MVHF_FORK_BLOCK = 50000;
-
-    //// 	Auto Backup At Block 		////
-    // Test autobackupwalletpath argument
+    // MVF-BU begin MVHF-BU-DES-WABU-3
+    // check if we need to do wallet auto backup at pre-fork block
     if (!fAutoBackupDone)
     {
-    	std::string strWalletBackupFile = GetArg("-autobackupwalletpath", "");
+        std::string strWalletBackupFile = GetArg("-autobackupwalletpath", "");
+	    int BackupBlock = GetArg("-autobackupblock", FinalActivateForkHeight - 1);
 
-		int BackupBlock = GetArg("-autobackupblock", MVHF_FORK_BLOCK - 1);
+        //LogPrintf("MVF DEBUG: autobackupwalletpath=%s\n",strWalletBackupFile);
+        //LogPrintf("MVF DEBUG: autobackupblock=%d\n",BackupBlock);
 
-		//LogPrintf("DEBUG: autobackupwalletpath=%s\n",strWalletBackupFile);
-		//LogPrintf("DEBUG: autobackupblock=%d\n",BackupBlock);
-
-		if (GetBoolArg("-disablewallet", false)) {
-			LogPrintf("-disablewallet and -autobackupwalletpath conflict so automatic backup disabled.");
-			fAutoBackupDone = true;
-		}
-		else
-			// Auto Backup defined so check block height
-			if (chainActive.Height() >= BackupBlock )
-			{
-				if (GetMainSignals().BackupWalletAuto(strWalletBackupFile, BackupBlock))
-					fAutoBackupDone = true;
-				else
-					throw std::runtime_error("CWallet::BackupWalletAuto() : Auto wallet backup failed!");
-
-			}
+        if (GetBoolArg("-disablewallet", false))
+        {
+            LogPrintf("MVF: -disablewallet and -autobackupwalletpath conflict so automatic backup disabled.");
+            fAutoBackupDone = true;
+        }
+        else {
+            // Auto Backup defined so check block height
+            if (chainActive.Height() >= BackupBlock )
+            {
+                if (GetMainSignals().BackupWalletAuto(strWalletBackupFile, BackupBlock))
+                    fAutoBackupDone = true;
+                else
+                    // shutdown in case of wallet backup failure (MVHF-BU-DES-WABU-5)
+                    // MVF-BU TODO: investigate if this is safe in terms of wallet flushing/closing or if more needs to be done
+                    throw std::runtime_error("CWallet::BackupWalletAuto() : Auto wallet backup failed!");
+            }
+        }
 
     } // if (!fAutoBackupDone)
+
+    // if trigger block height reached, perform fork activation actions (MVHF-BU-DES-TRIG-6)
+    if (chainActive.Height() == FinalActivateForkHeight)
+    {
+        // MVF-BU TODO: decide on above condition
+        // if preparations are only made after block has been accepted, then only FinalActivateForkHeight+1 can be new rules
+        // otherwise have to activate fork at end of block before FinalActivateForkHeight
+        ActivateFork();
+    }
+
+    LogPrintf("MVF: isMVFHardForkActive=%B\n", isMVFHardForkActive);
+    // MVF-BU end
 
     // Check the version of the last 100 blocks to see if we need to upgrade:
     static bool fWarned = false;
@@ -4131,6 +4143,13 @@ bool static LoadBlockIndexDB()
     if (it == mapBlockIndex.end())
         return true;
     chainActive.SetTip(it->second);
+
+    // MVF-BU begin
+    if (chainActive.Height() > FinalActivateForkHeight)
+    {
+        ActivateFork();
+    }
+    // MVF-BU end
 
     PruneBlockIndexCandidates();
 
