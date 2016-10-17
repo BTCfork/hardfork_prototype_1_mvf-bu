@@ -53,8 +53,11 @@ several automated tests along the lines of software requirements.
 
 ###4.1 Wallet backup tests
 
-This section gives some notes on the testing of the wallet backup 
+This section gives some notes on the testing of the wallet backup
 requirements (REQ-10-*).
+
+The wallet requirements are tested by the regression test
+`qa/rpc-tests/walletbackupauto.py`.
 
 
 ###4.1.1 SW-REQ-10-1
@@ -99,3 +102,7 @@ It is recommended that the test check for the presence of log messages
 The test should verify that the client safely shuts down if the backup
 fails (e.g. because the path to which to write is read-only).
 
+Currently the implementation shuts down using a runtime error.
+It is not certain yet how safe this is for the wallet integrity, and
+the qa test framework does not easily allow catching an expected
+runtime error (the test is stopped if a node shuts down like this).
