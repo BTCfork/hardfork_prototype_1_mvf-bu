@@ -33,6 +33,7 @@ HARDFORK_PORT_REGTEST = 19555,       // default post-fork port on local regressi
 
 // MVHF-BU-DES-CSIG-1 - signature change parameter defaults
 HARDFORK_SIGHASH_ID = 0x777000,      // 3 byte fork id that is left-shifted by 8 bits and then ORed with the SIGHASHes
+MAX_HARDFORK_SIGHASH_ID = 0xFFFFFF,  // fork id may not exceed maximum representable in 3 bytes
 };
 
 // MVHF-BU-DES-NSEP-1 - network separation parameter defaults
