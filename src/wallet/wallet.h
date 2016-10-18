@@ -1,6 +1,7 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2015 The Bitcoin Core developers
 // Copyright (c) 2015-2016 The Bitcoin Unlimited developers
+// Copyright (c) 2016 The Bitcoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -27,6 +28,7 @@
 #include <vector>
 
 #include <boost/shared_ptr.hpp>
+
 
 /**
  * Settings
@@ -405,6 +407,7 @@ public:
     bool RelayWalletTransaction();
 
     std::set<uint256> GetConflicts() const;
+
 };
 
 
@@ -571,6 +574,9 @@ public:
 
     const CWalletTx* GetWalletTx(const uint256& hash) const;
 
+    // MVHF-BU
+    bool BackupWalletAuto(const std::string& strDest, int BackupBlock);
+
     //! check whether we are allowed to upgrade (or already support) to the named feature
     bool CanSupportFeature(enum WalletFeature wf) { AssertLockHeld(cs_wallet); return nWalletMaxVersion >= wf; }
 
@@ -713,6 +719,7 @@ public:
     CAmount GetDebit(const CTransaction& tx, const isminefilter& filter) const;
     CAmount GetCredit(const CTransaction& tx, const isminefilter& filter) const;
     CAmount GetChange(const CTransaction& tx) const;
+
     void SetBestChain(const CBlockLocator& loc);
 
     DBErrors LoadWallet(bool& fFirstRunRet);

@@ -2,6 +2,7 @@
 // Copyright (c) 2009-2015 The Bitcoin Core developers
 // Copyright (c) 2015-2016 The Bitcoin Unlimited developers
 // Copyright (c) 2016 Bitcoin Unlimited developers
+// Copyright (c) 2016 The Bitcoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -39,6 +40,7 @@
 #include "validationinterface.h"
 #include "versionbits.h"
 #include "unlimited.h" // This is here because many files include util, so hopefully it will minimize diffs
+#include "mvf-bu.h"    // MVF-BU
 
 #include <sstream>
 #include <algorithm>
@@ -82,6 +84,7 @@ size_t nCoinCacheUsage = 5000 * 300;
 uint64_t nPruneTarget = 0;
 bool fAlerts = DEFAULT_ALERTS;
 bool fEnableReplacement = DEFAULT_ENABLE_REPLACEMENT;
+bool fAutoBackupDone = false; // MVHF-BU
 
 /** Fees smaller than this (in satoshi) are considered zero fee (for relaying, mining and transaction creation) */
 CFeeRate minRelayTxFee = CFeeRate(DEFAULT_MIN_RELAY_TX_FEE);
@@ -95,6 +98,14 @@ map<uint256, COrphanTx> mapOrphanTransactions GUARDED_BY(cs_orphancache);
 map<uint256, set<uint256> > mapOrphanTransactionsByPrev GUARDED_BY(cs_orphancache);
 void EraseOrphansFor(NodeId peer) EXCLUSIVE_LOCKS_REQUIRED(cs_orphancache);
 
+// BU: start block download at low numbers in case our peers are slow when we start  
+/** Number of blocks that can be requested at any given time from a single peer. */
+static unsigned int MAX_BLOCKS_IN_TRANSIT_PER_PEER = 1;       
+/** Size of the "block download window": how far ahead of our current height do we fetch?
+ *  Larger windows tolerate larger download speed differences between peer, but increase the potential
+ *  degree of disordering of blocks on disk (which make reindexing and in the future perhaps pruning
+ *  harder). We'll probably want to make this a per-peer adaptive value at some point. */
+static unsigned int BLOCK_DOWNLOAD_WINDOW = 8;
 
 /**
  * Returns true if there are nRequired or more blocks of minVersion or above
@@ -397,6 +408,7 @@ bool MarkBlockAsReceived(const uint256& hash) {
             MAX_BLOCKS_IN_TRANSIT_PER_PEER = 1;
             BLOCK_DOWNLOAD_WINDOW = 8;
         }
+
         LogPrint("thin", "Received block %s in %.2f seconds\n", hash.ToString(), nResponseTime);
         LogPrint("thin", "Average block response time is %.2f seconds\n", avgResponseTime);
         LogPrintf("BLOCK_DOWNLOAD_WINDOW is %d MAX_BLOCKS_IN_TRANSIT_PER_PEER is %d\n", BLOCK_DOWNLOAD_WINDOW, MAX_BLOCKS_IN_TRANSIT_PER_PEER);
@@ -2785,6 +2797,48 @@ void static UpdateTip(CBlockIndex *pindexNew) {
 
     cvBlockChange.notify_all();
 
+    // MVF-BU begin MVHF-BU-DES-WABU-3
+    // check if we need to do wallet auto backup at pre-fork block
+    if (!fAutoBackupDone)
+    {
+        std::string strWalletBackupFile = GetArg("-autobackupwalletpath", "");
+	    int BackupBlock = GetArg("-autobackupblock", FinalActivateForkHeight - 1);
+
+        //LogPrintf("MVF DEBUG: autobackupwalletpath=%s\n",strWalletBackupFile);
+        //LogPrintf("MVF DEBUG: autobackupblock=%d\n",BackupBlock);
+
+        if (GetBoolArg("-disablewallet", false))
+        {
+            LogPrintf("MVF: -disablewallet and -autobackupwalletpath conflict so automatic backup disabled.");
+            fAutoBackupDone = true;
+        }
+        else {
+            // Auto Backup defined so check block height
+            if (chainActive.Height() >= BackupBlock )
+            {
+                if (GetMainSignals().BackupWalletAuto(strWalletBackupFile, BackupBlock))
+                    fAutoBackupDone = true;
+                else
+                    // shutdown in case of wallet backup failure (MVHF-BU-DES-WABU-5)
+                    // MVF-BU TODO: investigate if this is safe in terms of wallet flushing/closing or if more needs to be done
+                    throw std::runtime_error("CWallet::BackupWalletAuto() : Auto wallet backup failed!");
+            }
+        }
+
+    } // if (!fAutoBackupDone)
+
+    // if trigger block height reached, perform fork activation actions (MVHF-BU-DES-TRIG-6)
+    if (chainActive.Height() == FinalActivateForkHeight)
+    {
+        // MVF-BU TODO: decide on above condition
+        // if preparations are only made after block has been accepted, then only FinalActivateForkHeight+1 can be new rules
+        // otherwise have to activate fork at end of block before FinalActivateForkHeight
+        ActivateFork();
+    }
+
+    LogPrintf("MVF: isMVFHardForkActive=%B\n", isMVFHardForkActive);
+    // MVF-BU end
+
     // Check the version of the last 100 blocks to see if we need to upgrade:
     static bool fWarned = false;
     if (!IsInitialBlockDownload())
@@ -3660,10 +3714,10 @@ static bool AcceptBlockHeader(const CBlockHeader& block, CValidationState& state
         CBlockIndex* pindexPrev = NULL;
         BlockMap::iterator mi = mapBlockIndex.find(block.hashPrevBlock);
         if (mi == mapBlockIndex.end())
-            return state.DoS(10, error("%s: prev block not found", __func__), 0, "bad-prevblk");
+	  return state.DoS(10, error("%s: previous block %s not found while accepting %s", __func__,block.hashPrevBlock.ToString(),hash.ToString()), 0, "bad-prevblk");
         pindexPrev = (*mi).second;
         if (pindexPrev->nStatus & BLOCK_FAILED_MASK)
-            return state.DoS(100, error("%s: prev block invalid", __func__), REJECT_INVALID, "bad-prevblk");
+            return state.DoS(100, error("%s: previous block invalid", __func__), REJECT_INVALID, "bad-prevblk");
 
         assert(pindexPrev);
         if (fCheckpointsEnabled && !CheckIndexAgainstCheckpoint(pindexPrev, state, chainparams, hash))
@@ -3792,7 +3846,10 @@ bool ProcessNewBlock(CValidationState& state, const CChainParams& chainparams, c
         }
         CheckBlockIndex(chainparams.GetConsensus());
         if (!ret)
+	  {
+            // BU TODO: if block comes out of order (before its parent) this will happen.  We should cache the block until the parents arrive.
             return error("%s: AcceptBlock FAILED", __func__);
+	  }
     }
 
     if (!ActivateBestChain(state, chainparams, pblock))
@@ -4098,6 +4155,13 @@ bool static LoadBlockIndexDB()
     if (it == mapBlockIndex.end())
         return true;
     chainActive.SetTip(it->second);
+
+    // MVF-BU begin
+    if (chainActive.Height() > FinalActivateForkHeight)
+    {
+        ActivateFork();
+    }
+    // MVF-BU end
 
     PruneBlockIndexCandidates();
 
@@ -5523,7 +5587,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
                 vector<CInv> vGetData;
                 // Download as much as possible, from earliest to latest.
                 BOOST_REVERSE_FOREACH(CBlockIndex *pindex, vToFetch) {
-                    if (nodestate->nBlocksInFlight >= MAX_BLOCKS_IN_TRANSIT_PER_PEER) {
+                    if (nodestate->nBlocksInFlight >= (int)MAX_BLOCKS_IN_TRANSIT_PER_PEER) {
                         // Can't download any more from this peer
                         break;
                     }
@@ -6635,7 +6699,7 @@ bool SendMessages(CNode* pto)
         // Message: getdata (blocks)
         //
         vector<CInv> vGetData;
-        if (!pto->fDisconnect && !pto->fClient && (fFetch || !IsInitialBlockDownload()) && state.nBlocksInFlight < MAX_BLOCKS_IN_TRANSIT_PER_PEER) {
+        if (!pto->fDisconnect && !pto->fClient && (fFetch || !IsInitialBlockDownload()) && state.nBlocksInFlight < (int)MAX_BLOCKS_IN_TRANSIT_PER_PEER) {
             vector<CBlockIndex*> vToDownload;
             NodeId staller = -1;
             FindNextBlocksToDownload(pto->GetId(), MAX_BLOCKS_IN_TRANSIT_PER_PEER - state.nBlocksInFlight, vToDownload, staller);

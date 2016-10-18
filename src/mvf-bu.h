@@ -8,15 +8,24 @@
 
 #include "protocol.h"
 
+class CChainParams;
+
+extern int FinalActivateForkHeight;         // MVHF-BU-DES-TRIG-4
+extern bool isMVFHardForkActive;            // MVHF-BU-DES-TRIG-5
+extern std::string autoWalletBackupSuffix;  // MVHF-BU-DES-WABU-1
+
+
 // default values that can be easily put into an enum
 enum {
 // MVHF-BU-DES-TRIG-1 - trigger related parameter defaults
+// MVF-BU TODO: choose values with some consideration instead of dummy values
 HARDFORK_HEIGHT_MAINNET =  666666,   // operational network trigger height
 HARDFORK_HEIGHT_TESTNET = 9999999,   // public test network trigger height
 HARDFORK_HEIGHT_NOLNET  = 8888888,   // BU public no-limit test network  trigger height
-HARDFORK_HEIGHT_REGTEST =    1000,   // regression test network (local)  trigger height
+HARDFORK_HEIGHT_REGTEST =     100,   // regression test network (local)  trigger height
 
 // MVHF-BU-DES-NSEP-1 - network separation parameter defaults
+// MVF-BU TODO: re-check that these port values could be used
 HARDFORK_PORT_MAINNET = 9442,        // default post-fork port on operational network (mainnet)
 HARDFORK_PORT_TESTNET = 9443,        // default post-fork port on public test network (testnet)
 HARDFORK_PORT_NOLNET  = 9444,        // default post-fork port on BU public no-limit test network (nolnet)
@@ -46,5 +55,11 @@ static const uint256 HARDFORK_POWRESET_MAINNET = uint256S("00007ffffffffffffffff
                      HARDFORK_POWRESET_TESTNET = uint256S("007fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),  // testnet
                      HARDFORK_POWRESET_NOLNET  = uint256S("3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),  // nolnet
                      HARDFORK_POWRESET_REGTEST = uint256S("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");  // regtestnet
+
+
+extern std::string ForkCmdLineHelp();  // fork-specific command line option help (MVHF-BU-DES-TRIG-8)
+extern void ForkSetup(const CChainParams& chainparams);  // actions to perform at program setup (parameter validation etc.)
+extern void ActivateFork(void);    // actions to perform at fork triggering (MVHF-BU-DES-TRIG-6)
+extern void DeactivateFork(void);  // actions to revert if reorg deactivates fork (MVHF-BU-DES-TRIG-7)
 
 #endif

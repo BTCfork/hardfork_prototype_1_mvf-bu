@@ -1,6 +1,7 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2015 The Bitcoin Core developers
 // Copyright (c) 2015-2016 The Bitcoin Unlimited developers
+// Copyright (c) 2016 The Bitcoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -25,6 +26,7 @@
 #include "txmempool.h"
 #include "util.h"
 #include "utilmoneystr.h"
+#include "mvf-bu.h"  // MVF-BU
 
 #include <assert.h>
 
@@ -290,6 +292,9 @@ bool CWallet::ChangeWalletPassphrase(const SecureString& strOldWalletPassphrase,
 
     return false;
 }
+
+
+
 
 void CWallet::SetBestChain(const CBlockLocator& loc)
 {
@@ -1039,6 +1044,55 @@ CAmount CWallet::GetChange(const CTransaction& tx) const
     }
     return nChange;
 }
+
+
+
+// MVF-BU begin auto wallet backup procedure (MVHF-BU-DES-WABU-4)
+bool CWallet::BackupWalletAuto(const std::string& strDest, int BackupBlock)
+{
+    boost::filesystem::path pathBackupWallet = strDest;
+
+    //if the backup destination is blank
+    if (strDest == "")
+    {
+        // then prefix it with the existing data dir and wallet filename
+        pathBackupWallet = GetDataDir() / strprintf("%s.%s",strWalletFile, autoWalletBackupSuffix);
+    }
+    else {
+        if (pathBackupWallet.is_relative())
+        	// prefix existing data dir
+        	pathBackupWallet = GetDataDir() / pathBackupWallet;
+
+        if (pathBackupWallet.extension() == "")
+            // no custom filename so append the default filename
+            pathBackupWallet /= strprintf("%s.%s",strWalletFile, autoWalletBackupSuffix);
+
+        if (pathBackupWallet.branch_path() != "")
+            // create directories if they don't exist
+            boost::filesystem::create_directories(pathBackupWallet.branch_path());
+    }
+
+    std::string strBackupFile = pathBackupWallet.string();
+
+    // replace # with BackupBlock number
+    boost::replace_all(strBackupFile,"@", boost::to_string_stub(BackupBlock));
+    //LogPrintf("DEBUG: strBackupFile=%s\n",strBackupFile);
+
+    // skip if already done
+    if (!boost::filesystem::exists(strBackupFile))
+    {
+        // call common backup wallet function
+        if (BackupWallet(*this, strBackupFile))
+            LogPrintf("Wallet automatically backed up to: %s\n",strBackupFile);
+        else
+            // backup failed
+            return false;
+    }
+
+    return true;
+}
+// MVF-BU end
+
 
 int64_t CWalletTx::GetTxTime() const
 {
@@ -3058,3 +3112,5 @@ bool CMerkleTx::AcceptToMemoryPool(bool fLimitFree, bool fRejectAbsurdFee)
     CValidationState state;
     return ::AcceptToMemoryPool(mempool, state, *this, fLimitFree, NULL, false, fRejectAbsurdFee);
 }
+
+
