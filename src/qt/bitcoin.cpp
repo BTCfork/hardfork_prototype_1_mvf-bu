@@ -673,7 +673,7 @@ int main(int argc, char *argv[])
         app.createWindow(networkStyle.data());
         app.requestInitialize();
 #if defined(Q_OS_WIN) && QT_VERSION >= 0x050000
-        WinShutdownMonitor::registerShutdownBlockReason(QObject::tr("Bitcoin didn't yet exit safely..."), (HWND)app.getMainWinId());
+        WinShutdownMonitor::registerShutdownBlockReason(QObject::tr("Bitcoin MVF-BU didn't yet exit safely..."), (HWND)app.getMainWinId());  // MVF-BU client name change (MVHF-BU-SW-REQ-11-1 / MVHF-BU-DES-IDME-2)
 #endif
         app.exec();
         app.requestShutdown();
