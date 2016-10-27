@@ -27,6 +27,7 @@
 #include "validationinterface.h"
 #include "version.h"
 #include "stat.h"
+#include "tweak.h"
 
 #include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
@@ -37,77 +38,74 @@
 
 using namespace std;
 
-set<uint256> setPreVerifiedTxHash;
-set<uint256> setUnVerifiedOrphanTxHash;
-CCriticalSection cs_xval;
-
 extern CTxMemPool mempool; // from main.cpp
 
-uint64_t maxGeneratedBlock = DEFAULT_MAX_GENERATED_BLOCK_SIZE;
-unsigned int excessiveBlockSize = DEFAULT_EXCESSIVE_BLOCK_SIZE;
-unsigned int excessiveAcceptDepth = DEFAULT_EXCESSIVE_ACCEPT_DEPTH;
-unsigned int maxMessageSizeMultiplier = DEFAULT_MAX_MESSAGE_SIZE_MULTIPLIER;
-int nMaxOutConnections = DEFAULT_MAX_OUTBOUND_CONNECTIONS;
-
-uint32_t blockVersion = 0;  // Overrides the mined block version if non-zero
-
-std::vector<std::string> BUComments = std::vector<std::string>();
-std::string minerComment;
-
-// Variables for traffic shaping
-CLeakyBucket receiveShaper(DEFAULT_MAX_RECV_BURST, DEFAULT_AVE_RECV);
-CLeakyBucket sendShaper(DEFAULT_MAX_SEND_BURST, DEFAULT_AVE_SEND);
-boost::chrono::steady_clock CLeakyBucket::clock;
 bool IsTrafficShapingEnabled();
 
-// Variables for statistics tracking, must be before the "requester" singleton instantiation
-const char* sampleNames[] = { "sec10", "min5", "hourly", "daily","monthly"};
-int operateSampleCount[] = { 30,       12,   24,  30 };
-int interruptIntervals[] = { 30,       30*12,   30*12*24,   30*12*24*30 };
+std::string ExcessiveBlockValidator(const unsigned int& value,unsigned int* item,bool validate)
+{
+  if (validate)
+    {
+      if (value < maxGeneratedBlock) 
+	{
+        std::ostringstream ret;
+        ret << "Sorry, your maximum mined block (" << maxGeneratedBlock << ") is larger than your proposed excessive size (" << value << ").  This would cause you to orphan your own blocks.";    
+        return ret.str();
+	}
+    }
+  else  // Do anything to "take" the new value
+    {
+      // nothing needed
+    }
+  return std::string();
+}
 
-boost::posix_time::milliseconds statMinInterval(10000);
-boost::asio::io_service stat_io_service __attribute__((init_priority(101)));
+std::string OutboundConnectionValidator(const int& value,int* item,bool validate)
+{
+  if (validate)
+    {
+      if ((value < 0)||(value > 10000))  // sanity check
+	{
+        return "Invalid Value";
+	}
+      if (value < *item)
+	{
+	  return "This field cannot be reduced at run time since that would kick out existing connections";
+	}
+    }
+  else  // Do anything to "take" the new value
+    {
+      if (value < *item)  // note that now value is the old value and *item has been set to the new.
+        {
+	  int diff = *item - value;
+          if (semOutboundAddNode)  // Add the additional slots to the outbound semaphore
+            for (int i=0; i<diff; i++)
+              semOutboundAddNode->post();
+	}
+    }
+  return std::string();
+}
 
-CStatMap statistics __attribute__((init_priority(102)));
+std::string SubverValidator(const std::string& value,std::string* item,bool validate)
+{
+  if (validate)
+    {
+    if (value.size() > MAX_SUBVERSION_LENGTH) 
+    {
+      return(std::string("Subversion string is too long")); 
+    }
+  }
+  return std::string();
+}
 
-vector<CNode*> vNodes __attribute__((init_priority(109)));
-CCriticalSection cs_vNodes __attribute__((init_priority(109)));
-list<CNode*> vNodesDisconnected __attribute__((init_priority(109)));
-CSemaphore*  semOutbound = NULL;
-CSemaphore*  semOutboundAddNode = NULL; // BU: separate semaphore for -addnodes
-CNodeSignals g_signals __attribute__((init_priority(109)));
-CNetCleanup cnet_instance_cleanup __attribute__((init_priority(110)));  // Must construct after statistics, because CNodes use statistics.  In particular, seg fault on osx during exit because constructor/destructor order is not guaranteed between modules in clang.
-
-
-CStatHistory<unsigned int, MinValMax<unsigned int> > txAdded; //"memPool/txAdded");
-CStatHistory<uint64_t, MinValMax<uint64_t> > poolSize; // "memPool/size",STAT_OP_AVE);
-CStatHistory<uint64_t > recvAmt; 
-CStatHistory<uint64_t > sendAmt; 
-
-// Thin block statistics need to be located here to ensure that the "statistics" global variable is constructed first
-CStatHistory<uint64_t> CThinBlockStats::nOriginalSize("thin/blockSize", STAT_OP_SUM | STAT_KEEP);
-CStatHistory<uint64_t> CThinBlockStats::nThinSize("thin/thinSize", STAT_OP_SUM | STAT_KEEP);
-CStatHistory<uint64_t> CThinBlockStats::nBlocks("thin/numBlocks", STAT_OP_SUM | STAT_KEEP);
-CStatHistory<uint64_t> CThinBlockStats::nMempoolLimiterBytesSaved("nSize", STAT_OP_SUM | STAT_KEEP);
-CStatHistory<uint64_t> CThinBlockStats::nTotalBloomFilterBytes("nSizeBloom", STAT_OP_SUM | STAT_KEEP);
-
-// Expedited blocks
-std::vector<CNode*> xpeditedBlk; // (256,(CNode*)NULL);    // Who requested expedited blocks from us
-std::vector<CNode*> xpeditedBlkUp; //(256,(CNode*)NULL);  // Who we requested expedited blocks from
-std::vector<CNode*> xpeditedTxn; // (256,(CNode*)NULL);  
 
 #define NUM_XPEDITED_STORE 10
 uint256 xpeditedBlkSent[NUM_XPEDITED_STORE];  // Just save the last few expedited sent blocks so we don't resend (uint256 zeros on construction)
 int xpeditedBlkSendPos=0;
 
+// Push all transactions in the mempool to another node
 void UnlimitedPushTxns(CNode* dest);
 
-// BUIP010 Xtreme Thinblocks Variables
-std::map<uint256, uint64_t> mapThinBlockTimer;
-bool fIsChainNearlySyncd;
-
-//! The largest block size that we have seen since startup
-uint64_t nLargestBlockSeen=BLOCKSTREAM_CORE_MAX_BLOCK_SIZE; // BU - Xtreme Thinblocks
 
 int32_t UnlimitedComputeBlockVersion(const CBlockIndex* pindexPrev, const Consensus::Params& params,uint32_t nTime)
 {
@@ -118,8 +116,9 @@ int32_t UnlimitedComputeBlockVersion(const CBlockIndex* pindexPrev, const Consen
     
     int32_t nVersion = ComputeBlockVersion(pindexPrev, params);
 
-    if (nTime <= params.SizeForkExpiration())
-	  nVersion |= FORK_BIT_2MB;
+    // turn BIP109 off by default by commenting this out: 
+    // if (nTime <= params.SizeForkExpiration())
+    //	  nVersion |= FORK_BIT_2MB;
  
     return nVersion;
 }
@@ -559,6 +558,8 @@ void UnlimitedSetup(void)
     blockVersion = GetArg("-blockversion", blockVersion);
     excessiveBlockSize = GetArg("-excessiveblocksize", excessiveBlockSize);
     excessiveAcceptDepth = GetArg("-excessiveacceptdepth", excessiveAcceptDepth);
+    LoadTweaks();  // The above options are deprecated so the same parameter defined as a tweak will override them
+
     settingsToUserAgentString();
     //  Init network shapers
     int64_t rb = GetArg("-receiveburst", DEFAULT_MAX_RECV_BURST);
@@ -749,13 +750,22 @@ UniValue setexcessiveblock(const UniValue& params, bool fHelp)
             "\nExamples:\n" +
             HelpExampleCli("getexcessiveblock", "") + HelpExampleRpc("getexcessiveblock", ""));
 
+    unsigned int ebs=0;
     if (params[0].isNum())
-        excessiveBlockSize = params[0].get_int64();
+        ebs = params[0].get_int64();
     else {
         string temp = params[0].get_str();
         if (temp[0] == '-') boost::throw_exception( boost::bad_lexical_cast() );
-        excessiveBlockSize = boost::lexical_cast<unsigned int>(temp);
+        ebs = boost::lexical_cast<unsigned int>(temp);
     }
+
+    if (ebs < maxGeneratedBlock) 
+      {
+      std::ostringstream ret;
+      ret << "Sorry, your maximum mined block (" << maxGeneratedBlock << ") is larger than your proposed excessive size (" << ebs << ").  This would cause you to orphan your own blocks.";    
+      throw runtime_error(ret.str());
+      }
+    excessiveBlockSize = ebs;
 
     if (params[1].isNum())
         excessiveAcceptDepth = params[1].get_int64();
@@ -766,7 +776,9 @@ UniValue setexcessiveblock(const UniValue& params, bool fHelp)
     }
 
     settingsToUserAgentString();
-    return NullUniValue;
+    std::ostringstream ret;
+    ret << "Excessive Block set to " << excessiveBlockSize << " bytes.  Accept Depth set to " << excessiveAcceptDepth << " blocks.";    
+    return UniValue(ret.str());
 }
 
 
@@ -808,8 +820,8 @@ UniValue setminingmaxblock(const UniValue& params, bool fHelp)
     }
 
     // I don't want to waste time testing edge conditions where no txns can fit in a block, so limit the minimum block size
-    if (arg < 100000)
-        throw runtime_error("max generated block size must be greater than 100KB");
+    if (arg < 1000)
+        throw runtime_error("max generated block size must be greater than 1KB");
 
     maxGeneratedBlock = arg;
 
@@ -1112,7 +1124,7 @@ bool CanThinBlockBeDownloaded(CNode* pto)
 // This way we avoid having to lock cs_main so often which tends to be a bottleneck.
 void IsChainNearlySyncdInit() 
 {
-    LOCK(cs_main);
+    LOCK2(cs_main, cs_ischainnearlysyncd);
     if (!pindexBestHeader) fIsChainNearlySyncd = false;  // Not nearly synced if we don't have any blocks!
     else
       {
@@ -1124,6 +1136,7 @@ void IsChainNearlySyncdInit()
 }
 bool IsChainNearlySyncd()
 {
+    LOCK(cs_ischainnearlysyncd);
     return fIsChainNearlySyncd;
 }
 
