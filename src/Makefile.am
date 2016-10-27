@@ -163,6 +163,7 @@ BITCOIN_CORE_H = \
   undo.h \
   unlimited.h \
   stat.h \
+  tweak.h \
   requestManager.h \
   util.h \
   utilmoneystr.h \
@@ -192,6 +193,7 @@ libbitcoin_util_a-clientversion.$(OBJEXT): obj/build.h
 libbitcoin_server_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) $(MINIUPNPC_CPPFLAGS) $(EVENT_CFLAGS) $(EVENT_PTHREADS_CFLAGS)
 libbitcoin_server_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 libbitcoin_server_a_SOURCES = \
+  globals.cpp \
   addrman.cpp \
   alert.cpp \
   bitnodes.cpp \
@@ -224,6 +226,7 @@ libbitcoin_server_a_SOURCES = \
   torcontrol.cpp \
   txdb.cpp \
   txmempool.cpp \
+  tweak.cpp \
   unlimited.cpp \
   requestManager.cpp \
   validationinterface.cpp \

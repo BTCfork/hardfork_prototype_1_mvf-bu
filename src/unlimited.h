@@ -6,6 +6,7 @@
 #ifndef BITCOIN_UNLIMITED_H
 #define BITCOIN_UNLIMITED_H
 
+#include "tweak.h"
 #include "leakybucket.h"
 #include "net.h"
 #include "stat.h"
@@ -60,6 +61,11 @@ static const unsigned int DEFAULT_MIN_LIMITFREERELAY = 1;
 // Replace Core's ComputeBlockVersion
 int32_t UnlimitedComputeBlockVersion(const CBlockIndex* pindexPrev, const Consensus::Params& params,uint32_t nTime);
 
+// This API finds a near match to the specified IP address, for example you can
+// leave the port off and it will find the first match to that IP.  This is
+// useful for the RPC calls.
+CNode* FindLikelyNode(const std::string& addrName);
+
 // process incoming unsolicited block
 void HandleExpeditedBlock(CDataStream& vRecv,CNode* pfrom);
 
@@ -93,6 +99,12 @@ extern int isChainExcessive(const CBlockIndex* blk, unsigned int checkDepth = ex
 extern int chainContainsExcessive(const CBlockIndex* blk, unsigned int goBack=0);
 
 // RPC calls
+
+// RPC Get a particular tweak
+extern UniValue settweak(const UniValue& params, bool fHelp);
+// RPC Set a particular tweak
+extern UniValue gettweak(const UniValue& params, bool fHelp);
+
 extern UniValue settrafficshaping(const UniValue& params, bool fHelp);
 extern UniValue gettrafficshaping(const UniValue& params, bool fHelp);
 extern UniValue pushtx(const UniValue& params, bool fHelp);
@@ -141,6 +153,9 @@ extern std::set<uint256> setUnVerifiedOrphanTxHash;
 extern CCriticalSection cs_xval;
 // Xpress Validation: end
 
+extern bool fIsChainNearlySyncd;
+extern CCriticalSection cs_ischainnearlysyncd;
+
 extern bool HaveConnectThinblockNodes();
 extern bool HaveThinblockNodes();
 extern bool CheckThinblockTimer(uint256 hash);
@@ -167,6 +182,13 @@ extern std::map<uint256, uint64_t> mapThinBlockTimer;
 
 // BUIP010 Xtreme Thinblocks: end
 
+extern CSemaphore*  semOutboundAddNode;
+extern std::vector<CNode*> xpeditedBlk; // Who requested expedited blocks from us
+extern std::vector<CNode*> xpeditedBlkUp; // Who we requested expedited blocks from
+extern std::vector<CNode*> xpeditedTxn;
+extern CStatHistory<uint64_t > recvAmt; 
+extern CStatHistory<uint64_t > sendAmt; 
+
 // Connection Slot mitigation - used to track connection attempts and evictions
 struct ConnectionHistory
 {
@@ -187,6 +209,10 @@ void UpdateRecvStats(CNode* pfrom, const std::string& strCommand, int msgSize, i
 extern CStatHistory<unsigned int, MinValMax<unsigned int> > txAdded;
 extern CStatHistory<uint64_t, MinValMax<uint64_t> > poolSize;
 
+// Configuration variable validators
+std::string ExcessiveBlockValidator(const unsigned int& value,unsigned int* item,bool validate);
+std::string OutboundConnectionValidator(const int& value,int* item,bool validate);
+std::string SubverValidator(const std::string& value,std::string* item,bool validate);
 
 // Protocol changes:
 
