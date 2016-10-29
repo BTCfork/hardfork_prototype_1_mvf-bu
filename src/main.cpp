@@ -6818,11 +6818,8 @@ ThresholdState VersionBitsTipState(const Consensus::Params& params, Consensus::D
     return VersionBitsState(chainActive.Tip(), params, pos, versionbitscache);
 }
 
-class CMainCleanup
-{
-public:
-    CMainCleanup() {}
-    ~CMainCleanup() {
+CMainCleanup::~CMainCleanup() 
+  {
         // block headers
         BlockMap::iterator it1 = mapBlockIndex.begin();
         for (; it1 != mapBlockIndex.end(); it1++)
@@ -6831,6 +6828,5 @@ public:
 
         // orphan transactions
         mapOrphanTransactions.clear();
-        mapOrphanTransactionsByPrev.clear();
-    }
-} instance_of_cmaincleanup;
+        mapOrphanTransactionsByPrev.clear();  
+  }
