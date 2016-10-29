@@ -74,7 +74,7 @@ void ForkSetup(const CChainParams& chainparams)
     }
 
     FinalForkId = GetArg("-forkid", HARDFORK_SIGHASH_ID);
-    // check forkid for validity
+    // check fork id for validity (MVHF-BU-DES-CSIG-2)
     if (FinalForkId == 0) {
         LogPrintf("MVF: Warning: fork id = 0 will result in vulnerability to replay attacks\n");
     }
