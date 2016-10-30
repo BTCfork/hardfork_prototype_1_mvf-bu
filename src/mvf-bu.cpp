@@ -97,7 +97,7 @@ void ForkSetup(const CChainParams& chainparams)
 void ActivateFork(void)
 {
     LogPrintf("%s: MVF: checking whether to perform fork activation\n", __func__);
-    if (!isMVFHardForkActive)
+    if (!isMVFHardForkActive)  // sanity check
     {
         LogPrintf("%s: MVF: performing fork activation actions\n", __func__);
         isMVFHardForkActive = true;
