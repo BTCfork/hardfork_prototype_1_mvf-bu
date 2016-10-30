@@ -2837,8 +2837,9 @@ void static UpdateTip(CBlockIndex *pindexNew) {
 
     } // if (!fAutoBackupDone)
 
-    // if trigger block height reached, perform fork activation actions (MVHF-BU-DES-TRIG-6)
-    if (chainActive.Height() == FinalActivateForkHeight)
+    // if trigger block height reached or SegWit soft-fork activated, perform hardfork activation actions (MVHF-BU-DES-TRIG-6)
+    if (!isMVFHardForkActive && ((chainActive.Height() == FinalActivateForkHeight)
+                                   || VersionBitsTipState(chainParams.GetConsensus(), Consensus::DEPLOYMENT_SEGWIT) == THRESHOLD_ACTIVE))
     {
         // MVF-BU TODO: decide on above condition
         // if preparations are only made after block has been accepted, then only FinalActivateForkHeight+1 can be new rules
@@ -3626,6 +3627,14 @@ bool CheckIndexAgainstCheckpoint(const CBlockIndex* pindexPrev, CValidationState
     return true;
 }
 
+// MVF-BU begin port from Core 0.13 for TRIG
+bool IsWitnessEnabled(const CBlockIndex* pindexPrev, const Consensus::Params& params)
+{
+    LOCK(cs_main);
+    return (VersionBitsState(pindexPrev, params, Consensus::DEPLOYMENT_SEGWIT, versionbitscache) == THRESHOLD_ACTIVE);
+}
+// MVF-BU end
+
 bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& state, CBlockIndex * const pindexPrev)
 {
     const Consensus::Params& consensusParams = Params().GetConsensus();
@@ -4162,7 +4171,9 @@ bool static LoadBlockIndexDB()
     chainActive.SetTip(it->second);
 
     // MVF-BU begin
-    if (chainActive.Height() > FinalActivateForkHeight)
+    // check if hardfork needs activating
+    if (!isMVFHardForkActive && (chainActive.Height() > FinalActivateForkHeight
+                                 || VersionBitsTipState(chainparams.GetConsensus(), Consensus::DEPLOYMENT_SEGWIT) == THRESHOLD_ACTIVE))
     {
         ActivateFork();
     }
