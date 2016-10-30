@@ -33,6 +33,7 @@ HARDFORK_PORT_REGTEST = 19555,       // default post-fork port on local regressi
 
 // MVHF-BU-DES-CSIG-1 - signature change parameter defaults
 HARDFORK_SIGHASH_ID = 0x777000,      // 3 byte fork id that is left-shifted by 8 bits and then ORed with the SIGHASHes
+MAX_HARDFORK_SIGHASH_ID = 0xFFFFFF,  // fork id may not exceed maximum representable in 3 bytes
 };
 
 // MVHF-BU-DES-NSEP-1 - network separation parameter defaults
@@ -51,7 +52,7 @@ static const CMessageHeader::MessageStartChars pchMessageStart_HardForkMainnet  
 // MVHF-BU-DES-DIAD-1 - difficulty adjustment parameter defaults
 // MVF-BU TODO: calibrate the values for public testnets according to estimated initial present hashpower
 // values to which powLimit is reset at fork time on various networks:
-static const uint256 HARDFORK_POWLIMIT_MAINNET = uint256S("00007fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),  // mainnet
+static const uint256 HARDFORK_POWRESET_MAINNET = uint256S("00007fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),  // mainnet
                      HARDFORK_POWRESET_TESTNET = uint256S("007fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),  // testnet
                      HARDFORK_POWRESET_NOLNET  = uint256S("3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),  // nolnet
                      HARDFORK_POWRESET_REGTEST = uint256S("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");  // regtestnet

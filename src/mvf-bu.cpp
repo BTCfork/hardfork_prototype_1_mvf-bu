@@ -13,6 +13,9 @@ using namespace std;
 // actual fork height, taking into account user configuration parameters (MVHF-BU-DES-TRIG-4)
 int FinalActivateForkHeight = 0;
 
+// actual fork id, taking into account user configuration parameters (MVHF-BU-DES-CSIG-1)
+int FinalForkId = 0;
+
 // track whether HF is active (MVHF-BU-DES-TRIG-5)
 bool isMVFHardForkActive = false;
 
@@ -32,6 +35,9 @@ std::string ForkCmdLineHelp()
 
     // fork height parameter (MVHF-BU-DES-TRIG-1)
     strUsage += HelpMessageOpt("-forkheight=<n>", strprintf(_("Block height at which to fork on active network (integer). Defaults (also minimums): mainnet:%u,testnet=%u,nolnet=%u,regtest=%u"), (unsigned)HARDFORK_HEIGHT_MAINNET, (unsigned)HARDFORK_HEIGHT_TESTNET, (unsigned)HARDFORK_HEIGHT_NOLNET, (unsigned)HARDFORK_HEIGHT_REGTEST));
+
+    // fork id (MVHF-BU-DES-CSIG-1)
+    strUsage += HelpMessageOpt("-forkid=<n>", strprintf(_("Fork id to use for signature change. Value must be between 0 and %d. Default is 0x%06x (%u)"), (unsigned)MAX_HARDFORK_SIGHASH_ID, (unsigned)HARDFORK_SIGHASH_ID, (unsigned)HARDFORK_SIGHASH_ID));
 
     return strUsage;
 }
@@ -65,13 +71,25 @@ void ForkSetup(const CChainParams& chainparams)
     {
         LogPrintf("MVF: Error: specified fork height (%d) is less than minimum for '%s' network (%d)\n", FinalActivateForkHeight, activeNetworkID, minForkHeightForNetwork);
         StartShutdown();
-        FinalActivateForkHeight = minForkHeightForNetwork;
+    }
+
+    FinalForkId = GetArg("-forkid", HARDFORK_SIGHASH_ID);
+    // check fork id for validity (MVHF-BU-DES-CSIG-2)
+    if (FinalForkId == 0) {
+        LogPrintf("MVF: Warning: fork id = 0 will result in vulnerability to replay attacks\n");
+    }
+    else {
+        if (FinalForkId < 0 || FinalForkId > MAX_HARDFORK_SIGHASH_ID) {
+            LogPrintf("MVF: Error: specified fork id (%d) is not in range 0..%u\n", FinalForkId, (unsigned)MAX_HARDFORK_SIGHASH_ID);
+            StartShutdown();
+        }
     }
 
     // we should always set the activation flag to false during setup
     isMVFHardForkActive = false;
 
-    LogPrintf("%s: MVF: ForkSetup() active fork height = %d\n", __func__, FinalActivateForkHeight);
+    LogPrintf("%s: MVF: active fork height = %d\n", __func__, FinalActivateForkHeight);
+    LogPrintf("%s: MVF: active fork id = 0x%06x (%d)\n", __func__, FinalForkId, FinalForkId);
 }
 
 
