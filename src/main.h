@@ -459,7 +459,8 @@ bool CheckIndexAgainstCheckpoint(const CBlockIndex* pindexPrev, CValidationState
 bool AcceptBlock(CBlock& block, CValidationState& state, CBlockIndex **pindex, bool fRequested, CDiskBlockPos* dbp);
 bool AcceptBlockHeader(const CBlockHeader& block, CValidationState& state, CBlockIndex **ppindex= NULL);
 
-
+// MVF-BU added for TRIG
+bool IsWitnessEnabled(const CBlockIndex* pindexPrev, const Consensus::Params& params);
 
 class CBlockFileInfo
 {
@@ -577,5 +578,14 @@ extern std::map<uint256, std::set<uint256> > mapOrphanTransactionsByPrev GUARDED
 
 void EraseOrphanTx(uint256 hash) EXCLUSIVE_LOCKS_REQUIRED(cs_orphancache);
 // BU: end
+
+class CMainCleanup
+{
+public:
+    CMainCleanup() {}
+    ~CMainCleanup();
+};
+
+
 
 #endif // BITCOIN_MAIN_H
