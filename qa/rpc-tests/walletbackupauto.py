@@ -36,6 +36,8 @@ and that the debug.log contains a conflict message
 """
 
 import os
+import fnmatch
+import hashlib
 from test_framework.test_framework import BitcoinTestFramework
 from test_framework.util import *
 from random import randint
@@ -61,17 +63,17 @@ class WalletBackupTest(BitcoinTestFramework):
         # as per the test design at sw-req-10-1
         extra_args = [
             ["-keypool=100",
-                "-autobackupwalletpath=%s"%(self.options.tmpdir + "/node0/newabsdir/pathandfile.@.bak"),
+                "-autobackupwalletpath=%s"%(os.path.join(self.options.tmpdir,"node0","newabsdir","pathandfile.@.bak")),
                 "-autobackupblock=%s"%(backupblock)],
             ["-keypool=100",
                 "-autobackupwalletpath=filenameonly.@.bak",
                 "-autobackupblock=%s"%(backupblock)],
             ["-keypool=100",
-                "-autobackupwalletpath=./newreldir/",
+                "-autobackupwalletpath=" + os.path.join(".","newreldir"),
                 "-autobackupblock=%s"%(backupblock)],
             ["-autobackupblock=%s"%(backupblock)],
             ["-disablewallet",
-                "-autobackupwalletpath="+self.options.tmpdir+"/node4",
+                "-autobackupwalletpath="+ os.path.join(self.options.tmpdir,"node4"),
                 "-autobackupblock=%s"%(backupblock)]]
 
         self.nodes = start_nodes(5, self.options.tmpdir, extra_args)
@@ -124,20 +126,20 @@ class WalletBackupTest(BitcoinTestFramework):
         stop_node(self.nodes[3], 3)
 
     def erase_four(self):
-        os.remove(self.options.tmpdir + "/node0/regtest/wallet.dat")
-        os.remove(self.options.tmpdir + "/node1/regtest/wallet.dat")
-        os.remove(self.options.tmpdir + "/node2/regtest/wallet.dat")
-        os.remove(self.options.tmpdir + "/node3/regtest/wallet.dat")
+        os.remove(os.path.join(self.options.tmpdir,"node0","regtest","wallet.dat"))
+        os.remove(os.path.join(self.options.tmpdir,"node1","regtest","wallet.dat"))
+        os.remove(os.path.join(self.options.tmpdir,"node2","regtest","wallet.dat"))
+        os.remove(os.path.join(self.options.tmpdir,"node3","regtest","wallet.dat"))
 
     def run_test(self):
         logging.info("Automatic backup configured for block %s"%(backupblock))
         assert_greater_than(backupblock, 113)
 
         # target backup files
-        node0backupfile = self.options.tmpdir + "/node0/newabsdir/pathandfile.%s.bak"%(backupblock)
-        node1backupfile = self.options.tmpdir + "/node1/regtest/filenameonly.%s.bak"%(backupblock)
-        node2backupfile = self.options.tmpdir + "/node2/regtest/newreldir/wallet.dat.auto.%s.bak"%(backupblock)
-        node3backupfile = self.options.tmpdir + "/node3/regtest/wallet.dat.auto.%s.bak"%(backupblock)
+        node0backupfile = os.path.join(self.options.tmpdir,"node0","newabsdir","pathandfile.%s.bak"%(backupblock))
+        node1backupfile = os.path.join(self.options.tmpdir,"node1","regtest","filenameonly.%s.bak"%(backupblock))
+        node2backupfile = os.path.join(self.options.tmpdir,"node2","regtest","newreldir","wallet.dat.auto.%s.bak"%(backupblock))
+        node3backupfile = os.path.join(self.options.tmpdir,"node3","regtest","wallet.dat.auto.%s.bak"%(backupblock))
 
         logging.info("Generating initial blockchain")
         self.nodes[0].generate(1)
@@ -221,7 +223,10 @@ class WalletBackupTest(BitcoinTestFramework):
         if os.path.isfile(node1backupfile): node1backupexists = 1
         else: logging.info("Error backup does not exist: %s"%(node1backupfile))
 
-        if os.path.isfile(node2backupfile): node2backupexists = 1
+        if os.path.isfile(node2backupfile):
+            node2backupexists = 1
+            # take MD5 for comparison to .old file in later test
+            node2backupfile_orig_md5 = hashlib.md5(open(node2backupfile, 'rb').read()).hexdigest()
         else: logging.info("Error backup does not exist: %s"%(node2backupfile))
 
         if os.path.isfile(node3backupfile): node3backupexists = 1
@@ -259,10 +264,10 @@ class WalletBackupTest(BitcoinTestFramework):
         self.erase_four()
 
         # Restore wallets from backup
-        shutil.copyfile(node0backupfile, tmpdir + "/node0/regtest/wallet.dat")
-        shutil.copyfile(node1backupfile, tmpdir + "/node1/regtest/wallet.dat")
-        shutil.copyfile(node2backupfile, tmpdir + "/node2/regtest/wallet.dat")
-        shutil.copyfile(node3backupfile, tmpdir + "/node3/regtest/wallet.dat")
+        shutil.copyfile(node0backupfile, os.path.join(tmpdir,"node0","regtest","wallet.dat"))
+        shutil.copyfile(node1backupfile, os.path.join(tmpdir,"node1","regtest","wallet.dat"))
+        shutil.copyfile(node2backupfile, os.path.join(tmpdir,"node2","regtest","wallet.dat"))
+        shutil.copyfile(node3backupfile, os.path.join(tmpdir,"node3","regtest","wallet.dat"))
 
         logging.info("Re-starting nodes")
         self.start_four()
@@ -287,15 +292,45 @@ class WalletBackupTest(BitcoinTestFramework):
         # when -disablewallet is enabled then no backup file should be created and graceful exit happens
         # without causing a runtime error
         node4backupexists = 0
-        if os.path.isfile(tmpdir + "/node4/regtest/wallet.dat.auto.%s.bak"%(backupblock)):
+        if os.path.isfile(os.path.join(tmpdir,"node4","regtest","wallet.dat.auto.%s.bak"%(backupblock))):
             node4backupexists = 1
             logging.info("Error: Auto backup performed on node4 with -disablewallet!")
 
         # Test Node4 debug.log contains a conflict message - length test should be > 0
-        debugmsg_list = search_file(tmpdir + "/node4/regtest/debug.log","-disablewallet and -autobackupwalletpath conflict")
+        debugmsg_list = search_file(os.path.join(tmpdir,"node4","regtest","debug.log"),"-disablewallet and -autobackupwalletpath conflict")
 
         assert_equal(0,node4backupexists)
         assert_greater_than(len(debugmsg_list),0)
+
+        # test that existing wallet backup is preserved
+        # rewind node 2's chain to before backupblock
+        logging.info("Rewinding node 2 to before auto backup test preservation of existing backup file")
+        self.nodes[2].invalidateblock(self.nodes[2].getblockhash(backupblock))
+        logging.info("Stopping all nodes")
+        self.stop_four()
+        logging.info("Restarting node 2")
+        self.nodes[2] = start_node(2, self.options.tmpdir,["-keypool=100", "-autobackupwalletpath="+ os.path.join(".","newreldir"), "-autobackupblock=%s"%(backupblock) ])
+        # check that there is no .old yet (node 2 needs to generate a block to hit the height)
+        old_files_found=[]
+        for file in os.listdir(os.path.join(tmpdir,"node2","regtest","newreldir")):
+            if fnmatch.fnmatch(file, "wallet.dat.auto.%s.bak.*.old" % (backupblock)):
+                logging.info("old file found: %s" % file)
+                old_files_found.append(file)
+        assert_equal(0, len(old_files_found))
+        # generate a block to hit the backup block height
+        # this should cause the existing backup to be saved to a timestamped .old copy
+        self.nodes[2].generate(1)
+        for file in os.listdir(os.path.join(tmpdir,"node2","regtest","newreldir")):
+            if fnmatch.fnmatch(file, "*.old"):
+                old_files_found.append(file)
+        assert_equal(1, len(old_files_found))
+        # check that the contents of the .old match what we recorded earlier for node 2's backup
+        # (the file should just have been renamed)
+        logging.info("Checking .old file %s" % old_files_found[0])
+        assert_equal(node2backupfile_orig_md5,hashlib.md5(open(os.path.join(tmpdir,"node2","regtest","newreldir",old_files_found[0]), 'rb').read()).hexdigest())
+        logging.info("Checksum ok - shutting down")
+        stop_node(self.nodes[2], 2)
+        self.start_four()
 
 if __name__ == '__main__':
     WalletBackupTest().main()

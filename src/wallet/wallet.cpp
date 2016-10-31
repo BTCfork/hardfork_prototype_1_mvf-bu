@@ -1078,16 +1078,16 @@ bool CWallet::BackupWalletAuto(const std::string& strDest, int BackupBlock)
     boost::replace_all(strBackupFile,"@", boost::to_string_stub(BackupBlock));
     //LogPrintf("DEBUG: strBackupFile=%s\n",strBackupFile);
 
-    // skip if already done
-    if (!boost::filesystem::exists(strBackupFile))
-    {
-        // call common backup wallet function
-        if (BackupWallet(*this, strBackupFile))
-            LogPrintf("Wallet automatically backed up to: %s\n",strBackupFile);
-        else
-            // backup failed
-            return false;
-    }
+    // rename with .old suffix if target already exists
+    if (boost::filesystem::exists(strBackupFile))
+        boost::filesystem::rename(strBackupFile,strprintf("%s.%s.old",strBackupFile,GetTime()));
+
+    // call common backup wallet function
+	if (BackupWallet(*this, strBackupFile))
+		LogPrintf("Wallet automatically backed up to: %s\n",strBackupFile);
+	else
+		// backup failed
+		return false;
 
     return true;
 }
