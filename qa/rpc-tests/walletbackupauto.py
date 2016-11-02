@@ -255,16 +255,6 @@ class WalletBackupTest(BitcoinTestFramework):
         logging.info("Node3 balance:" + str(balance3))
 
         logging.info("Original Wallet Total: " + str(total))
-        logging.info("Generating 2016")
-        self.nodes[3].generate(2016)
-        raw_input()
-        logging.info("Generating 2016")
-        self.nodes[3].generate(2016)
-        raw_input()
-        logging.info("Generating 2016 - final")
-        self.nodes[3].generate(2016)
-        logging.info("Done")
-        raw_input()
 
         ##
         # Test restoring spender wallets from backups
