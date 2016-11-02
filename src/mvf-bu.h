@@ -12,6 +12,8 @@ class CChainParams;
 
 extern int FinalActivateForkHeight;         // MVHF-BU-DES-TRIG-4
 extern bool isMVFHardForkActive;            // MVHF-BU-DES-TRIG-5
+extern int FinalForkId;                     // MVHF-BU-DES-CSIG-1
+extern bool fAutoBackupDone;                // MVHF-BU-DES-WABU-1
 extern std::string autoWalletBackupSuffix;  // MVHF-BU-DES-WABU-1
 
 
