@@ -310,10 +310,11 @@ class WalletBackupTest(BitcoinTestFramework):
 
         # test that existing wallet backup is preserved
         # rewind node 2's chain to before backupblock
-        logging.info("Rewinding node 2 to before auto backup test preservation of existing backup file")
-        self.nodes[2].invalidateblock(self.nodes[2].getblockhash(backupblock))
         logging.info("Stopping all nodes")
         self.stop_four()
+        logging.info("Erasing blockchain on node 2 while keeping backup file")
+        shutil.rmtree(self.options.tmpdir + "/node2/regtest/blocks")
+        shutil.rmtree(self.options.tmpdir + "/node2/regtest/chainstate")
         logging.info("Restarting node 2")
         self.nodes[2] = start_node(2, self.options.tmpdir,["-keypool=100", "-autobackupwalletpath="+ os.path.join(".","newreldir"), "-autobackupblock=%s"%(backupblock) ])
         # check that there is no .old yet (node 2 needs to generate a block to hit the height)
@@ -323,9 +324,9 @@ class WalletBackupTest(BitcoinTestFramework):
                 logging.info("old file found: %s" % file)
                 old_files_found.append(file)
         assert_equal(0, len(old_files_found))
-        # generate a block to hit the backup block height
+        # generate enough blocks to hit the backup block height
         # this should cause the existing backup to be saved to a timestamped .old copy
-        self.nodes[2].generate(1)
+        self.nodes[2].generate(backupblock)
         for file in os.listdir(os.path.join(tmpdir,"node2","regtest","newreldir")):
             if fnmatch.fnmatch(file, "*.old"):
                 old_files_found.append(file)
