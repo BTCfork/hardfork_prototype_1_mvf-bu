@@ -67,7 +67,7 @@ unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nF
     LogPrintf("  nActualTimespan = %d  before bounds\n", nActualTimespan);
 
     //mvhf-bu target time span while within the re-target period
-	int64_t nTargetTimespan = params.nPowTargetTimespan; // the original 2016 blocks
+    int64_t nTargetTimespan = params.nPowTargetTimespan; // the original 2016 blocks
 
 	// During the MVF Re-target Period after the fork block the target time span starts at 1 block until 12 blocks
 	if (pindexLast->nHeight > params.MVFActivateForkHeight() && pindexLast->nHeight < params.nMVFRetargetPeriodEnd() )
