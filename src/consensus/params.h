@@ -64,9 +64,9 @@ struct Params {
     int64_t DifficultyAdjustmentInterval() const { return nPowTargetTimespan / nPowTargetSpacing; }
     int64_t SizeForkExpiration() const { return 1514764800; } // BU (classic compatibility) 2018-01-01 00:00:00 GMT
     // MVF-BU begin (MVHF-BU-DES-TRIG-3)
-    int nMVFActivateForkHeight;     // trigger block height
+    int nMVFDefaultActivateForkHeight;     // trigger block height
 
-    int MVFActivateForkHeight() const { return nMVFActivateForkHeight; };
+    int MVFDefaultActivateForkHeight() const { return nMVFDefaultActivateForkHeight; };
     // MVF-BU end
 
 };
