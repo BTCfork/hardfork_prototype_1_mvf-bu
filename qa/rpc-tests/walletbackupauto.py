@@ -33,6 +33,14 @@ Then restored using the auto backup wallets eg wallet.dat.auto.114.bak.
 Sanity check to confirm 1/2/3/4 balances match the 114 block balances.
 Sanity check to confirm 5th node does NOT perform the auto backup
 and that the debug.log contains a conflict message
+
+Node 2 is rewinded to before the backup height, and a check is made that
+an existing backup is copied to a .old file with identical contents if the
+existing backup is overwritten.
+
+Finally, node 1 is stopped, its wallet backup is deleted, and the node is
+restarted. A post-fork block is generated to check that the wallet backup
+is not re-performed once the node has already forked.
 """
 
 import os
@@ -125,11 +133,9 @@ class WalletBackupTest(BitcoinTestFramework):
         stop_node(self.nodes[2], 2)
         stop_node(self.nodes[3], 3)
 
-    def erase_four(self):
-        os.remove(os.path.join(self.options.tmpdir,"node0","regtest","wallet.dat"))
-        os.remove(os.path.join(self.options.tmpdir,"node1","regtest","wallet.dat"))
-        os.remove(os.path.join(self.options.tmpdir,"node2","regtest","wallet.dat"))
-        os.remove(os.path.join(self.options.tmpdir,"node3","regtest","wallet.dat"))
+    def erase_hot_wallets(self):
+        for node in xrange(4):
+            os.remove(os.path.join(self.options.tmpdir,"node%s" % node,"regtest","wallet.dat"))
 
     def run_test(self):
         logging.info("Automatic backup configured for block %s"%(backupblock))
@@ -261,7 +267,7 @@ class WalletBackupTest(BitcoinTestFramework):
         ##
         logging.info("Switching wallets. Restoring using automatic wallet backups...")
         self.stop_four()
-        self.erase_four()
+        self.erase_hot_wallets()
 
         # Restore wallets from backup
         shutil.copyfile(node0backupfile, os.path.join(tmpdir,"node0","regtest","wallet.dat"))
@@ -331,6 +337,30 @@ class WalletBackupTest(BitcoinTestFramework):
         logging.info("Checksum ok - shutting down")
         stop_node(self.nodes[2], 2)
         self.start_four()
+
+        # test that wallet backup is not performed again if fork has already
+        # triggered and wallet exists
+        # (otherwise it would backup a later-state wallet)
+        logging.info("stopping node 1")
+        stop_node(self.nodes[1], 1)
+        logging.info("checking that wallet backup file exists: %s" % node1backupfile)
+        assert(os.path.isfile(node1backupfile))
+        logging.info("removing wallet backup file %s" % node1backupfile)
+        os.remove(node1backupfile)
+        # check that no wallet backup file created
+        logging.info("restarting node 1")
+        self.nodes[1] = start_node(1, self.options.tmpdir, ["-keypool=100",
+                                                            "-autobackupwalletpath=filenameonly.@.bak",
+                                                            "-autobackupblock=%s"%(backupblock)])
+        logging.info("generating another block on node 1")
+        self.nodes[1].generate(1)
+        logging.info("checking that backup file has not been created again...")
+        node1backupexists = 0
+        if os.path.isfile(node1backupfile):
+            node1backupexists = 1
+            logging.info("Error: Auto backup created again on node1 after fork has already activated!")
+        assert_equal(0, node1backupexists)
+
 
 if __name__ == '__main__':
     WalletBackupTest().main()
