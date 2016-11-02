@@ -61,13 +61,23 @@ struct Params {
     bool fPowNoRetargeting;
     int64_t nPowTargetSpacing;
     int64_t nPowTargetTimespan;
-    int64_t DifficultyAdjustmentInterval() const { return nPowTargetTimespan / nPowTargetSpacing; }
-    int64_t SizeForkExpiration() const { return 1514764800; } // BU (classic compatibility) 2018-01-01 00:00:00 GMT
     // MVF-BU begin (MVHF-BU-DES-TRIG-3)
-    int nMVFActivateForkHeight;     // trigger block height
+	int nMVFActivateForkHeight;     // trigger block height
 
-    int MVFActivateForkHeight() const { return nMVFActivateForkHeight; };
+	int MVFActivateForkHeight() const { return nMVFActivateForkHeight; };
+
+    int nMVFRetargetPeriodEnd() const { return  nMVFActivateForkHeight + (130 * 24 * 60 * 60); };
+    int64_t DifficultyAdjustmentInterval(int Height) const
+    	{
+    		// mvhf-bu - if the height is before the fork or 6 months after use the original values
+    		if (Height < nMVFActivateForkHeight || Height > nMVFRetargetPeriodEnd() )
+    			return nPowTargetTimespan / nPowTargetSpacing;
+    		else // re-target every block
+    			return nPowTargetSpacing;
+    	}
     // MVF-BU end
+    int64_t SizeForkExpiration() const { return 1514764800; } // BU (classic compatibility) 2018-01-01 00:00:00 GMT
+
 
 };
 } // namespace Consensus

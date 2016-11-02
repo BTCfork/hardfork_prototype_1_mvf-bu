@@ -20,8 +20,14 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
     if (pindexLast == NULL)
         return nProofOfWorkLimit;
 
+    // mvhf-bu genesis block reset the difficulty target
+    if (pindexLast->nHeight == params.MVFActivateForkHeight() )
+    {
+    	return nProofOfWorkLimit;
+    }
+
     // Only change once per difficulty adjustment interval
-    if ((pindexLast->nHeight+1) % params.DifficultyAdjustmentInterval() != 0)
+    if ((pindexLast->nHeight+1) % params.DifficultyAdjustmentInterval(pindexLast->nHeight) != 0)
     {
         if (params.fPowAllowMinDifficultyBlocks)
         {
@@ -34,7 +40,7 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
             {
                 // Return the last non-special-min-difficulty-rules-block
                 const CBlockIndex* pindex = pindexLast;
-                while (pindex->pprev && pindex->nHeight % params.DifficultyAdjustmentInterval() != 0 && pindex->nBits == nProofOfWorkLimit)
+                while (pindex->pprev && pindex->nHeight % params.DifficultyAdjustmentInterval(pindexLast->nHeight) != 0 && pindex->nBits == nProofOfWorkLimit)
                     pindex = pindex->pprev;
                 return pindex->nBits;
             }
@@ -43,7 +49,7 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
     }
 
     // Go back by what we want to be 14 days worth of blocks
-    int nHeightFirst = pindexLast->nHeight - (params.DifficultyAdjustmentInterval()-1);
+    int nHeightFirst = pindexLast->nHeight - (params.DifficultyAdjustmentInterval(pindexLast->nHeight)-1);
     assert(nHeightFirst >= 0);
     const CBlockIndex* pindexFirst = pindexLast->GetAncestor(nHeightFirst);
     assert(pindexFirst);
@@ -59,10 +65,26 @@ unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nF
     // Limit adjustment step
     int64_t nActualTimespan = pindexLast->GetBlockTime() - nFirstBlockTime;
     LogPrintf("  nActualTimespan = %d  before bounds\n", nActualTimespan);
-    if (nActualTimespan < params.nPowTargetTimespan/4)
-        nActualTimespan = params.nPowTargetTimespan/4;
-    if (nActualTimespan > params.nPowTargetTimespan*4)
-        nActualTimespan = params.nPowTargetTimespan*4;
+
+    //mvhf-bu target time span while within the re-target period
+	int64_t nTargetTimespan = params.nPowTargetTimespan; // the original 2016 blocks
+
+	// During the MVF Re-target Period after the fork block the target time span starts at 1 block until 12 blocks
+	if (pindexLast->nHeight > params.MVFActivateForkHeight() && pindexLast->nHeight < params.nMVFRetargetPeriodEnd() )
+	{
+		nTargetTimespan = params.nPowTargetSpacing * (pindexLast->nHeight - params.MVFActivateForkHeight());
+		if (nTargetTimespan > params.nPowTargetSpacing * 12) nTargetTimespan = params.nPowTargetSpacing * 12;
+	}
+
+	// During the first 12 blocks after the fork abrupt changes are permitted
+	if (nTargetTimespan >= params.nPowTargetSpacing * 12)
+	{
+		// prevent abrupt changes to target
+		if (nActualTimespan < params.nPowTargetTimespan/4)
+			nActualTimespan = params.nPowTargetTimespan/4;
+		if (nActualTimespan > params.nPowTargetTimespan*4)
+			nActualTimespan = params.nPowTargetTimespan*4;
+	}
 
     // Retarget
     const arith_uint256 bnPowLimit = UintToArith256(params.powLimit);
@@ -71,14 +93,14 @@ unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nF
     bnNew.SetCompact(pindexLast->nBits);
     bnOld = bnNew;
     bnNew *= nActualTimespan;
-    bnNew /= params.nPowTargetTimespan;
+    bnNew /= nTargetTimespan;
 
     if (bnNew > bnPowLimit)
         bnNew = bnPowLimit;
 
     /// debug print
     LogPrintf("GetNextWorkRequired RETARGET\n");
-    LogPrintf("params.nPowTargetTimespan = %d    nActualTimespan = %d\n", params.nPowTargetTimespan, nActualTimespan);
+    LogPrintf("nTargetTimespan = %d    nActualTimespan = %d\n", nTargetTimespan, nActualTimespan);
     LogPrintf("Before: %08x  %s\n", pindexLast->nBits, bnOld.ToString());
     LogPrintf("After:  %08x  %s\n", bnNew.GetCompact(), bnNew.ToString());
 
