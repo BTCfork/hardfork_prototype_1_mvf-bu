@@ -66,7 +66,7 @@ struct Params {
 
 	int MVFActivateForkHeight() const { return nMVFActivateForkHeight; };
 
-    int nMVFRetargetPeriodEnd() const { return  nMVFActivateForkHeight + (130 * 24 * 60 * 60); };
+    int nMVFRetargetPeriodEnd() const { return  nMVFActivateForkHeight + ((130 * 24 * 60 * 60)/nPowTargetSpacing); };
     int64_t DifficultyAdjustmentInterval(int Height) const
     	{
     		// mvhf-bu - if the height is before the fork or 6 months after use the original values
