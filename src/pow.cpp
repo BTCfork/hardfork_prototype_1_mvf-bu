@@ -21,7 +21,7 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
         return nProofOfWorkLimit;
 
     // mvhf-bu genesis block reset the difficulty target
-    if (pindexLast->nHeight == params.MVFActivateForkHeight() )
+    if (pindexLast->nHeight == params.MVFDefaultActivateForkHeight() )
     {
     	return nProofOfWorkLimit;
     }
@@ -70,9 +70,9 @@ unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nF
     int64_t nTargetTimespan = params.nPowTargetTimespan; // the original 2016 blocks
 
 	// During the MVF Re-target Period after the fork block the target time span starts at 1 block until 2016 blocks
-	if (pindexLast->nHeight > params.MVFActivateForkHeight() && pindexLast->nHeight < params.nMVFRetargetPeriodEnd() )
+	if (pindexLast->nHeight > params.MVFDefaultActivateForkHeight() && pindexLast->nHeight < params.nMVFRetargetPeriodEnd() )
 	{
-		nTargetTimespan = params.nPowTargetSpacing * (pindexLast->nHeight - params.MVFActivateForkHeight());
+		nTargetTimespan = params.nPowTargetSpacing * (pindexLast->nHeight - params.MVFDefaultActivateForkHeight());
 		// Limit the time span to 2016
 		if (nTargetTimespan > params.nPowTargetSpacing * 2016) nTargetTimespan = params.nPowTargetSpacing * 2016;
 	}
