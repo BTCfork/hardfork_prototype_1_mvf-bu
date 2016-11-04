@@ -52,7 +52,8 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
 	}
 
 	// Go back by what we want to be 14 days worth of blocks
-	int nHeightFirst = pindexLast->nHeight - (params.DifficultyAdjustmentInterval(pindexLast->nHeight));
+	int nHeightFirst = pindexLast->nHeight - (params.DifficultyAdjustmentInterval(pindexLast->nHeight)-1);
+	if (pindexLast->nHeight >= params.MVFDefaultActivateForkHeight()) nHeightFirst += 1;
 	assert(nHeightFirst >= 0);
 	const CBlockIndex* pindexFirst = pindexLast->GetAncestor(nHeightFirst);
 	assert(pindexFirst);
