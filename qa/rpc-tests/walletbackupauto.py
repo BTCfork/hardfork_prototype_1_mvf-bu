@@ -4,7 +4,7 @@
 # Copyright (c) 2016 The Bitcoin developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
-# MVHF-BU
+# MVF-BU
 """
 See https://github.com/BTCfork/hardfork_prototype_1_mvf-bu/blob/master/doc/mvf-bu-test-design.md#411
 
@@ -312,6 +312,8 @@ class WalletBackupTest(BitcoinTestFramework):
         # rewind node 2's chain to before backupblock
         logging.info("Stopping all nodes")
         self.stop_four()
+        for n in xrange(4):
+            os.unlink(os.path.join(tmpdir,"node%s" % n,"btcfork.conf"))
         logging.info("Erasing blockchain on node 2 while keeping backup file")
         shutil.rmtree(self.options.tmpdir + "/node2/regtest/blocks")
         shutil.rmtree(self.options.tmpdir + "/node2/regtest/chainstate")
@@ -337,6 +339,7 @@ class WalletBackupTest(BitcoinTestFramework):
         assert_equal(node2backupfile_orig_md5,hashlib.md5(open(os.path.join(tmpdir,"node2","regtest","newreldir",old_files_found[0]), 'rb').read()).hexdigest())
         logging.info("Checksum ok - shutting down")
         stop_node(self.nodes[2], 2)
+        os.unlink(os.path.join(tmpdir,"node2","btcfork.conf"))
         self.start_four()
 
         # test that wallet backup is not performed again if fork has already
@@ -350,6 +353,7 @@ class WalletBackupTest(BitcoinTestFramework):
         os.remove(node1backupfile)
         # check that no wallet backup file created
         logging.info("restarting node 1")
+        os.unlink(os.path.join(tmpdir,"node1","btcfork.conf"))
         self.nodes[1] = start_node(1, self.options.tmpdir, ["-keypool=100",
                                                             "-autobackupwalletpath=filenameonly.@.bak",
                                                             "-autobackupblock=%s"%(backupblock)])
