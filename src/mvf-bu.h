@@ -60,7 +60,7 @@ static const uint256 HARDFORK_POWRESET_MAINNET = uint256S("00007ffffffffffffffff
                      HARDFORK_POWRESET_NOLNET  = uint256S("3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),  // nolnet
                      HARDFORK_POWRESET_REGTEST = uint256S("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");  // regtestnet
 
-// MVF_BU-DES-TRIG-10 - config file that is written when forking, and used to detect "forked" condition at start
+// MVHF-BU-DES-TRIG-10 - config file that is written when forking, and used to detect "forked" condition at start
 const char * const BTCFORK_CONF_FILENAME = "btcfork.conf";
 
 extern std::string ForkCmdLineHelp();  // fork-specific command line option help (MVHF-BU-DES-TRIG-8)
