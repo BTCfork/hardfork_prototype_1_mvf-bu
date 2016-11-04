@@ -79,6 +79,7 @@ testScripts = [
     'bip68-112-113-p2p.py',
     'wallet.py',
     'mvf-bu-trig.py',
+    'mvf-bu-retarget.py',
     'excessive.py',
     'listtransactions.py',
     'receivedby.py',

@@ -12,6 +12,7 @@
 #include "uint256.h"
 #include "util.h"
 
+
 unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock, const Consensus::Params& params)
 {
     unsigned int nProofOfWorkLimit = UintToArith256(params.powLimit).GetCompact();
@@ -20,46 +21,49 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
     if (pindexLast == NULL)
         return nProofOfWorkLimit;
 
-    // mvhf-bu genesis block reset the difficulty target
-    if (pindexLast->nHeight == params.MVFDefaultActivateForkHeight() )
-    {
-    	return nProofOfWorkLimit;
-    }
+    // mvhf-bu difficulty re-targeting reset
+	if (pindexLast->nHeight == params.MVFDefaultActivateForkHeight())
+	{
+		LogPrintf("FORK BLOCK DIFFICULTY RESET %d \n", nProofOfWorkLimit);
+		return pindexLast->nBits;
+	}
 
-    // Only change once per difficulty adjustment interval
-    if ((pindexLast->nHeight+1) % params.DifficultyAdjustmentInterval(pindexLast->nHeight) != 0)
-    {
-        if (params.fPowAllowMinDifficultyBlocks)
-        {
-            // Special difficulty rule for testnet:
-            // If the new block's timestamp is more than 2* 10 minutes
-            // then allow mining of a min-difficulty block.
-            if (pblock->GetBlockTime() > pindexLast->GetBlockTime() + params.nPowTargetSpacing*2)
-                return nProofOfWorkLimit;
-            else
-            {
-                // Return the last non-special-min-difficulty-rules-block
-                const CBlockIndex* pindex = pindexLast;
-                while (pindex->pprev && pindex->nHeight % params.DifficultyAdjustmentInterval(pindexLast->nHeight) != 0 && pindex->nBits == nProofOfWorkLimit)
-                    pindex = pindex->pprev;
-                return pindex->nBits;
-            }
-        }
-        return pindexLast->nBits;
-    }
+	LogPrintf("DEBUG DifficultyAdjInterval = %d , TimeSpan = %d \n", params.DifficultyAdjustmentInterval(pindexLast->nHeight), params.MVFPowTargetTimespan(pindexLast->nHeight));
+	// Only change once per difficulty adjustment interval
+	if ((pindexLast->nHeight+1) % params.DifficultyAdjustmentInterval(pindexLast->nHeight) != 0)
+	{
+		if (params.fPowAllowMinDifficultyBlocks && !GetBoolArg("-force-retarget", false))
+		{
+			// Special difficulty rule for testnet:
+			// If the new block's timestamp is more than 2* 10 minutes
+			// then allow mining of a min-difficulty block.
+			if (pblock->GetBlockTime() > pindexLast->GetBlockTime() + params.nPowTargetSpacing*2)
+				return nProofOfWorkLimit;
+			else
+			{
+				// Return the last non-special-min-difficulty-rules-block
+				const CBlockIndex* pindex = pindexLast;
+				while (pindex->pprev && pindex->nHeight % params.DifficultyAdjustmentInterval(pindexLast->nHeight) != 0 && pindex->nBits == nProofOfWorkLimit)
+					pindex = pindex->pprev;
+				return pindex->nBits;
+			}
+		}
+		return pindexLast->nBits;
+	}
 
-    // Go back by what we want to be 14 days worth of blocks
-    int nHeightFirst = pindexLast->nHeight - (params.DifficultyAdjustmentInterval(pindexLast->nHeight)-1);
-    assert(nHeightFirst >= 0);
-    const CBlockIndex* pindexFirst = pindexLast->GetAncestor(nHeightFirst);
-    assert(pindexFirst);
+	// Go back by what we want to be 14 days worth of blocks
+	int nHeightFirst = pindexLast->nHeight - (params.DifficultyAdjustmentInterval(pindexLast->nHeight));
+	assert(nHeightFirst >= 0);
+	const CBlockIndex* pindexFirst = pindexLast->GetAncestor(nHeightFirst);
+	assert(pindexFirst);
 
-    return CalculateNextWorkRequired(pindexLast, pindexFirst->GetBlockTime(), params);
+	return CalculateNextWorkRequired(pindexLast, pindexFirst->GetBlockTime(), params);
+
 }
 
 unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nFirstBlockTime, const Consensus::Params& params)
 {
-    if (params.fPowNoRetargeting)
+    if (params.fPowNoRetargeting && !GetBoolArg("-force-retarget", false))
         return pindexLast->nBits;
 
     // Limit adjustment step
@@ -67,25 +71,14 @@ unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nF
     LogPrintf("  nActualTimespan = %d  before bounds\n", nActualTimespan);
 
     //mvhf-bu target time span while within the re-target period
-    int64_t nTargetTimespan = params.nPowTargetTimespan; // the original 2016 blocks
-
-	// During the MVF Re-target Period after the fork block the target time span starts at 1 block until 2016 blocks
-	if (pindexLast->nHeight > params.MVFDefaultActivateForkHeight() && pindexLast->nHeight < params.nMVFRetargetPeriodEnd() )
-	{
-		nTargetTimespan = params.nPowTargetSpacing * (pindexLast->nHeight - params.MVFDefaultActivateForkHeight());
-		// Limit the time span to 2016
-		if (nTargetTimespan > params.nPowTargetSpacing * 2016) nTargetTimespan = params.nPowTargetSpacing * 2016;
-	}
-
-	// During the first 12 blocks after the fork abrupt changes are permitted
-	if (nTargetTimespan >= params.nPowTargetSpacing * 12)
-	{
-		// prevent abrupt changes to target
-		if (nActualTimespan < params.nPowTargetTimespan/4)
-			nActualTimespan = params.nPowTargetTimespan/4;
-		if (nActualTimespan > params.nPowTargetTimespan*4)
-			nActualTimespan = params.nPowTargetTimespan*4;
-	}
+    int64_t nTargetTimespan = params.nPowTargetTimespan; // the original 14 days
+    if (pindexLast->nHeight >= params.MVFDefaultActivateForkHeight() && pindexLast->nHeight < params.MVFRetargetPeriodEnd())
+    	nTargetTimespan = params.MVFPowTargetTimespan(pindexLast->nHeight);
+	// prevent abrupt changes to target
+	if (nActualTimespan < nTargetTimespan/4)
+		nActualTimespan = nTargetTimespan/4;
+	if (nActualTimespan > nTargetTimespan*4)
+		nActualTimespan = nTargetTimespan*4;
 
     // Retarget
     const arith_uint256 bnPowLimit = UintToArith256(params.powLimit);

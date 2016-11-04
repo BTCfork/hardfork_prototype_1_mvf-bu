@@ -61,22 +61,29 @@ struct Params {
     bool fPowNoRetargeting;
     int64_t nPowTargetSpacing;
     int64_t nPowTargetTimespan;
+
     // MVF-BU begin (MVHF-BU-DES-TRIG-3)
 
 	int nMVFDefaultActivateForkHeight;     // trigger block height
 
-	int MVFDefaultActivateForkHeight() const { return nMVFDefaultActivateForkHeight; };
+	int MVFDefaultActivateForkHeight() const { return nMVFDefaultActivateForkHeight; }
 
-    int nMVFRetargetPeriodEnd() const { return  MVFDefaultActivateForkHeight() + ((180 * 24 * 60 * 60)/nPowTargetSpacing); };
+    int MVFRetargetPeriodEnd() const { return  MVFDefaultActivateForkHeight() + (180 * 24 * 60 * 60 / nPowTargetSpacing); }
+
+    int64_t MVFPowTargetTimespan(int Height) const { return (Height - MVFDefaultActivateForkHeight()) * nPowTargetSpacing; }
+
     int64_t DifficultyAdjustmentInterval(int Height) const
-    	{
-    		// mvhf-bu - if the height is before the fork or 6 months after use the original values
-    		if (Height < MVFDefaultActivateForkHeight() || Height > nMVFRetargetPeriodEnd() )
-    			return nPowTargetTimespan / nPowTargetSpacing;
-    		else // re-target every block
-    			return nPowTargetSpacing;
-    	}
+	   {
+		   // mvhf-bu - if the height is before the fork or 6 months after use the original values
+		   if (Height >= MVFDefaultActivateForkHeight() && Height < MVFRetargetPeriodEnd() )
+			   // re-target MVF
+			   return MVFPowTargetTimespan(Height) / nPowTargetSpacing;
+		   else // re-target original
+			   return nPowTargetTimespan / nPowTargetSpacing;
+	   }
+
     // MVF-BU end
+
     int64_t SizeForkExpiration() const { return 1514764800; } // BU (classic compatibility) 2018-01-01 00:00:00 GMT
 
 
