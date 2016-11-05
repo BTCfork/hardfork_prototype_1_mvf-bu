@@ -11,6 +11,7 @@
 #include "uint256.h"
 #include <map>
 #include <string>
+#include <math.h>  //MVF-BU
 
 namespace Consensus {
 
@@ -70,17 +71,29 @@ struct Params {
 
     int MVFRetargetPeriodEnd() const { return  MVFDefaultActivateForkHeight() + (180 * 24 * 60 * 60 / nPowTargetSpacing); }
 
-    int64_t MVFPowTargetTimespan(int Height) const { return (Height - MVFDefaultActivateForkHeight()) * nPowTargetSpacing; }
+    int64_t MVFPowTargetTimespan(int Height) const
+    {
+    	// start at 1 and increase by 1 every 12 blocks until max of 2016
+    	return fmin((((Height - MVFDefaultActivateForkHeight())/12)+1) * nPowTargetSpacing, nPowTargetTimespan);
+    }
+
+    bool MVFisWithinRetargetPeriod(int Height) const
+    {
+ 	   if (Height >= MVFDefaultActivateForkHeight() && Height < MVFRetargetPeriodEnd() )
+ 		   return true;
+ 	   else
+ 		   return false;
+    }
 
     int64_t DifficultyAdjustmentInterval(int Height) const
-	   {
-		   // mvhf-bu - if the height is before the fork or 6 months after use the original values
-		   if (Height >= MVFDefaultActivateForkHeight() && Height < MVFRetargetPeriodEnd() )
-			   // re-target MVF
-			   return MVFPowTargetTimespan(Height) / nPowTargetSpacing;
-		   else // re-target original
-			   return nPowTargetTimespan / nPowTargetSpacing;
-	   }
+   {
+	   // mvhf-bu - if the height is before the fork or 6 months after use the original values
+	   if (MVFisWithinRetargetPeriod(Height))
+		   // re-target MVF
+		   return MVFPowTargetTimespan(Height) / nPowTargetSpacing;
+	   else // re-target original
+		   return nPowTargetTimespan / nPowTargetSpacing;
+   }
 
     // MVF-BU end
 

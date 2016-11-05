@@ -14,7 +14,7 @@
 
 from test_framework.test_framework import BitcoinTestFramework
 from test_framework.util import *
-
+from random import randint
 
 class MVF_RETARGET_Test(BitcoinTestFramework):
 
@@ -63,15 +63,20 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
         print "Fork triggered successfully on node 0 (block height 100)"
 
         # start generating blocks with time stamps 600 apart
-        for n in xrange(10):
-            best_block = self.nodes[0].getbestblockhash()
-            best_block_time = self.nodes[0].getblock(best_block, True)['time']
-            print "%s :: %s"%(best_block,time.strftime("%H:%M",time.gmtime(best_block_time)))
+        for n in xrange(144):
+            best_block_hash = self.nodes[0].getbestblockhash()
+            best_block = self.nodes[0].getblock(best_block_hash, True)
 
-            self.nodes[0].setmocktime(best_block_time + 600)
+            print "%s :: %s :: %d :: %s" %(
+                best_block['height'],
+                time.strftime("%H:%M",time.gmtime(best_block['time'])),
+                best_block['difficulty'],
+                best_block['bits'])
+
+            self.nodes[0].setmocktime(best_block['time'] + randint(300,900))
             self.nodes[0].generate(1)
 
-        print "Done."
+        print "Done. Check the logs now or press enter to shutdown test."
         raw_input()
 
 if __name__ == '__main__':

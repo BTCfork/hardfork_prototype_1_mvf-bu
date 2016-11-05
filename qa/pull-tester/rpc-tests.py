@@ -78,8 +78,8 @@ if EXEEXT == ".exe" and "-win" not in opts:
 testScripts = [
     'bip68-112-113-p2p.py',
     'wallet.py',
-    'mvf-bu-trig.py',
-    'mvf-bu-retarget.py',
+    'mvf-bu-retarget.py', # MVF-BU
+    'mvf-bu-trig.py',  # MVF-BU
     'excessive.py',
     'listtransactions.py',
     'receivedby.py',
@@ -100,7 +100,7 @@ testScripts = [
     'fundrawtransaction.py',
     'signrawtransactions.py',
     'walletbackup.py',
-    'walletbackupauto.py', # MVHF-BU
+    'walletbackupauto.py',  # MVF-BU
     'nodehandling.py',
     'reindex.py',
     'decodescript.py',

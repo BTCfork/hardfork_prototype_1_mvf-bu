@@ -19,6 +19,7 @@
 #include "txmempool.h"
 #include "util.h"
 #include "utilstrencodings.h"
+#include "mvf-bu.h"  // MVF-BU added
 
 #include <stdint.h>
 
@@ -619,6 +620,25 @@ static UniValue BIP9SoftForkDesc(const std::string& name, const Consensus::Param
     return rv;
 }
 
+// MVF-BU begin add hard fork output (MVHF-BU-DES-TRIG-9)
+static UniValue HardForkDesc(const std::string &name, CBlockIndex* pindex, const Consensus::Params& consensusParams)
+{
+    UniValue rv(UniValue::VOBJ);
+    rv.push_back(Pair("id", name));
+    rv.push_back(Pair("forkheight", FinalActivateForkHeight));
+    rv.push_back(Pair("forkid", FinalForkId));
+    rv.push_back(Pair("blocks_remaining", (FinalActivateForkHeight > pindex->nHeight) ? (FinalActivateForkHeight - pindex->nHeight) : 0));
+    switch (VersionBitsTipState(consensusParams, Consensus::DEPLOYMENT_SEGWIT)) {
+    case THRESHOLD_DEFINED: rv.push_back(Pair("segwit_status", "defined")); break;
+    case THRESHOLD_STARTED: rv.push_back(Pair("segwit_status", "started")); break;
+    case THRESHOLD_LOCKED_IN: rv.push_back(Pair("segwit_status", "locked_in")); break;
+    case THRESHOLD_ACTIVE: rv.push_back(Pair("segwit_status", "active")); break;
+    case THRESHOLD_FAILED: rv.push_back(Pair("segwit_status", "failed")); break;
+    }
+    return rv;
+}
+// MVF-BU end
+
 UniValue getblockchaininfo(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 0)
@@ -683,8 +703,18 @@ UniValue getblockchaininfo(const UniValue& params, bool fHelp)
     softforks.push_back(SoftForkDesc("bip66", 3, tip, consensusParams));
     softforks.push_back(SoftForkDesc("bip65", 4, tip, consensusParams));
     bip9_softforks.push_back(BIP9SoftForkDesc("csv", consensusParams, Consensus::DEPLOYMENT_CSV));
+    bip9_softforks.push_back(BIP9SoftForkDesc("segwit", consensusParams, Consensus::DEPLOYMENT_SEGWIT));  // MVF-BU added
     obj.push_back(Pair("softforks",             softforks));
     obj.push_back(Pair("bip9_softforks", bip9_softforks));
+
+    // MVF-BU begin output hardfork description (MVHF-BU-DES-TRIG-9)
+    if (!isMVFHardForkActive)
+    {
+        UniValue hardforks(UniValue::VARR);
+        hardforks.push_back(HardForkDesc("mvhf", tip, consensusParams));
+        obj.push_back(Pair("hardforks", hardforks));
+    }
+    // MVF-BU end
 
     if (fPruneMode)
     {

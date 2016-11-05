@@ -28,7 +28,7 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
 		return pindexLast->nBits;
 	}
 
-	LogPrintf("DEBUG DifficultyAdjInterval = %d , TimeSpan = %d \n", params.DifficultyAdjustmentInterval(pindexLast->nHeight), params.MVFPowTargetTimespan(pindexLast->nHeight));
+	LogPrintf("DEBUG DifficultyAdjInterval = %d , TargetTimeSpan = %d \n", params.DifficultyAdjustmentInterval(pindexLast->nHeight), params.MVFPowTargetTimespan(pindexLast->nHeight));
 	// Only change once per difficulty adjustment interval
 	if ((pindexLast->nHeight+1) % params.DifficultyAdjustmentInterval(pindexLast->nHeight) != 0)
 	{
@@ -53,7 +53,7 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
 
 	// Go back by what we want to be 14 days worth of blocks
 	int nHeightFirst = pindexLast->nHeight - (params.DifficultyAdjustmentInterval(pindexLast->nHeight)-1);
-	if (pindexLast->nHeight >= params.MVFDefaultActivateForkHeight())
+	if (params.MVFisWithinRetargetPeriod(pindexLast->nHeight))
 		nHeightFirst = pindexLast->nHeight - params.DifficultyAdjustmentInterval(pindexLast->nHeight);
 	assert(nHeightFirst >= 0);
 	const CBlockIndex* pindexFirst = pindexLast->GetAncestor(nHeightFirst);
@@ -74,7 +74,7 @@ unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nF
 
     //mvhf-bu target time span while within the re-target period
     int64_t nTargetTimespan = params.nPowTargetTimespan; // the original 14 days
-    if (pindexLast->nHeight >= params.MVFDefaultActivateForkHeight() && pindexLast->nHeight < params.MVFRetargetPeriodEnd())
+    if (params.MVFisWithinRetargetPeriod(pindexLast->nHeight))
     	nTargetTimespan = params.MVFPowTargetTimespan(pindexLast->nHeight);
 	// prevent abrupt changes to target
 	if (nActualTimespan < nTargetTimespan/4)
@@ -113,11 +113,21 @@ bool CheckProofOfWork(uint256 hash, unsigned int nBits, const Consensus::Params&
 
     // Check range
     if (fNegative || bnTarget == 0 || fOverflow || bnTarget > UintToArith256(params.powLimit))
-        return error("CheckProofOfWork(): nBits below minimum work");
-
+    {
+    	if (!GetBoolArg("-force-retarget", false))
+        	return error("CheckProofOfWork(): nBits below minimum work");
+    	else
+    		return false;
+    }
     // Check proof of work matches claimed amount
     if (UintToArith256(hash) > bnTarget)
-      return error("CheckProofOfWork(): hash %s doesn't match nBits 0x%x",hash.ToString(),nBits);
+    {
+    	if (!GetBoolArg("-force-retarget", false))
+    		return error("CheckProofOfWork(): hash %s doesn't match nBits 0x%x",hash.ToString(),nBits);
+    	else
+    		return false;
+    }
+
 
     return true;
 }
