@@ -12,6 +12,7 @@
 #include <map>
 #include <string>
 #include <math.h>  //MVF-BU
+#include "mvf-bu.h"  // MVF-BU added
 
 namespace Consensus {
 
@@ -64,22 +65,38 @@ struct Params {
     int64_t nPowTargetTimespan;
 
     // MVF-BU begin (MVHF-BU-DES-TRIG-3)
+    int nMVFDefaultActivateForkHeight;     // trigger block height
 
-	int nMVFDefaultActivateForkHeight;     // trigger block height
+    int MVFDefaultActivateForkHeight() const { return nMVFDefaultActivateForkHeight; };
 
-	int MVFDefaultActivateForkHeight() const { return nMVFDefaultActivateForkHeight; }
-
-    int MVFRetargetPeriodEnd() const { return  MVFDefaultActivateForkHeight() + (180 * 24 * 60 * 60 / nPowTargetSpacing); }
+    int MVFRetargetPeriodEnd() const { return  FinalActivateForkHeight + (180 * 24 * 60 * 60 / nPowTargetSpacing); }
 
     int64_t MVFPowTargetTimespan(int Height) const
     {
-    	// start at 1 and increase by 1 every 12 blocks until max of 2016
-    	return fmin((((Height - MVFDefaultActivateForkHeight())/12)+1) * nPowTargetSpacing, nPowTargetTimespan);
+    	int MVFHeight = Height - FinalActivateForkHeight;
+
+    	switch (MVFHeight)
+    	{
+    		case 	1 ...
+					10: return nPowTargetSpacing;			// 10 minutes (abrupt retargeting permitted)
+
+    		case 	11 ...
+					40: return nPowTargetSpacing * 3;		// 30 minutes
+
+    		case	41 ...
+					101: return nPowTargetSpacing * 6; 		// 1 hour
+
+    		case	102 ...
+					2000: return nPowTargetSpacing * 6 * 3; // 3 hours
+
+    		default : return nPowTargetSpacing * 6 * 12; 	// 12 hours
+    	}
+
     }
 
     bool MVFisWithinRetargetPeriod(int Height) const
     {
- 	   if (Height >= MVFDefaultActivateForkHeight() && Height < MVFRetargetPeriodEnd() )
+ 	   if (Height >= FinalActivateForkHeight && Height < MVFRetargetPeriodEnd() )
  		   return true;
  	   else
  		   return false;
@@ -87,7 +104,7 @@ struct Params {
 
     int64_t DifficultyAdjustmentInterval(int Height) const
    {
-	   // mvhf-bu - if the height is before the fork or 6 months after use the original values
+	   // mvhf-bu - if outside the MVFRetargetPeriod then use the original values
 	   if (MVFisWithinRetargetPeriod(Height))
 		   // re-target MVF
 		   return MVFPowTargetTimespan(Height) / nPowTargetSpacing;

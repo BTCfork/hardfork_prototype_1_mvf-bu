@@ -11,7 +11,7 @@
 #include "primitives/block.h"
 #include "uint256.h"
 #include "util.h"
-
+#include "mvf-bu.h"  // MVF-BU added
 
 unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock, const Consensus::Params& params)
 {
@@ -22,13 +22,14 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
         return nProofOfWorkLimit;
 
     // mvhf-bu difficulty re-targeting reset
-	if (pindexLast->nHeight == params.MVFDefaultActivateForkHeight())
+	if (pindexLast->nHeight == FinalActivateForkHeight)
 	{
-		LogPrintf("FORK BLOCK DIFFICULTY RESET %d \n", nProofOfWorkLimit);
+		LogPrintf("FORK BLOCK DIFFICULTY RESET  %08x  \n", pindexLast->nBits);
 		return pindexLast->nBits;
 	}
 
 	LogPrintf("DEBUG DifficultyAdjInterval = %d , TargetTimeSpan = %d \n", params.DifficultyAdjustmentInterval(pindexLast->nHeight), params.MVFPowTargetTimespan(pindexLast->nHeight));
+
 	// Only change once per difficulty adjustment interval
 	if ((pindexLast->nHeight+1) % params.DifficultyAdjustmentInterval(pindexLast->nHeight) != 0)
 	{
@@ -74,13 +75,21 @@ unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nF
 
     //mvhf-bu target time span while within the re-target period
     int64_t nTargetTimespan = params.nPowTargetTimespan; // the original 14 days
+
     if (params.MVFisWithinRetargetPeriod(pindexLast->nHeight))
     	nTargetTimespan = params.MVFPowTargetTimespan(pindexLast->nHeight);
-	// prevent abrupt changes to target
-	if (nActualTimespan < nTargetTimespan/4)
-		nActualTimespan = nTargetTimespan/4;
-	if (nActualTimespan > nTargetTimespan*4)
-		nActualTimespan = nTargetTimespan*4;
+
+    // permit abrupt changes for a few blocks after the fork i.e. when nTargetTimespan is < 30 minutes
+    if (nTargetTimespan >= params.nPowTargetSpacing * 3)
+    {
+		// prevent abrupt changes to target
+		if (nActualTimespan < nTargetTimespan/4)
+			nActualTimespan = nTargetTimespan/4;
+		if (nActualTimespan > nTargetTimespan*4)
+			nActualTimespan = nTargetTimespan*4;
+    }
+    else LogPrintf("Abrupt RETARGET permitted.\n");
+
 
     // Retarget
     const arith_uint256 bnPowLimit = UintToArith256(params.powLimit);
