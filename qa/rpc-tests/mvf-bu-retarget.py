@@ -59,25 +59,37 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
 
         # use to track how many times the same bits are used in a row
         prev_block = 0
-        count_bits_used = 1
+        count_bits_used = 0
+        diffadjinterval = 0
+        prev_block_delta = 0
 
         # start generating MVF blocks with varying time stamps
-        for n in xrange(4032):
+        print "nBits changed @ Time,Delta,Block,nBits,Used,Difficulty"
+        for n in xrange(185 * 24 * 60 * 60): #25920
             best_block_hash = self.nodes[0].getbestblockhash()
             best_block = self.nodes[0].getblock(best_block_hash, True)
 
-            if prev_block <> 0 :
-                if prev_block['bits'] == best_block['bits']:
-                    count_bits_used += 1
-                else:
-                    print "nBits changed @ Height:nBits:Diff:Used %s : %s : %f : %d" %(
-                        prev_block['height'],
-                        prev_block['bits'],
-                        prev_block['difficulty'],
-                        count_bits_used)
+            prev_block = self.nodes[0].getblock(best_block['previousblockhash'], True)
 
-                    count_bits_used = 1
+            diffadjinterval = self.nodes[0].getblockchaininfo()['difficultyadjinterval']
 
+            if prev_block['bits'] == best_block['bits']:
+                count_bits_used += 1
+            else:
+                print "%s,%d,%d,%s,%d,%f " %(
+                    time.strftime("%Y-%m-%d %H:%M",time.gmtime(prev_block['time'])),
+                    prev_block_delta,
+                    prev_block['height'],
+                    prev_block['bits'],
+                    count_bits_used,
+                    prev_block['difficulty'])
+
+                #assert_equal(diffadjinterval, count_bits_used)
+
+                count_bits_used = 1
+            #### end if prev_block['bits'] == best_block['bits']
+
+            # print info for every block
             #print "%s :: %s :: %f :: %s" %(
                 #best_block['height'],
                 #time.strftime("%H:%M",time.gmtime(best_block['time'])),
@@ -86,15 +98,22 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
 
             if n <= 36 :
                 # simulate slow blocks just after the fork i.e. low hash power/high difficulty
-                self.nodes[0].setmocktime(best_block['time'] + randint(4000,8000))
+                next_block_time = randint(4000,6000)
             else:
                 # simulate ontime blocks i.e. hash power/difficult around 600 secs
-                self.nodes[0].setmocktime(best_block['time'] + randint(300,900))
+                next_block_time = randint(500,700)
+
+            self.nodes[0].setmocktime(best_block['time'] + next_block_time)
+
+            prev_block_delta = best_block['time'] - prev_block['time']
 
             self.nodes[0].generate(1)
 
-            prev_block = best_block
-        #end for n in xrange
+        #### end for n in xrange
+
+        diffadjinterval = self.nodes[0].getblockchaininfo()['difficultyadjinterval']
+
+        print diffadjinterval
 
         print "Done. Check the logs now or press enter to shutdown test."
         raw_input()

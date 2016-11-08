@@ -81,13 +81,13 @@ struct Params {
 					10: return nPowTargetSpacing;			// 10 minutes (abrupt retargeting permitted)
 
     		case 	11 ...
-					40: return nPowTargetSpacing * 3;		// 30 minutes
+					43: return nPowTargetSpacing * 3;		// 30 minutes
 
-    		case	41 ...
+    		case	44 ...
 					101: return nPowTargetSpacing * 6; 		// 1 hour
 
     		case	102 ...
-					2000: return nPowTargetSpacing * 6 * 3; // 3 hours
+					2011: return nPowTargetSpacing * 6 * 3; // 3 hours
 
     		default : return nPowTargetSpacing * 6 * 12; 	// 12 hours
     	}
