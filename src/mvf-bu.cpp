@@ -124,7 +124,7 @@ void ForkSetup(const CChainParams& chainparams)
 void ActivateFork(void)
 {
     LogPrintf("%s: MVF: checking whether to perform fork activation\n", __func__);
-    if (!isMVFHardForkActive && !wasMVFHardForkPreviouslyActivated)  // sanity check
+    if (!isMVFHardForkActive && !wasMVFHardForkPreviouslyActivated)  // sanity check to protect the one-off actions
     {
         LogPrintf("%s: MVF: performing fork activation actions\n", __func__);
 
@@ -154,10 +154,10 @@ void ActivateFork(void)
         LogPrintf("%s: MVF: active fork height = %d\n", __func__, FinalActivateForkHeight);
         LogPrintf("%s: MVF: active fork id = 0x%06x (%d)\n", __func__, FinalForkId, FinalForkId);
         LogPrintf("%s: MVF: auto backup block = %d\n", __func__, GetArg("-autobackupblock", FinalForkId - 1));
-
-        // set the flag so that other code knows HF is active
-        isMVFHardForkActive = true;
     }
+    // set the flag so that other code knows HF is active
+    LogPrintf("%s: MVF: enabling isMVFHardForkActive\n", __func__);
+    isMVFHardForkActive = true;
 }
 
 
@@ -168,6 +168,7 @@ void DeactivateFork(void)
     if (isMVFHardForkActive)
     {
         LogPrintf("%s: MVF: performing fork deactivation actions\n", __func__);
-        isMVFHardForkActive = false;
     }
+    LogPrintf("%s: MVF: disabling isMVFHardForkActive\n", __func__);
+    isMVFHardForkActive = false;
 }

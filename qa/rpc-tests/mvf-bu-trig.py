@@ -12,6 +12,8 @@
 # on node 3, test block height trigger pre-empts SegWit trigger at 300
 #
 
+import os
+
 from test_framework.test_framework import BitcoinTestFramework
 from test_framework.util import *
 
@@ -49,7 +51,8 @@ class MVF_TRIG_Test(BitcoinTestFramework):
         """ check in log file if fork has triggered and return true/false """
         # MVF-BU TODO: extend to check using RPC info about forks
         nodelog = self.options.tmpdir + "/node%s/regtest/debug.log" % node
-        hf_active = search_file(nodelog, "isMVFHardForkActive=1")
+        hf_active = (search_file(nodelog, "isMVFHardForkActive=1") and
+                     search_file(nodelog, "enabling isMVFHardForkActive"))
         fork_actions_performed = search_file(nodelog, "MVF: performing fork activation actions")
         return (len(hf_active) > 0 and len(fork_actions_performed) == 1)
 
@@ -109,11 +112,16 @@ class MVF_TRIG_Test(BitcoinTestFramework):
         for n in xrange(4):
             assert_equal(False, self.prior_fork_detected_on_node(n))
             stop_node(self.nodes[n], n)
+            # get rid of debug.log files so we can better check retrigger
+            os.unlink(os.path.join(self.options.tmpdir,"node%d" % n,"regtest","debug.log"))
+
         # restart them all, check that they detected having forked on prior run
         print "Restarting all nodes"
         self.start_all_nodes()
         for n in xrange(4):
             assert_equal(True, self.prior_fork_detected_on_node(n))
+            nodelog=os.path.join(self.options.tmpdir,"node%d" % n,"regtest","debug.log")
+            assert(len(search_file(nodelog, "enabling isMVFHardForkActive")) == 1)
         print "Prior fork activation detected on all nodes"
 
 if __name__ == '__main__':
