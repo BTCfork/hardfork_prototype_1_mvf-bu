@@ -54,6 +54,7 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
 
 	// Go back by what we want to be 14 days worth of blocks
 	int nHeightFirst = pindexLast->nHeight - (params.DifficultyAdjustmentInterval(pindexLast->nHeight)-1);
+	// While within the retarget period override the original formula to handle a dynamic time span
 	if (params.MVFisWithinRetargetPeriod(pindexLast->nHeight))
 		nHeightFirst = pindexLast->nHeight - params.DifficultyAdjustmentInterval(pindexLast->nHeight);
 	assert(nHeightFirst >= 0);
@@ -66,11 +67,22 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
 
 unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nFirstBlockTime, const Consensus::Params& params)
 {
-    if (params.fPowNoRetargeting && !GetBoolArg("-force-retarget", false))
+    static bool force_retarget=GetBoolArg("-force-retarget", false);  // MVF-BU added to test retargeting
+    const arith_uint256 bnPowLimit = UintToArith256(params.powLimit); // MVF-BU moved here
+
+    if (params.fPowNoRetargeting && !force_retarget)
         return pindexLast->nBits;
 
     // Limit adjustment step
     int64_t nActualTimespan = pindexLast->GetBlockTime() - nFirstBlockTime;
+    // MVF-BU begin check for abnormal condition
+    // This actually occurred during testing, resulting in new target == 0
+    // which could never be met
+    if (nActualTimespan == 0) {
+        LogPrintf("  MVF: nActualTimespan == 0, returning bnPowLimit\n");
+         return bnPowLimit.GetCompact();
+    }
+    // MVF-BU end
     LogPrintf("  nActualTimespan = %d  before bounds\n", nActualTimespan);
 
     //mvhf-bu target time span while within the re-target period
@@ -92,16 +104,29 @@ unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nF
 
 
     // Retarget
-    const arith_uint256 bnPowLimit = UintToArith256(params.powLimit);
-    arith_uint256 bnNew;
+    arith_uint256 bnNew, bnNew1, bnNew2;
     arith_uint256 bnOld;
     bnNew.SetCompact(pindexLast->nBits);
     bnOld = bnNew;
-    bnNew *= nActualTimespan;
-    bnNew /= nTargetTimespan;
+    // MVF-BU begin: move division before multiplication
+    // at regtest difficulty, the multiplication is prone to overflowing
+    bnNew1 = bnNew / nTargetTimespan;
+    bnNew2 = bnNew1 * nActualTimespan;
 
-    if (bnNew > bnPowLimit)
+    // Test for overflow
+    if (bnNew2 / nActualTimespan != bnNew1)
+    {
+        bnNew = bnOld;
+        LogPrintf("GetNextWorkRequired OVERFLOW\n");
+    }
+    else if (bnNew2 > bnPowLimit)
+    {
         bnNew = bnPowLimit;
+        LogPrintf("GetNextWorkRequired OVERLIMIT\n");
+    }
+    else
+        bnNew = bnNew2;
+    // MVF-BU end
 
     /// debug print
     LogPrintf("GetNextWorkRequired RETARGET\n");
