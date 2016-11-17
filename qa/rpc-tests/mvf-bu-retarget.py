@@ -17,21 +17,14 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
 
     def setup_chain(self):
         print("Initializing test directory " + self.options.tmpdir)
-        initialize_chain_clean(self.options.tmpdir, 4)
+        initialize_chain_clean(self.options.tmpdir, 1)
 
     def setup_network(self):
         self.nodes = []
         self.is_network_split = False
-        self.nodes.append(start_node(0, self.options.tmpdir,
-                            ["-forkheight=100", "-force-retarget" ]))
-        #self.nodes.append(start_node(1, self.options.tmpdir,
-                            #["-forkheight=200", ]))
-        #self.nodes.append(start_node(2, self.options.tmpdir,
-                            #["-forkheight=999999",
-                             #"-blockversion=%s" % 0x20000002])) # signal SegWit
-        #self.nodes.append(start_node(3, self.options.tmpdir,
-                            #["-forkheight=300",
-                             #"-blockversion=%s" % 0x20000002])) # signal SegWit, but forkheight should pre-empt
+        self.nodes.append(start_node(0, self.options.tmpdir
+            ,["-forkheight=100", "-force-retarget","-rpcthreads=100" ]
+            ))
 
     def is_fork_triggered_on_node(self, node=0):
         """ check in log file if fork has triggered and return true/false """
@@ -64,27 +57,27 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
         prev_block_delta = 0
 
         # start generating MVF blocks with varying time stamps
-        print "nBits changed @ Time,Delta,Block,nBits,Used,Difficulty"
-        for n in xrange(185 * 24 * 60 * 60): #25920
+        print "nBits changed @ Time,Block,Delta(secs),nBits,Used,Difficulty"
+        for n in xrange(200 * 24 * 60 * 60 / 600): #26640
             best_block_hash = self.nodes[0].getbestblockhash()
             best_block = self.nodes[0].getblock(best_block_hash, True)
 
             prev_block = self.nodes[0].getblock(best_block['previousblockhash'], True)
 
-            diffadjinterval = self.nodes[0].getblockchaininfo()['difficultyadjinterval']
-
             if prev_block['bits'] == best_block['bits']:
                 count_bits_used += 1
             else:
+
                 print "%s,%d,%d,%s,%d,%f " %(
                     time.strftime("%Y-%m-%d %H:%M",time.gmtime(prev_block['time'])),
-                    prev_block_delta,
                     prev_block['height'],
+                    prev_block_delta,
                     prev_block['bits'],
                     count_bits_used,
                     prev_block['difficulty'])
 
-                #assert_equal(diffadjinterval, count_bits_used)
+                if prev_block['bits'] <> "207fffff":
+                    assert_less_than_equal(count_bits_used, diffadjinterval)
 
                 count_bits_used = 1
             #### end if prev_block['bits'] == best_block['bits']
@@ -98,6 +91,7 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
 
             if n <= 36 :
                 # simulate slow blocks just after the fork i.e. low hash power/high difficulty
+                # this will cause bits to hit the limit 207fffff
                 next_block_time = randint(4000,6000)
             else:
                 # simulate ontime blocks i.e. hash power/difficult around 600 secs
@@ -106,17 +100,15 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
             self.nodes[0].setmocktime(best_block['time'] + next_block_time)
 
             prev_block_delta = best_block['time'] - prev_block['time']
+            diffadjinterval = self.nodes[0].getblockchaininfo()['difficultyadjinterval']
 
             self.nodes[0].generate(1)
 
         #### end for n in xrange
 
-        diffadjinterval = self.nodes[0].getblockchaininfo()['difficultyadjinterval']
 
-        print diffadjinterval
-
-        print "Done. Check the logs now or press enter to shutdown test."
-        raw_input()
+        print "Done."
+        #raw_input()
 
 if __name__ == '__main__':
     MVF_RETARGET_Test().main()
