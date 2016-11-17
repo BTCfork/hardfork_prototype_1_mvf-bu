@@ -712,7 +712,7 @@ UniValue getblockchaininfo(const UniValue& params, bool fHelp)
     obj.push_back(Pair("difficultyadjinterval", consensusParams.DifficultyAdjustmentInterval(tip->nHeight))); // MVF-BU
 
     // MVF-BU begin output hardfork description (MVHF-BU-DES-TRIG-9)
-    if (!isMVFHardForkActive && consensusParams.MVFisWithinRetargetPeriod(tip->nHeight))
+    if (!isMVFHardForkActive)
     {
         UniValue hardforks(UniValue::VARR);
         hardforks.push_back(HardForkDesc("mvhf", tip, consensusParams));
