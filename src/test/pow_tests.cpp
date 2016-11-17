@@ -55,7 +55,11 @@ BOOST_AUTO_TEST_CASE(get_next_work_lower_limit_actual)
     pindexLast.nHeight = 68543;
     pindexLast.nTime = 1279297671;  // Block #68543
     pindexLast.nBits = 0x1c05a3f4;
-    BOOST_CHECK_EQUAL(CalculateNextWorkRequired(&pindexLast, nLastRetargetTime, params), 0x1c0168fd);
+    // MVF-BU begin
+    // due to reversal of multiply-divide calculation in CalculateNextWorkRequired,
+    // this rounds slightly differently (change in last digit)
+    BOOST_CHECK_EQUAL(CalculateNextWorkRequired(&pindexLast, nLastRetargetTime, params), 0x1c0168fc);
+    // MVF-BU end
 }
 
 /* Test the constraint on the upper bound for actual time taken */
@@ -95,5 +99,32 @@ BOOST_AUTO_TEST_CASE(GetBlockProofEquivalentTime_test)
         BOOST_CHECK_EQUAL(tdiff, p1->GetBlockTime() - p2->GetBlockTime());
     }
 }
+
+// MVF-BU begin
+// added unit test after we found that on regtest, difficulty calculation
+// can lead to overflow of 256-bit integer.
+// We reversed the order of multiplication and division so that the
+// division is done first.
+BOOST_AUTO_TEST_CASE(MVFCheckDiffCalculation_test)
+{
+    SelectParams(CBaseChainParams::REGTEST);
+    const Consensus::Params& params = Params().GetConsensus();
+    arith_uint256 bnPowLimit = UintToArith256(params.powLimit);
+    arith_uint256 bnNew;
+    arith_uint256 bnOld;
+    unsigned int oldnBits = 0x1f10f1aa;
+    int64_t nTargetTimespan = 3600, nActualTimespan = 3880;
+    bnNew.SetCompact(oldnBits);
+    bnOld = bnNew;
+    bnNew /= nTargetTimespan;   // division first, else might overflow
+    bnNew *= nActualTimespan;
+
+    if (bnNew > bnPowLimit)
+        bnNew = bnPowLimit;
+
+    BOOST_CHECK_EQUAL(bnOld.ToString(), "0010f1aa00000000000000000000000000000000000000000000000000000000");
+    BOOST_CHECK_EQUAL(bnNew.ToString(), "00124309b60b60b60b60b60b60b60b60b60b60b60b60b60b60b60b60b60b5218");
+}
+// MVF-BU end
 
 BOOST_AUTO_TEST_SUITE_END()
