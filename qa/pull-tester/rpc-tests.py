@@ -78,6 +78,7 @@ if EXEEXT == ".exe" and "-win" not in opts:
 testScripts = [
     'bip68-112-113-p2p.py',
     'wallet.py',
+    'mvf-bu-retarget.py', # MVF-BU
     'mvf-bu-trig.py',  # MVF-BU
     'excessive.py',
     'listtransactions.py',

@@ -55,7 +55,11 @@ BOOST_AUTO_TEST_CASE(get_next_work_lower_limit_actual)
     pindexLast.nHeight = 68543;
     pindexLast.nTime = 1279297671;  // Block #68543
     pindexLast.nBits = 0x1c05a3f4;
-    BOOST_CHECK_EQUAL(CalculateNextWorkRequired(&pindexLast, nLastRetargetTime, params), 0x1c0168fd);
+    // MVF-BU begin
+    // due to reversal of multiply-divide calculation in CalculateNextWorkRequired,
+    // this rounds slightly differently (change in last digit)
+    BOOST_CHECK_EQUAL(CalculateNextWorkRequired(&pindexLast, nLastRetargetTime, params), 0x1c0168fc);
+    // MVF-BU end
 }
 
 /* Test the constraint on the upper bound for actual time taken */
@@ -95,5 +99,28 @@ BOOST_AUTO_TEST_CASE(GetBlockProofEquivalentTime_test)
         BOOST_CHECK_EQUAL(tdiff, p1->GetBlockTime() - p2->GetBlockTime());
     }
 }
+
+// MVF-BU begin
+// added unit test after we found that on regtest, difficulty calculation
+// can lead to overflow of 256-bit integer.
+// Here an excessive retarget time is set
+// in order to trigger the overflow case.
+BOOST_AUTO_TEST_CASE(MVFCheckOverflowCalculation_test)
+{
+    SelectParams(CBaseChainParams::MAIN);
+    const Consensus::Params& params = Params().GetConsensus();
+
+    FinalActivateForkHeight = 68540;
+
+    int64_t nLastRetargetTime = 7; // Force an excessive retarget time to trigger overflow
+    CBlockIndex pindexLast;
+    pindexLast.nHeight = 68543;
+    pindexLast.nTime = 1279297671;  // Block #68543
+    pindexLast.nBits = 0x200aaaaa;    // Almost overflowing already
+
+    // an overflow causes the old bits to be used again
+    BOOST_CHECK_EQUAL(CalculateNextWorkRequired(&pindexLast, nLastRetargetTime, params), pindexLast.nBits);
+}
+// MVF-BU end
 
 BOOST_AUTO_TEST_SUITE_END()
