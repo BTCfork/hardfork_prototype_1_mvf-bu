@@ -21,53 +21,56 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
     if (pindexLast == NULL)
         return nProofOfWorkLimit;
 
-    // mvhf-bu difficulty re-targeting reset
-	if (pindexLast->nHeight == FinalActivateForkHeight)
-	{
-		LogPrintf("FORK BLOCK DIFFICULTY RESET  %08x  \n", pindexLast->nBits);
-		return pindexLast->nBits;
-	}
+    // MVF-BU begin difficulty re-targeting reset
+    if (pindexLast->nHeight == FinalActivateForkHeight)
+    {
+        LogPrintf("MVF FORK BLOCK DIFFICULTY RESET  %08x  \n", pindexLast->nBits);
+        return pindexLast->nBits;
+    }
+    LogPrintf("MVF DEBUG DifficultyAdjInterval = %d , TargetTimeSpan = %d \n", params.DifficultyAdjustmentInterval(pindexLast->nHeight), params.MVFPowTargetTimespan(pindexLast->nHeight));
+    // MVF-BU end
 
-	LogPrintf("DEBUG DifficultyAdjInterval = %d , TargetTimeSpan = %d \n", params.DifficultyAdjustmentInterval(pindexLast->nHeight), params.MVFPowTargetTimespan(pindexLast->nHeight));
+    // Only change once per difficulty adjustment interval
+    if ((pindexLast->nHeight+1) % params.DifficultyAdjustmentInterval(pindexLast->nHeight) != 0)  // MVF-BU: use height-dependent interval
+    {
+        // MVF-BU: added force parameter to enable adjusting difficulty for regtest tests
+        if (params.fPowAllowMinDifficultyBlocks && !GetBoolArg("-force-retarget", false))
+        {
+            // Special difficulty rule for testnet:
+            // If the new block's timestamp is more than 2* 10 minutes
+            // then allow mining of a min-difficulty block.
+            if (pblock->GetBlockTime() > pindexLast->GetBlockTime() + params.nPowTargetSpacing*2)
+                return nProofOfWorkLimit;
+            else
+            {
+                // Return the last non-special-min-difficulty-rules-block
+                const CBlockIndex* pindex = pindexLast;
+                // MVF-BU: use height-dependent interval
+                while (pindex->pprev && pindex->nHeight % params.DifficultyAdjustmentInterval(pindexLast->nHeight) != 0 && pindex->nBits == nProofOfWorkLimit)
+                    pindex = pindex->pprev;
+                return pindex->nBits;
+            }
+        }
+        return pindexLast->nBits;
+    }
 
-	// Only change once per difficulty adjustment interval
-	if ((pindexLast->nHeight+1) % params.DifficultyAdjustmentInterval(pindexLast->nHeight) != 0)
-	{
-		if (params.fPowAllowMinDifficultyBlocks && !GetBoolArg("-force-retarget", false))
-		{
-			// Special difficulty rule for testnet:
-			// If the new block's timestamp is more than 2* 10 minutes
-			// then allow mining of a min-difficulty block.
-			if (pblock->GetBlockTime() > pindexLast->GetBlockTime() + params.nPowTargetSpacing*2)
-				return nProofOfWorkLimit;
-			else
-			{
-				// Return the last non-special-min-difficulty-rules-block
-				const CBlockIndex* pindex = pindexLast;
-				while (pindex->pprev && pindex->nHeight % params.DifficultyAdjustmentInterval(pindexLast->nHeight) != 0 && pindex->nBits == nProofOfWorkLimit)
-					pindex = pindex->pprev;
-				return pindex->nBits;
-			}
-		}
-		return pindexLast->nBits;
-	}
+    // MVF-BU begin
+    // Go back by what we want to be 14 days worth of blocks (normally)
+    int nHeightFirst = pindexLast->nHeight - (params.DifficultyAdjustmentInterval(pindexLast->nHeight)-1);
+    // while within the retarget period override the original formula to handle a dynamic time span
+    if (params.MVFisWithinRetargetPeriod(pindexLast->nHeight))
+        nHeightFirst = pindexLast->nHeight - params.DifficultyAdjustmentInterval(pindexLast->nHeight);
+    // MVF-BU end
+    assert(nHeightFirst >= 0);
+    const CBlockIndex* pindexFirst = pindexLast->GetAncestor(nHeightFirst);
+    assert(pindexFirst);
 
-	// Go back by what we want to be 14 days worth of blocks
-	int nHeightFirst = pindexLast->nHeight - (params.DifficultyAdjustmentInterval(pindexLast->nHeight)-1);
-	// While within the retarget period override the original formula to handle a dynamic time span
-	if (params.MVFisWithinRetargetPeriod(pindexLast->nHeight))
-		nHeightFirst = pindexLast->nHeight - params.DifficultyAdjustmentInterval(pindexLast->nHeight);
-	assert(nHeightFirst >= 0);
-	const CBlockIndex* pindexFirst = pindexLast->GetAncestor(nHeightFirst);
-	assert(pindexFirst);
-
-	return CalculateNextWorkRequired(pindexLast, pindexFirst->GetBlockTime(), params);
-
+    return CalculateNextWorkRequired(pindexLast, pindexFirst->GetBlockTime(), params);
 }
 
 unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nFirstBlockTime, const Consensus::Params& params)
 {
-    static bool force_retarget=GetBoolArg("-force-retarget", false);  // MVF-BU added to test retargeting
+    static bool force_retarget=GetBoolArg("-force-retarget", false);  // MVF-BU added for retargeting tests on regtestnet
     const arith_uint256 bnPowLimit = UintToArith256(params.powLimit); // MVF-BU moved here
 
     if (params.fPowNoRetargeting && !force_retarget)
@@ -85,22 +88,24 @@ unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nF
     // MVF-BU end
     LogPrintf("  nActualTimespan = %d  before bounds\n", nActualTimespan);
 
-    //mvhf-bu target time span while within the re-target period
+    // MVF-BU:
+    // target time span while within the re-target period
     int64_t nTargetTimespan = params.nPowTargetTimespan; // the original 14 days
 
+    // unless within the fork retargeting period, then it varies with height
     if (params.MVFisWithinRetargetPeriod(pindexLast->nHeight))
-    	nTargetTimespan = params.MVFPowTargetTimespan(pindexLast->nHeight);
+        nTargetTimespan = params.MVFPowTargetTimespan(pindexLast->nHeight);
 
-    // permit abrupt changes for a few blocks after the fork i.e. when nTargetTimespan is < 30 minutes
+    // MVF-BU: permit abrupt changes for a few blocks after the fork i.e. when nTargetTimespan is < 30 minutes
     if (nTargetTimespan >= params.nPowTargetSpacing * 3)
     {
-		// prevent abrupt changes to target
-		if (nActualTimespan < nTargetTimespan/4)
-			nActualTimespan = nTargetTimespan/4;
-		if (nActualTimespan > nTargetTimespan*4)
-			nActualTimespan = nTargetTimespan*4;
+        // prevent abrupt changes to target
+        if (nActualTimespan < nTargetTimespan/4)
+            nActualTimespan = nTargetTimespan/4;
+        if (nActualTimespan > nTargetTimespan*4)
+            nActualTimespan = nTargetTimespan*4;
     }
-    else LogPrintf("Abrupt RETARGET permitted.\n");
+    else LogPrintf("MVF Abrupt RETARGET permitted.\n");
 
 
     // Retarget
@@ -117,12 +122,12 @@ unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nF
     if (bnNew2 / nActualTimespan != bnNew1)
     {
         bnNew = bnOld;
-        LogPrintf("GetNextWorkRequired OVERFLOW\n");
+        LogPrintf("MVF GetNextWorkRequired OVERFLOW\n");
     }
     else if (bnNew2 > bnPowLimit)
     {
         bnNew = bnPowLimit;
-        LogPrintf("GetNextWorkRequired OVERLIMIT\n");
+        LogPrintf("MVF GetNextWorkRequired OVERLIMIT\n");
     }
     else
         bnNew = bnNew2;
@@ -146,21 +151,26 @@ bool CheckProofOfWork(uint256 hash, unsigned int nBits, const Consensus::Params&
     bnTarget.SetCompact(nBits, &fNegative, &fOverflow);
 
     // Check range
+    // MVF-BU begin
     if (fNegative || bnTarget == 0 || fOverflow || bnTarget > UintToArith256(params.powLimit))
     {
-    	if (!GetBoolArg("-force-retarget", false))
-        	return error("CheckProofOfWork(): nBits below minimum work");
-    	else
-    		return false;
+        // do not output verbose error msgs if force-retarget
+        // this is to prevent log file flooding when regtests with actual
+        // retargeting are done
+        if (!GetBoolArg("-force-retarget", false))
+            return error("CheckProofOfWork(): nBits below minimum work");
+        else
+            return false;
     }
     // Check proof of work matches claimed amount
     if (UintToArith256(hash) > bnTarget)
     {
-    	if (!GetBoolArg("-force-retarget", false))
-    		return error("CheckProofOfWork(): hash %s doesn't match nBits 0x%x",hash.ToString(),nBits);
-    	else
-    		return false;
+        if (!GetBoolArg("-force-retarget", false))
+            return error("CheckProofOfWork(): hash %s doesn't match nBits 0x%x",hash.ToString(),nBits);
+        else
+            return false;
     }
+    // MVF-BU end
 
 
     return true;

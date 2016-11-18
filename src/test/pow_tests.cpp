@@ -101,10 +101,10 @@ BOOST_AUTO_TEST_CASE(GetBlockProofEquivalentTime_test)
 }
 
 // MVF-BU begin
-// added unit test after we found that on regtest, difficulty calculation
-// can lead to overflow of 256-bit integer.
-// Here an excessive retarget time is set
-// in order to trigger the overflow case.
+/* added unit test after we found that on regtest, difficulty calculation
+   can lead to overflow of 256-bit integer. Here an excessive retarget time
+   is set in order to trigger the overflow case, in which case the previous
+   difficulty is re-used. */
 BOOST_AUTO_TEST_CASE(MVFCheckOverflowCalculation_test)
 {
     SelectParams(CBaseChainParams::MAIN);
@@ -112,11 +112,11 @@ BOOST_AUTO_TEST_CASE(MVFCheckOverflowCalculation_test)
 
     FinalActivateForkHeight = 68540;
 
-    int64_t nLastRetargetTime = 7; // Force an excessive retarget time to trigger overflow
+    int64_t nLastRetargetTime = 7;  // Force an excessive retarget time to trigger overflow
     CBlockIndex pindexLast;
     pindexLast.nHeight = 68543;
     pindexLast.nTime = 1279297671;  // Block #68543
-    pindexLast.nBits = 0x200aaaaa;    // Almost overflowing already
+    pindexLast.nBits = 0x200aaaaa;  // Almost overflowing already
 
     // an overflow causes the old bits to be used again
     BOOST_CHECK_EQUAL(CalculateNextWorkRequired(&pindexLast, nLastRetargetTime, params), pindexLast.nBits);

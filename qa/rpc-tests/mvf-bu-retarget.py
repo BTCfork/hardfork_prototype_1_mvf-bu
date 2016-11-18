@@ -68,7 +68,7 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
                 count_bits_used += 1
             else:
 
-                print "%s,%d,%d,%s,%d,%f " %(
+                print "%s,%d,%d,%s,%d,%s " %(
                     time.strftime("%Y-%m-%d %H:%M",time.gmtime(prev_block['time'])),
                     prev_block['height'],
                     prev_block_delta,

@@ -11,7 +11,7 @@
 #include "uint256.h"
 #include <map>
 #include <string>
-#include <math.h>  //MVF-BU
+#include <math.h>    // MVF-BU added
 #include "mvf-bu.h"  // MVF-BU added
 
 namespace Consensus {
@@ -64,7 +64,7 @@ struct Params {
     int64_t nPowTargetSpacing;
     int64_t nPowTargetTimespan;
 
-    // MVF-BU begin (MVHF-BU-DES-TRIG-3)
+    // MVF-BU begin (MVHF-BU-DES-TRIG-3, MVHF-BU-DES-DIAD-TODO)
     int nMVFDefaultActivateForkHeight;     // trigger block height
 
     int MVFDefaultActivateForkHeight() const { return nMVFDefaultActivateForkHeight; };
@@ -73,49 +73,51 @@ struct Params {
 
     int64_t MVFPowTargetTimespan(int Height) const
     {
-    	int MVFHeight = Height - FinalActivateForkHeight;
+        int MVFHeight = Height - FinalActivateForkHeight;
 
-    	switch (MVFHeight)
-    	{
-    		case 	1 ...
-					10: return nPowTargetSpacing;			// 10 minutes (abrupt retargeting permitted)
+        switch (MVFHeight)
+        {
+            case    1 ...
+                    10: return nPowTargetSpacing;           // 10 minutes (abrupt retargeting permitted)
 
-    		case 	11 ...
-					43: return nPowTargetSpacing * 3;		// 30 minutes
+            case    11 ...
+                    43: return nPowTargetSpacing * 3;       // 30 minutes
 
-    		case	44 ...
-					101: return nPowTargetSpacing * 6; 		// 1 hour
+            case    44 ...
+                    101: return nPowTargetSpacing * 6;      // 1 hour
 
-    		case	102 ...
-					2011: return nPowTargetSpacing * 6 * 3; // 3 hours
+            case    102 ...
+                    2011: return nPowTargetSpacing * 6 * 3; // 3 hours
 
-    		default : return nPowTargetSpacing * 6 * 12; 	// 12 hours
-    	}
-
+            default : return nPowTargetSpacing * 6 * 12;    // 12 hours
+        }
     }
 
     bool MVFisWithinRetargetPeriod(int Height) const
     {
- 	   if (Height >= FinalActivateForkHeight && Height < MVFRetargetPeriodEnd() )
- 		   return true;
- 	   else
- 		   return false;
+        if (Height >= FinalActivateForkHeight && Height < MVFRetargetPeriodEnd())
+            return true;
+        else
+            return false;
     }
 
     int64_t DifficultyAdjustmentInterval(int Height) const
-   {
-	   // mvhf-bu - if outside the MVFRetargetPeriod then use the original values
-	   if (MVFisWithinRetargetPeriod(Height))
-		   // re-target MVF
-		   return MVFPowTargetTimespan(Height) / nPowTargetSpacing;
-	   else // re-target original
-		   return nPowTargetTimespan / nPowTargetSpacing;
-   }
-
+    {
+        // MVF-BU:
+        // if outside the MVFRetargetPeriod then use the original values
+        // otherwise use a height-dependent window size
+        if (MVFisWithinRetargetPeriod(Height)) {
+           // re-target MVF
+           return MVFPowTargetTimespan(Height) / nPowTargetSpacing;
+        }
+        else {
+           // re-target original
+           return nPowTargetTimespan / nPowTargetSpacing;
+        }
+    }
     // MVF-BU end
 
     int64_t SizeForkExpiration() const { return 1514764800; } // BU (classic compatibility) 2018-01-01 00:00:00 GMT
-
 
 };
 } // namespace Consensus

@@ -423,10 +423,11 @@ def assert_greater_than(thing1, thing2):
     if thing1 <= thing2:
         raise AssertionError("%s <= %s"%(str(thing1),str(thing2)))
 
-
+# MVF-BU begin
 def assert_less_than_equal(thing1, thing2):
     if thing1 > thing2:
         raise AssertionError("%s > %s"%(str(thing1),str(thing2)))
+# MVF-BU end
 
 def assert_raises(exc, fun, *args, **kwds):
     try:

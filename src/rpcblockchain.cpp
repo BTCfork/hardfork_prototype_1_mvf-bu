@@ -126,7 +126,6 @@ UniValue blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool tx
     CBlockIndex *pnext = chainActive.Next(blockindex);
     if (pnext)
         result.push_back(Pair("nextblockhash", pnext->GetBlockHash().GetHex()));
-
     return result;
 }
 
@@ -391,7 +390,7 @@ UniValue getblock(const UniValue& params, bool fHelp)
             "  \"chainwork\" : \"xxxx\",  (string) Expected number of hashes required to produce the chain up to this block (in hex)\n"
             "  \"previousblockhash\" : \"hash\",  (string) The hash of the previous block\n"
             "  \"nextblockhash\" : \"hash\"       (string) The hash of the next block\n"
-        	"  \"difficultyadjinterval\" : n,     (numeric) The number of blocks between difficulty adjustment \n"
+            "  \"difficultyadjinterval\" : n,     (numeric) The number of blocks between difficulty adjustment \n"  // MVF-BU
             "}\n"
             "\nResult (for verbose=false):\n"
             "\"data\"             (string) A string that is serialized, hex-encoded data for block 'hash'.\n"
@@ -654,7 +653,7 @@ UniValue getblockchaininfo(const UniValue& params, bool fHelp)
             "  \"headers\": xxxxxx,        (numeric) the current number of headers we have validated\n"
             "  \"bestblockhash\": \"...\", (string) the hash of the currently best block\n"
             "  \"difficulty\": xxxxxx,     (numeric) the current difficulty\n"
-        	"  \"difficultyadjinterval\": xxxxxx,         (numeric) the number of blocks between difficulty adjustments\n"
+            "  \"difficultyadjinterval\": xxxxxx,         (numeric) the number of blocks between difficulty adjustments\n"  // MVF-BU
             "  \"mediantime\": xxxxxx,     (numeric) median time for the current best block\n"
             "  \"verificationprogress\": xxxx, (numeric) estimate of verification progress [0..1]\n"
             "  \"chainwork\": \"xxxx\"     (string) total amount of work in active chain, in hexadecimal\n"
@@ -709,7 +708,7 @@ UniValue getblockchaininfo(const UniValue& params, bool fHelp)
     bip9_softforks.push_back(BIP9SoftForkDesc("segwit", consensusParams, Consensus::DEPLOYMENT_SEGWIT));  // MVF-BU added
     obj.push_back(Pair("softforks",             softforks));
     obj.push_back(Pair("bip9_softforks", bip9_softforks));
-    obj.push_back(Pair("difficultyadjinterval", consensusParams.DifficultyAdjustmentInterval(tip->nHeight))); // MVF-BU
+    obj.push_back(Pair("difficultyadjinterval", consensusParams.DifficultyAdjustmentInterval(tip->nHeight)));  // MVF-BU
 
     // MVF-BU begin output hardfork description (MVHF-BU-DES-TRIG-9)
     if (!isMVFHardForkActive)
