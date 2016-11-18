@@ -80,7 +80,6 @@ testScripts = [
     'wallet.py',
     'mvf-bu-retarget.py', # MVF-BU
     'mvf-bu-trig.py',  # MVF-BU
-    'endurance.py', #MVF-BU
     'excessive.py',
     'listtransactions.py',
     'receivedby.py',
