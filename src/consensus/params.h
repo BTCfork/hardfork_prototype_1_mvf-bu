@@ -64,13 +64,14 @@ struct Params {
     int64_t nPowTargetSpacing;
     int64_t nPowTargetTimespan;
 
-    // MVF-BU begin (MVHF-BU-DES-TRIG-3, MVHF-BU-DES-DIAD-TODO)
+    // MVF-BU begin (MVHF-BU-DES-TRIG-3, MVHF-BU-DES-DIAD-4)
     int nMVFDefaultActivateForkHeight;     // trigger block height
 
     int MVFDefaultActivateForkHeight() const { return nMVFDefaultActivateForkHeight; };
 
     int MVFRetargetPeriodEnd() const { return  FinalActivateForkHeight + (180 * 24 * 60 * 60 / nPowTargetSpacing); }
 
+    // return height-dependent target time span used to compute retargeting interval (MVHF-BU-DES-DIAD-4)
     int64_t MVFPowTargetTimespan(int Height) const
     {
         int MVFHeight = Height - FinalActivateForkHeight;
@@ -111,7 +112,7 @@ struct Params {
            return MVFPowTargetTimespan(Height) / nPowTargetSpacing;
         }
         else {
-           // re-target original
+           // re-target original (MVHF-BU-DES-DIAD-4)
            return nPowTargetTimespan / nPowTargetSpacing;
         }
     }

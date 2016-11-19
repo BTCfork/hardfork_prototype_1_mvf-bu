@@ -390,7 +390,7 @@ UniValue getblock(const UniValue& params, bool fHelp)
             "  \"chainwork\" : \"xxxx\",  (string) Expected number of hashes required to produce the chain up to this block (in hex)\n"
             "  \"previousblockhash\" : \"hash\",  (string) The hash of the previous block\n"
             "  \"nextblockhash\" : \"hash\"       (string) The hash of the next block\n"
-            "  \"difficultyadjinterval\" : n,     (numeric) The number of blocks between difficulty adjustment \n"  // MVF-BU
+            "  \"difficultyadjinterval\" : n,     (numeric) The number of blocks between difficulty adjustment \n"  // MVF-BU (MVHF-BU-DES-DIAD-7)
             "}\n"
             "\nResult (for verbose=false):\n"
             "\"data\"             (string) A string that is serialized, hex-encoded data for block 'hash'.\n"
@@ -705,10 +705,10 @@ UniValue getblockchaininfo(const UniValue& params, bool fHelp)
     softforks.push_back(SoftForkDesc("bip66", 3, tip, consensusParams));
     softforks.push_back(SoftForkDesc("bip65", 4, tip, consensusParams));
     bip9_softforks.push_back(BIP9SoftForkDesc("csv", consensusParams, Consensus::DEPLOYMENT_CSV));
-    bip9_softforks.push_back(BIP9SoftForkDesc("segwit", consensusParams, Consensus::DEPLOYMENT_SEGWIT));  // MVF-BU added
+    bip9_softforks.push_back(BIP9SoftForkDesc("segwit", consensusParams, Consensus::DEPLOYMENT_SEGWIT));  // MVF-BU (MVHF-BU-DES-TRIG-9)
     obj.push_back(Pair("softforks",             softforks));
     obj.push_back(Pair("bip9_softforks", bip9_softforks));
-    obj.push_back(Pair("difficultyadjinterval", consensusParams.DifficultyAdjustmentInterval(tip->nHeight)));  // MVF-BU
+    obj.push_back(Pair("difficultyadjinterval", consensusParams.DifficultyAdjustmentInterval(tip->nHeight)));  // MVF-BU (MVHF-BU-DES-DIAD-7)
 
     // MVF-BU begin output hardfork description (MVHF-BU-DES-TRIG-9)
     if (!isMVFHardForkActive)
