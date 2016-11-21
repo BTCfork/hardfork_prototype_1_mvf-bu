@@ -53,13 +53,13 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
 
         # use to track how many times the same bits are used in a row
         prev_block = 0
-        count_bits_used = decimal.Decimal(-1)
         diffadjinterval = 0
         next_block_time = 0
-        prev_block_delta = decimal.Decimal(0)
-        best_diff_expected = decimal.Decimal(0)
-        prev_blocks_delta_avg = decimal.Decimal(0)
-        diff_factor = decimal.Decimal(0)
+        count_bits_used = -1
+        prev_block_delta = 0
+        best_diff_expected = 0
+        prev_blocks_delta_avg = 0
+        diff_factor = 0
 
         # start generating MVF blocks with varying time stamps
         print "nBits changed @ Time,Block,Delta(secs),nBits,Used,Difficulty"
@@ -72,26 +72,26 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
             if prev_block['bits'] == best_block['bits']:
                 count_bits_used += 1
             else:
-                prev_blocks_delta_avg = decimal.Decimal(prev_block_delta / count_bits_used)
-                diff_factor = decimal.Decimal(600 / prev_blocks_delta_avg)
-                best_diff_expected = decimal.Decimal(prev_block['difficulty']) * diff_factor
+                prev_blocks_delta_avg = decimal.Decimal(prev_block_delta) / count_bits_used
+                diff_factor = 600 / decimal.Decimal(prev_blocks_delta_avg)
+                best_diff_expected = prev_block['difficulty'] * diff_factor
 
-                print "%s,%d,%d,%s,%d,%s " %(
+                print "%s,%d,%d,%s,%d,%f,%f,%f " %(
                     time.strftime("%Y-%m-%d %H:%M",time.gmtime(prev_block['time'])),
                     prev_block['height'],
                     prev_blocks_delta_avg,
                     prev_block['bits'],
                     count_bits_used,
                     prev_block['difficulty'],
-                    #best_diff_expected,
-                    #diff_factor
+                    best_diff_expected,
+                    diff_factor
                     )
 
                 if prev_block['bits'] <> "207fffff":
                     assert_less_than_equal(count_bits_used, diffadjinterval)
 
                 if n <= 500 :
-                    assert_equal(round(best_block['difficulty'],4), round(best_diff_expected,4))
+                    assert_equal(round(best_block['difficulty'],8), round(best_diff_expected,8))
 
                 count_bits_used = 1
                 prev_block_delta = 0
