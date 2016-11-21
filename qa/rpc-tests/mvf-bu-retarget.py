@@ -6,15 +6,17 @@
 #
 # Test MVF post fork retargeting
 #
-# on node 0, test pure block height trigger at height 100
+# on node 0, test pure block height trigger at height FORK_BLOCK
 #
 
 from test_framework.test_framework import BitcoinTestFramework
 from test_framework.util import *
 from random import randint
 import decimal
+
 # period (in blocks) from fork activation until retargeting returns to normal
 HARDFORK_RETARGET_BLOCKS = 180*144
+FORK_BLOCK = 100
 
 class MVF_RETARGET_Test(BitcoinTestFramework):
 
@@ -26,7 +28,7 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
         self.nodes = []
         self.is_network_split = False
         self.nodes.append(start_node(0, self.options.tmpdir
-            ,["-forkheight=100", "-force-retarget","-rpcthreads=100" ]
+            ,["-forkheight=%s"%FORK_BLOCK, "-force-retarget","-rpcthreads=100" ]
             ))
 
     def is_fork_triggered_on_node(self, node=0):
@@ -39,54 +41,57 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
 
     def run_test(self):
         # check that fork does not triggered before the height
-        print "Generating 99 pre-fork blocks"
-        for n in range(99):
+        print "Generating %s pre-fork blocks" % (FORK_BLOCK - 1)
+        for n in range(FORK_BLOCK - 1):
             self.nodes[0].generate(1)
             # Change block times so that difficulty develops
-            #best_block = self.nodes[0].getblock(self.nodes[0].getbestblockhash(), True)
-            #self.nodes[0].setmocktime(best_block['time'] + 600)
+            best_block = self.nodes[0].getblock(self.nodes[0].getbestblockhash(), True)
+            self.nodes[0].setmocktime(best_block['time'] + randint(500,700))
 
         # Read difficulty before the fork
-        #best_block = self.nodes[0].getblock(self.nodes[0].getbestblockhash(), True)
-        #print "Pre-fork difficulty: %s " % round(best_block['difficulty'],8)
-        #best_diff_expected = best_block['difficulty'] / 10
+        best_block = self.nodes[0].getblock(self.nodes[0].getbestblockhash(), True)
+        print "Pre-fork difficulty: %f %s " % (round(best_block['difficulty'],8), best_block['bits'])
+        best_diff_expected = best_block['difficulty'] / 10
 
         # Test fork did not trigger prematurely
         assert_equal(False, self.is_fork_triggered_on_node(0))
         print "Fork did not trigger prematurely"
 
         # Generate fork block
-        #best_block = self.nodes[0].getblock(self.nodes[0].getbestblockhash(), True)
-        #self.nodes[0].setmocktime(best_block['time'] + 600)
+        best_block = self.nodes[0].getblock(self.nodes[0].getbestblockhash(), True)
+        self.nodes[0].setmocktime(best_block['time'] + 600)
         self.nodes[0].generate(1)
         assert_equal(True,   self.is_fork_triggered_on_node(0))
-        print "Fork triggered successfully on node 0 (block height 2017)"
-
-        # Test difficulty reset
-        #best_block = self.nodes[0].getblock(self.nodes[0].getbestblockhash(), True)
-        #assert_equal(round(best_block['difficulty'],8), round(best_diff_expected,8))
-        #print "Post-fork difficulty reset successfully: %s " % round(best_diff_expected,8)
+        print "Fork triggered successfully on node 0 (block height %s)" % FORK_BLOCK
 
         # use to track how many times the same bits are used in a row
         prev_block = 0
         diffadjinterval = 0
         next_block_time = 0
-        count_bits_used = -1
+        count_bits_used = 0
         prev_block_delta = 0
         best_diff_expected = 0
         prev_blocks_delta_avg = 0
         diff_factor = 0
 
         # start generating MVF blocks with varying time stamps
-        print "nBits changed @ Time,Block,Delta(secs),nBits,Used,DiffInterval,Difficulty,NextDifficulty,DiffFactor"
         for n in xrange(HARDFORK_RETARGET_BLOCKS + 2016):
             best_block_hash = self.nodes[0].getbestblockhash()
             best_block = self.nodes[0].getblock(best_block_hash, True)
 
             prev_block = self.nodes[0].getblock(best_block['previousblockhash'], True)
 
+            # test fork difficult reset
+            if best_block['height'] == FORK_BLOCK + 1 :
+                #assert_equal(round(best_block['difficulty'],8), round(best_diff_expected,8))
+                assert_equal(best_block['bits'], "207eeeee")
+                print "Post-fork difficulty reset successfull: %f %s " % (round(best_diff_expected,8), best_block['bits'])
+
+                # print column titles
+                print "nBits changed @ Time,Block,Delta(secs),nBits,Used,DiffInterval,Difficulty,NextDifficulty,DiffFactor"
+
             # track bits used
-            if prev_block['bits'] == best_block['bits'] or count_bits_used == -1:
+            if prev_block['bits'] == best_block['bits'] or best_block['height'] == FORK_BLOCK:
                 count_bits_used += 1
             else:
                 # when the bits change then output the retargeting metrics

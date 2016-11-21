@@ -26,7 +26,7 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
     {
         arith_uint256 bnNew;
 
-        bnNew.SetCompact(pindexLast->nBits);
+        bnNew.SetCompact(0x207eeeee);
         //bnNew *= 10;     // drop difficulty by factor of 10
 
         LogPrintf("MVF FORK BLOCK DIFFICULTY RESET  %08x  \n", bnNew.GetCompact());
