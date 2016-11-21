@@ -64,7 +64,6 @@ void ForkSetup(const CChainParams& chainparams)
 
     LogPrintf("%s: MVF: doing setup\n", __func__);
     LogPrintf("%s: MVF: active network = %s\n", __func__, activeNetworkID);
-    FinalActivateForkHeight = GetArg("-forkheight", chainparams.GetConsensus().nMVFDefaultActivateForkHeight);
 
     // determine minimum fork height according to network
     // (these are set to the same as the default fork heights for now, but could be made different)
@@ -78,6 +77,8 @@ void ForkSetup(const CChainParams& chainparams)
         minForkHeightForNetwork = HARDFORK_HEIGHT_NOLNET;
     else
         throw std::runtime_error(strprintf("%s: Unknown chain %s.", __func__, activeNetworkID));
+
+    FinalActivateForkHeight = GetArg("-forkheight", minForkHeightForNetwork);
 
     // shut down immediately if specified fork height is invalid
     if (FinalActivateForkHeight < minForkHeightForNetwork)
