@@ -13,6 +13,8 @@ from test_framework.test_framework import BitcoinTestFramework
 from test_framework.util import *
 from random import randint
 import decimal
+# period (in blocks) from fork activation until retargeting returns to normal
+HARDFORK_RETARGET_BLOCKS = 180*144
 
 class MVF_RETARGET_Test(BitcoinTestFramework):
 
@@ -63,7 +65,7 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
 
         # start generating MVF blocks with varying time stamps
         print "nBits changed @ Time,Block,Delta(secs),nBits,Used,Difficulty,NextDifficulty,DiffFactor"
-        for n in xrange(200 * 24 * 60 * 60 / 600): #26640
+        for n in xrange(HARDFORK_RETARGET_BLOCKS + 2016):
             best_block_hash = self.nodes[0].getbestblockhash()
             best_block = self.nodes[0].getblock(best_block_hash, True)
 
@@ -87,9 +89,11 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
                     diff_factor
                     )
 
+                # Test processed bits are used within the expected difficulty interval
                 if prev_block['bits'] <> "207fffff":
                     assert_less_than_equal(count_bits_used, diffadjinterval)
 
+                # Test difficulty
                 if n <= 500 :
                     assert_equal(round(best_block['difficulty'],8), round(best_diff_expected,8))
 
@@ -97,7 +101,7 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
                 prev_block_delta = 0
             #### end if prev_block['bits'] == best_block['bits']
 
-            # determine block time interval
+            # generate various block time interval tests
             if n in range(0,11) :
                 next_block_time = next_block_time + 50
             elif n in range(12,18) :
@@ -120,6 +124,22 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
             prev_block_delta = prev_block_delta + (best_block['time'] - prev_block['time'])
             diffadjinterval = self.nodes[0].getblockchaininfo()['difficultyadjinterval']
 
+            # Test the interval matches the interval defined in params.MVFPowTargetTimespan()
+            if n in range(0,10) :
+                diff_interval_expected = 1
+            elif n in range(11,43) :
+                diff_interval_expected = 3
+            elif n in range(44,101) :
+                diff_interval_expected = 6
+            elif n in range(102,2011) :
+                diff_interval_expected = 18
+            elif n in range(2012,HARDFORK_RETARGET_BLOCKS-1) :
+                diff_interval_expected = 72
+            else:
+                diff_interval_expected = 2016
+
+            assert(diff_interval_expected, diffadjinterval)
+
             # print info for every block
             #print "%s :: %s :: %d :: %f :: %f" %(
                 #best_block['height'],
@@ -138,7 +158,6 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
             self.nodes[0].generate(1)
 
         #### end for n in xrange
-
 
         print "Done."
         #raw_input()

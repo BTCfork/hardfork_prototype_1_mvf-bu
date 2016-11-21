@@ -73,17 +73,13 @@ struct Params {
 
         switch (MVFHeight)
         {
-            case    1 ...
-                    10: return nPowTargetSpacing;           // 10 minutes (abrupt retargeting permitted)
+            case    1 ... 10: return nPowTargetSpacing;           // 10 minutes (abrupt retargeting permitted)
 
-            case    11 ...
-                    43: return nPowTargetSpacing * 3;       // 30 minutes
+            case    11 ... 43: return nPowTargetSpacing * 3;       // 30 minutes
 
-            case    44 ...
-                    101: return nPowTargetSpacing * 6;      // 1 hour
+            case    44 ... 101: return nPowTargetSpacing * 6;      // 1 hour
 
-            case    102 ...
-                    2011: return nPowTargetSpacing * 6 * 3; // 3 hours
+            case    102 ... 2011: return nPowTargetSpacing * 6 * 3; // 3 hours
 
             default : return nPowTargetSpacing * 6 * 12;    // 12 hours
         }
