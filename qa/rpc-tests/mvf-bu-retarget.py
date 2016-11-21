@@ -12,6 +12,7 @@
 from test_framework.test_framework import BitcoinTestFramework
 from test_framework.util import *
 from random import randint
+import decimal
 
 class MVF_RETARGET_Test(BitcoinTestFramework):
 
@@ -52,15 +53,16 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
 
         # use to track how many times the same bits are used in a row
         prev_block = 0
-        count_bits_used = float(-1)
+        count_bits_used = decimal.Decimal(-1)
         diffadjinterval = 0
         next_block_time = 0
-        prev_block_delta = float(0)
-        best_diff_expected = float(0)
-        prev_blocks_delta_avg = float(0)
+        prev_block_delta = decimal.Decimal(0)
+        best_diff_expected = decimal.Decimal(0)
+        prev_blocks_delta_avg = decimal.Decimal(0)
+        diff_factor = decimal.Decimal(0)
 
         # start generating MVF blocks with varying time stamps
-        print "nBits changed @ Time,Block,Delta(secs),nBits,Used,Difficulty,Next Difficulty"
+        print "nBits changed @ Time,Block,Delta(secs),nBits,Used,Difficulty"
         for n in xrange(200 * 24 * 60 * 60 / 600): #26640
             best_block_hash = self.nodes[0].getbestblockhash()
             best_block = self.nodes[0].getblock(best_block_hash, True)
@@ -70,23 +72,26 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
             if prev_block['bits'] == best_block['bits']:
                 count_bits_used += 1
             else:
-                prev_blocks_delta_avg = prev_block_delta / count_bits_used
-                diff_factor = float(600) / prev_blocks_delta_avg
+                prev_blocks_delta_avg = decimal.Decimal(prev_block_delta / count_bits_used)
+                diff_factor = decimal.Decimal(600 / prev_blocks_delta_avg)
                 best_diff_expected = prev_block['difficulty'] * diff_factor
 
-
-                print "%s,%d,%d,%s,%d,%f,%f,%f " %(
+                print "%s,%d,%d,%s,%d,%f " %(
                     time.strftime("%Y-%m-%d %H:%M",time.gmtime(prev_block['time'])),
                     prev_block['height'],
                     prev_blocks_delta_avg,
                     prev_block['bits'],
                     count_bits_used,
                     prev_block['difficulty'],
-                    best_diff_expected,
-                    diff_factor)
+                    #best_diff_expected,
+                    #diff_factor
+                    )
 
                 if prev_block['bits'] <> "207fffff":
                     assert_less_than_equal(count_bits_used, diffadjinterval)
+
+                if n <= 500 :
+                    assert_equal(best_block['difficulty'], best_diff_expected)
 
                 count_bits_used = 1
                 prev_block_delta = 0
@@ -129,8 +134,6 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
                 #prev_block_delta / count_bits_used / 600,
                 #best_diff_expected,
                 #best_block['difficulty'])
-
-            #assert_equal(best_block['difficulty'],prev_block['difficulty'] + (prev_block['difficulty'] * (prev_block_delta/600)))
 
             self.nodes[0].generate(1)
 
