@@ -74,9 +74,9 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
             else:
                 prev_blocks_delta_avg = decimal.Decimal(prev_block_delta / count_bits_used)
                 diff_factor = decimal.Decimal(600 / prev_blocks_delta_avg)
-                best_diff_expected = prev_block['difficulty'] * diff_factor
+                best_diff_expected = decimal.Decimal(prev_block['difficulty']) * diff_factor
 
-                print "%s,%d,%d,%s,%d,%f " %(
+                print "%s,%d,%d,%s,%d,%s " %(
                     time.strftime("%Y-%m-%d %H:%M",time.gmtime(prev_block['time'])),
                     prev_block['height'],
                     prev_blocks_delta_avg,
@@ -91,7 +91,7 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
                     assert_less_than_equal(count_bits_used, diffadjinterval)
 
                 if n <= 500 :
-                    assert_equal(best_block['difficulty'], best_diff_expected)
+                    assert_equal(round(best_block['difficulty'],4), round(best_diff_expected,4))
 
                 count_bits_used = 1
                 prev_block_delta = 0
