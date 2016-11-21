@@ -62,7 +62,7 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
         diff_factor = 0
 
         # start generating MVF blocks with varying time stamps
-        print "nBits changed @ Time,Block,Delta(secs),nBits,Used,Difficulty"
+        print "nBits changed @ Time,Block,Delta(secs),nBits,Used,Difficulty,NextDifficulty,DiffFactor"
         for n in xrange(200 * 24 * 60 * 60 / 600): #26640
             best_block_hash = self.nodes[0].getbestblockhash()
             best_block = self.nodes[0].getblock(best_block_hash, True)
