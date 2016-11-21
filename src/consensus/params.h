@@ -64,7 +64,7 @@ struct Params {
     int64_t nPowTargetSpacing;
     int64_t nPowTargetTimespan;
 
-    int MVFRetargetPeriodEnd() const { return  FinalActivateForkHeight + (180 * 24 * 60 * 60 / nPowTargetSpacing); }
+    int MVFRetargetPeriodEnd() const { return FinalActivateForkHeight + HARDFORK_RETARGET_BLOCKS; }
 
     // return height-dependent target time span used to compute retargeting interval (MVHF-BU-DES-DIAD-4)
     int64_t MVFPowTargetTimespan(int Height) const

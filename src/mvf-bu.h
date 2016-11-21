@@ -27,6 +27,10 @@ HARDFORK_HEIGHT_TESTNET = 9999999,   // public test network trigger height
 HARDFORK_HEIGHT_NOLNET  = 8888888,   // BU public no-limit test network  trigger height
 HARDFORK_HEIGHT_REGTEST =     100,   // regression test network (local)  trigger height
 
+// MVHF-BU-DES-DIAD-3 / MVHF-BU-DES-DIAD-4
+// period (in blocks) from fork activation until retargeting returns to normal
+HARDFORK_RETARGET_BLOCKS = 25920,    // 180*144 blocks
+
 // MVHF-BU-DES-NSEP-1 - network separation parameter defaults
 // MVF-BU TODO: re-check that these port values could be used
 HARDFORK_PORT_MAINNET = 9442,        // default post-fork port on operational network (mainnet)
