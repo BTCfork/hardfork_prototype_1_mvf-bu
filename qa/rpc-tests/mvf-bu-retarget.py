@@ -42,15 +42,19 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
     def run_test(self):
         # check that fork does not triggered before the height
         print "Generating %s pre-fork blocks" % (FORK_BLOCK - 1)
+
         for n in range(FORK_BLOCK - 1):
-            self.nodes[0].generate(1)
             # Change block times so that difficulty develops
             best_block = self.nodes[0].getblock(self.nodes[0].getbestblockhash(), True)
-            self.nodes[0].setmocktime(best_block['time'] + randint(500,700))
+            #print "%s %s" %(
+                #best_block['height'],
+                #time.strftime("%Y-%m-%d %H:%M",time.gmtime(best_block['time'])))
+            self.nodes[0].setmocktime(best_block['time'] + 600)
+            self.nodes[0].generate(1)
 
         # Read difficulty before the fork
         best_block = self.nodes[0].getblock(self.nodes[0].getbestblockhash(), True)
-        print "Pre-fork difficulty: %f %s " % (round(best_block['difficulty'],8), best_block['bits'])
+        print "Pre-fork difficulty: %s %s " % (round(best_block['difficulty'],8), best_block['bits'])
         best_diff_expected = best_block['difficulty'] / 10
 
         # Test fork did not trigger prematurely
@@ -85,10 +89,11 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
             if best_block['height'] == FORK_BLOCK + 1 :
                 #assert_equal(round(best_block['difficulty'],8), round(best_diff_expected,8))
                 assert_equal(best_block['bits'], "207eeeee")
-                print "Post-fork difficulty reset successfull: %f %s " % (round(best_diff_expected,8), best_block['bits'])
+                print "Post-fork difficulty reset successfull: %s %s " % (round(best_diff_expected,8), best_block['bits'])
 
                 # print column titles
                 print "nBits changed @ Time,Block,Delta(secs),nBits,Used,DiffInterval,Difficulty,NextDifficulty,DiffFactor"
+            # end if best_block['height'] == FORK_BLOCK + 1
 
             # track bits used
             if prev_block['bits'] == best_block['bits'] or best_block['height'] == FORK_BLOCK:
