@@ -16,7 +16,7 @@ import decimal
 
 # period (in blocks) from fork activation until retargeting returns to normal
 HARDFORK_RETARGET_BLOCKS = 180*144
-FORK_BLOCK = 100
+FORK_BLOCK = 2017
 
 class MVF_RETARGET_Test(BitcoinTestFramework):
 
@@ -28,7 +28,7 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
         self.nodes = []
         self.is_network_split = False
         self.nodes.append(start_node(0, self.options.tmpdir
-            ,["-forkheight=%s"%FORK_BLOCK, "-force-retarget","-rpcthreads=100" ]
+            ,["-forkheight=%s"%FORK_BLOCK, "-force-retarget","-rpcthreads=100","-blockversion=%s" % "0x20000000" ]
             ))
 
     def is_fork_triggered_on_node(self, node=0):
@@ -62,7 +62,7 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
         self.nodes[0].setmocktime(best_block['time'] + 600)
         self.nodes[0].generate(1)
         assert_equal(True,   self.is_fork_triggered_on_node(0))
-        print "Fork triggered successfully on node 0 (block height %s)" % FORK_BLOCK
+        print "Fork triggered successfully (block height %s)" % FORK_BLOCK
 
         # use to track how many times the same bits are used in a row
         prev_block = 0
@@ -164,15 +164,16 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
                 diff_interval_expected = 2016
 
             #print "%d %d" % (diff_interval_expected, diffadjinterval)
+            #if diff_interval_expected <> diffadjinterval : raw_input()
             assert_equal(diff_interval_expected, diffadjinterval)
 
             # print info for every block
-            #print "%s :: %s :: %d :: %f :: %f" %(
+            #print "%s :: %s :: %d :: %s :: %d" %(
                 #best_block['height'],
                 #time.strftime("%H:%M",time.gmtime(best_block['time'])),
-                #prev_block_delta,
-                #best_block['difficulty'],
-                #best_diff_expected)
+                #decimal.Decimal(prev_block_delta) / count_bits_used,
+                #best_block['bits'],
+                #count_bits_used)
 
             # generate the next block
             self.nodes[0].generate(1)

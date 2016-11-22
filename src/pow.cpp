@@ -126,7 +126,7 @@ unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nF
     // Test for overflow
     if (bnNew2 / nActualTimespan != bnNew1)
     {
-        bnNew = bnOld;
+        bnNew = bnPowLimit;
         LogPrintf("MVF GetNextWorkRequired OVERFLOW\n");
     }
     else if (bnNew2 > bnPowLimit)
