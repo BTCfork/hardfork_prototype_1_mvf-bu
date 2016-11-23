@@ -101,7 +101,7 @@ void ForkSetup(const CChainParams& chainparams)
 
     LogPrintf("%s: MVF: active fork height = %d\n", __func__, FinalActivateForkHeight);
     LogPrintf("%s: MVF: active fork id = 0x%06x (%d)\n", __func__, FinalForkId, FinalForkId);
-    LogPrintf("%s: MVF: auto backup block = %d\n", __func__, GetArg("-autobackupblock", FinalForkId - 1));
+    LogPrintf("%s: MVF: auto backup block = %d\n", __func__, GetArg("-autobackupblock", FinalActivateForkHeight - 1));
 
     // check if btcfork.conf exists (MVHF-BU-DES-TRIG-10)
     boost::filesystem::path pathBTCforkConfigFile(BTCFORK_CONF_FILENAME);
@@ -154,7 +154,7 @@ void ActivateFork(void)
 
         LogPrintf("%s: MVF: active fork height = %d\n", __func__, FinalActivateForkHeight);
         LogPrintf("%s: MVF: active fork id = 0x%06x (%d)\n", __func__, FinalForkId, FinalForkId);
-        LogPrintf("%s: MVF: auto backup block = %d\n", __func__, GetArg("-autobackupblock", FinalForkId - 1));
+        LogPrintf("%s: MVF: auto backup block = %d\n", __func__, GetArg("-autobackupblock", FinalActivateForkHeight - 1));
     }
     // set the flag so that other code knows HF is active
     LogPrintf("%s: MVF: enabling isMVFHardForkActive\n", __func__);
