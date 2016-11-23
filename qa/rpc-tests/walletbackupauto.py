@@ -121,13 +121,8 @@ class WalletBackupTest(BitcoinTestFramework):
 
     # As above, this mirrors the original bash test.
     def start_four(self):
-
         for i in range(4):
             self.nodes[i] = start_node(i, self.options.tmpdir, self.extra_args[i])
-
-        #self.nodes[1] = start_node(1, self.options.tmpdir)
-        #self.nodes[2] = start_node(2, self.options.tmpdir)
-        #self.nodes[3] = start_node(3, self.options.tmpdir)
 
         connect_nodes(self.nodes[0], 3)
         connect_nodes(self.nodes[1], 3)
