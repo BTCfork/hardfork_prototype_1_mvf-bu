@@ -69,22 +69,27 @@ class WalletBackupTest(BitcoinTestFramework):
         # and configure option autobackupwalletpath
         # testing each file path variant
         # as per the test design at sw-req-10-1
-        extra_args = [
+        self.extra_args = [
             ["-keypool=100",
                 "-autobackupwalletpath=%s"%(os.path.join(self.options.tmpdir,"node0","newabsdir","pathandfile.@.bak")),
+                "-forkheight=%s"%(backupblock+1),
                 "-autobackupblock=%s"%(backupblock)],
             ["-keypool=100",
                 "-autobackupwalletpath=filenameonly.@.bak",
+                "-forkheight=%s"%(backupblock+1),
                 "-autobackupblock=%s"%(backupblock)],
             ["-keypool=100",
                 "-autobackupwalletpath=" + os.path.join(".","newreldir"),
+                "-forkheight=%s"%(backupblock+1),
                 "-autobackupblock=%s"%(backupblock)],
-            ["-autobackupblock=%s"%(backupblock)],
+            ["-autobackupblock=%s"%(backupblock),
+                "-forkheight=%s"%(backupblock+1)],
             ["-disablewallet",
                 "-autobackupwalletpath="+ os.path.join(self.options.tmpdir,"node4"),
+                "-forkheight=%s"%(backupblock+1),
                 "-autobackupblock=%s"%(backupblock)]]
 
-        self.nodes = start_nodes(5, self.options.tmpdir, extra_args)
+        self.nodes = start_nodes(5, self.options.tmpdir, self.extra_args)
         connect_nodes(self.nodes[0], 3)
         connect_nodes(self.nodes[1], 3)
         connect_nodes(self.nodes[2], 3)
@@ -117,10 +122,12 @@ class WalletBackupTest(BitcoinTestFramework):
     # As above, this mirrors the original bash test.
     def start_four(self):
 
-        self.nodes[0] = start_node(0, self.options.tmpdir)
-        self.nodes[1] = start_node(1, self.options.tmpdir)
-        self.nodes[2] = start_node(2, self.options.tmpdir)
-        self.nodes[3] = start_node(3, self.options.tmpdir)
+        for i in range(4):
+            self.nodes[i] = start_node(i, self.options.tmpdir, self.extra_args[i])
+
+        #self.nodes[1] = start_node(1, self.options.tmpdir)
+        #self.nodes[2] = start_node(2, self.options.tmpdir)
+        #self.nodes[3] = start_node(3, self.options.tmpdir)
 
         connect_nodes(self.nodes[0], 3)
         connect_nodes(self.nodes[1], 3)
@@ -243,6 +250,11 @@ class WalletBackupTest(BitcoinTestFramework):
         assert_equal(1, node2backupexists)
         assert_equal(1, node3backupexists)
 
+        # generate one more block to trigger the fork
+        self.nodes[3].generate(1)
+        self.sync_all()
+        assert_equal(self.nodes[0].getblockcount(),backupblock+1)
+
         ##
         # Calculate wallet balances for comparison after restore
         ##
@@ -318,7 +330,11 @@ class WalletBackupTest(BitcoinTestFramework):
         shutil.rmtree(self.options.tmpdir + "/node2/regtest/blocks")
         shutil.rmtree(self.options.tmpdir + "/node2/regtest/chainstate")
         logging.info("Restarting node 2")
-        self.nodes[2] = start_node(2, self.options.tmpdir,["-keypool=100", "-autobackupwalletpath="+ os.path.join(".","newreldir"), "-autobackupblock=%s"%(backupblock) ])
+        self.nodes[2] = start_node(2, self.options.tmpdir,["-keypool=100",
+                                                           "-autobackupwalletpath="+ os.path.join(".","newreldir"),
+                                                           "-forkheight=%s"%(backupblock+1),
+                                                           "-autobackupblock=%s"%(backupblock) ])
+
         # check that there is no .old yet (node 2 needs to generate a block to hit the height)
         old_files_found=[]
         for file in os.listdir(os.path.join(tmpdir,"node2","regtest","newreldir")):
@@ -337,6 +353,8 @@ class WalletBackupTest(BitcoinTestFramework):
         # (the file should just have been renamed)
         logging.info("Checking .old file %s" % old_files_found[0])
         assert_equal(node2backupfile_orig_md5,hashlib.md5(open(os.path.join(tmpdir,"node2","regtest","newreldir",old_files_found[0]), 'rb').read()).hexdigest())
+        # generate the fork block
+        self.nodes[2].generate(backupblock+1)
         logging.info("Checksum ok - shutting down")
         stop_node(self.nodes[2], 2)
         os.unlink(os.path.join(tmpdir,"node2","btcfork.conf"))
@@ -356,6 +374,7 @@ class WalletBackupTest(BitcoinTestFramework):
         os.unlink(os.path.join(tmpdir,"node1","btcfork.conf"))
         self.nodes[1] = start_node(1, self.options.tmpdir, ["-keypool=100",
                                                             "-autobackupwalletpath=filenameonly.@.bak",
+                                                            "-forkheight=%s"%(backupblock+1),
                                                             "-autobackupblock=%s"%(backupblock)])
         logging.info("generating another block on node 1")
         self.nodes[1].generate(1)

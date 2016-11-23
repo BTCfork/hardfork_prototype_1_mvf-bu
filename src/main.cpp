@@ -2808,6 +2808,18 @@ void static UpdateTip(CBlockIndex *pindexNew) {
 
     cvBlockChange.notify_all();
 
+    // if trigger block height reached or SegWit soft-fork activated, perform hardfork activation actions (MVHF-BU-DES-TRIG-6)
+    // MVF-BU TODO: the block height test condition below uses strict equality - check if correct
+    // right now we haven't found a test case where >= would be needed, but we need to check if test coverage is inadequate
+    if (!isMVFHardForkActive && ((chainActive.Height() == FinalActivateForkHeight)
+                             || VersionBitsTipState(chainParams.GetConsensus(), Consensus::DEPLOYMENT_SEGWIT) == THRESHOLD_ACTIVE))
+    {
+        // MVF-BU TODO: decide on above condition
+        // if preparations are only made after block has been accepted, then only FinalActivateForkHeight+1 can be new rules
+        // otherwise have to activate fork at end of block before FinalActivateForkHeight
+        ActivateFork(chainActive.Height(), true);  // true: request a wallet backup if not already done
+    }
+
     // MVF-BU begin MVHF-BU-DES-WABU-3
     // check if we need to do wallet auto backup at pre-fork block
     if (!fAutoBackupDone)
@@ -2825,7 +2837,7 @@ void static UpdateTip(CBlockIndex *pindexNew) {
         }
         else {
             // Auto Backup defined so check block height
-            if (chainActive.Height() >= BackupBlock )
+            if (chainActive.Height() == BackupBlock )
             {
                 if (GetMainSignals().BackupWalletAuto(strWalletBackupFile, BackupBlock))
                     fAutoBackupDone = true;
@@ -2837,18 +2849,6 @@ void static UpdateTip(CBlockIndex *pindexNew) {
         }
 
     } // if (!fAutoBackupDone)
-
-    // if trigger block height reached or SegWit soft-fork activated, perform hardfork activation actions (MVHF-BU-DES-TRIG-6)
-    // MVF-BU TODO: the block height test condition below uses strict equality - check if correct
-    // right now we haven't found a test case where >= would be needed, but we need to check if test coverage is inadequate
-    if (!isMVFHardForkActive && ((chainActive.Height() == FinalActivateForkHeight)
-                             || VersionBitsTipState(chainParams.GetConsensus(), Consensus::DEPLOYMENT_SEGWIT) == THRESHOLD_ACTIVE))
-    {
-        // MVF-BU TODO: decide on above condition
-        // if preparations are only made after block has been accepted, then only FinalActivateForkHeight+1 can be new rules
-        // otherwise have to activate fork at end of block before FinalActivateForkHeight
-        ActivateFork();
-    }
 
     LogPrintf("MVF: isMVFHardForkActive=%B\n", isMVFHardForkActive);
     // MVF-BU end
@@ -4178,7 +4178,7 @@ bool static LoadBlockIndexDB()
     if (!isMVFHardForkActive && (chainActive.Height() >= FinalActivateForkHeight
                              || VersionBitsTipState(chainparams.GetConsensus(), Consensus::DEPLOYMENT_SEGWIT) == THRESHOLD_ACTIVE))
     {
-        ActivateFork();
+        ActivateFork(chainActive.Height(), false);
     }
     // MVF-BU end
 

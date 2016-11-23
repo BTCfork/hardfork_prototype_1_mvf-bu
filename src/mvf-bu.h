@@ -69,7 +69,7 @@ const char * const BTCFORK_CONF_FILENAME = "btcfork.conf";
 
 extern std::string ForkCmdLineHelp();  // fork-specific command line option help (MVHF-BU-DES-TRIG-8)
 extern void ForkSetup(const CChainParams& chainparams);  // actions to perform at program setup (parameter validation etc.)
-extern void ActivateFork(void);    // actions to perform at fork triggering (MVHF-BU-DES-TRIG-6)
+extern void ActivateFork(int actualForkHeight, bool doBackup=true);  // actions to perform at fork triggering (MVHF-BU-DES-TRIG-6)
 extern void DeactivateFork(void);  // actions to revert if reorg deactivates fork (MVHF-BU-DES-TRIG-7)
 
 #endif
