@@ -7,6 +7,7 @@
 #include "init.h"
 #include "util.h"
 #include "chainparams.h"
+#include "validationinterface.h"
 
 #include <iostream>
 #include <fstream>
@@ -122,12 +123,18 @@ void ForkSetup(const CChainParams& chainparams)
 
 
 /** Actions when the fork triggers (MVHF-BU-DES-TRIG-6) */
-void ActivateFork(void)
+// doBackup parameter default is true
+void ActivateFork(int actualForkHeight, bool doBackup)
 {
     LogPrintf("%s: MVF: checking whether to perform fork activation\n", __func__);
     if (!isMVFHardForkActive && !wasMVFHardForkPreviouslyActivated)  // sanity check to protect the one-off actions
     {
         LogPrintf("%s: MVF: performing fork activation actions\n", __func__);
+
+        // set so that we capture the actual height at which it forked
+        // because this can be different from user-specified configuration
+        // (e.g. soft-fork activated)
+        FinalActivateForkHeight = actualForkHeight;
 
         boost::filesystem::path pathBTCforkConfigFile(BTCFORK_CONF_FILENAME);
         if (!pathBTCforkConfigFile.is_complete())
@@ -149,12 +156,53 @@ void ActivateFork(void)
         std::ofstream  btcforkfile(pathBTCforkConfigFile.string().c_str(), std::ios::out);
         btcforkfile << "forkheight=" << FinalActivateForkHeight << "\n";
         btcforkfile << "forkid=" << FinalForkId << "\n";
-        btcforkfile << "autobackupblock=" << GetArg("-autobackupblock", FinalActivateForkHeight - 1) << "\n";
-        btcforkfile.close();
 
         LogPrintf("%s: MVF: active fork height = %d\n", __func__, FinalActivateForkHeight);
         LogPrintf("%s: MVF: active fork id = 0x%06x (%d)\n", __func__, FinalForkId, FinalForkId);
-        LogPrintf("%s: MVF: auto backup block = %d\n", __func__, GetArg("-autobackupblock", FinalActivateForkHeight - 1));
+
+        // MVF-BU begin MVHF-BU-DES-WABU-3
+        // check if we need to do wallet auto backup at fork block
+        // this is in case of soft-fork triggered activation
+        // MVF-BU TODO: reduce code duplication between this block and main.cpp:UpdateTip()
+        if (doBackup && !fAutoBackupDone)
+        {
+            std::string strWalletBackupFile = GetArg("-autobackupwalletpath", "");
+            int BackupBlock = actualForkHeight;
+
+            //LogPrintf("MVF DEBUG: autobackupwalletpath=%s\n",strWalletBackupFile);
+            //LogPrintf("MVF DEBUG: autobackupblock=%d\n",BackupBlock);
+
+            if (GetBoolArg("-disablewallet", false))
+            {
+                LogPrintf("MVF: -disablewallet and -autobackupwalletpath conflict so automatic backup disabled.");
+                fAutoBackupDone = true;
+            }
+            else {
+                // Auto Backup defined, but no need to check block height since
+                // this is fork activation time and we still have not backed up
+                // so just get on with it
+                if (GetMainSignals().BackupWalletAuto(strWalletBackupFile, BackupBlock))
+                    fAutoBackupDone = true;
+                else {
+                    // shutdown in case of wallet backup failure (MVHF-BU-DES-WABU-5)
+                    // MVF-BU TODO: investigate if this is safe in terms of wallet flushing/closing or if more needs to be done
+                    btcforkfile << "error: unable to perform automatic backup - exiting" << "\n";
+                    btcforkfile.close();
+                    throw std::runtime_error("CWallet::BackupWalletAuto() : Auto wallet backup failed!");
+                }
+            }
+            btcforkfile << "autobackupblock=" << FinalActivateForkHeight << "\n";
+            LogPrintf("%s: MVF: soft-forked auto backup block = %d\n", __func__, FinalActivateForkHeight);
+
+        }
+        else {
+            // auto backup was already made pre-fork - emit parameters
+            btcforkfile << "autobackupblock=" << GetArg("-autobackupblock", FinalActivateForkHeight - 1) << "\n";
+            LogPrintf("%s: MVF: height-based auto backup block = %d\n", __func__, GetArg("-autobackupblock", FinalActivateForkHeight - 1));
+        }
+
+        // close fork parameter file
+        btcforkfile.close();
     }
     // set the flag so that other code knows HF is active
     LogPrintf("%s: MVF: enabling isMVFHardForkActive\n", __func__);
