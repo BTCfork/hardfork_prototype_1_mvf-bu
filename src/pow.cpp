@@ -75,7 +75,7 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
 
 unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nFirstBlockTime, const Consensus::Params& params)
 {
-    static bool force_retarget=GetBoolArg("-force-retarget", false);  // MVF-BU added for retargeting tests on regtestnet (MVHF-BU-DES-DIAD-6)
+    bool force_retarget=GetBoolArg("-force-retarget", false);  // MVF-BU added for retargeting tests on regtestnet (MVHF-BU-DES-DIAD-6)
     const arith_uint256 bnPowLimit = UintToArith256(params.powLimit); // MVF-BU moved here
 
     if (params.fPowNoRetargeting && !force_retarget)
