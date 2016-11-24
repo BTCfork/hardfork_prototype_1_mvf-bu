@@ -24,8 +24,13 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
     // MVF-BU begin difficulty re-targeting reset (MVHF-BU-DES-DIAD-2)
     if (pindexLast->nHeight == FinalActivateForkHeight)
     {
-        LogPrintf("MVF FORK BLOCK DIFFICULTY RESET  %08x  \n", pindexLast->nBits);
-        return pindexLast->nBits;
+        arith_uint256 bnNew;
+
+        bnNew.SetCompact(0x207eeeee);
+        //bnNew *= 10;     // drop difficulty by factor of 10
+
+        LogPrintf("MVF FORK BLOCK DIFFICULTY RESET  %08x  \n", bnNew.GetCompact());
+        return bnNew.GetCompact();
     }
     LogPrintf("MVF DEBUG DifficultyAdjInterval = %d , TargetTimeSpan = %d \n", params.DifficultyAdjustmentInterval(pindexLast->nHeight), params.MVFPowTargetTimespan(pindexLast->nHeight));
     // MVF-BU end
@@ -121,7 +126,7 @@ unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nF
     // Test for overflow
     if (bnNew2 / nActualTimespan != bnNew1)
     {
-        bnNew = bnOld;
+        bnNew = bnPowLimit;
         LogPrintf("MVF GetNextWorkRequired OVERFLOW\n");
     }
     else if (bnNew2 > bnPowLimit)
