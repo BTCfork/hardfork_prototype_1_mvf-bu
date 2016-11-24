@@ -107,19 +107,22 @@ BOOST_AUTO_TEST_CASE(GetBlockProofEquivalentTime_test)
    difficulty is re-used. */
 BOOST_AUTO_TEST_CASE(MVFCheckOverflowCalculation_test)
 {
-    SelectParams(CBaseChainParams::MAIN);
+    SelectParams(CBaseChainParams::REGTEST);
     const Consensus::Params& params = Params().GetConsensus();
 
-    FinalActivateForkHeight = 68540;
+    FinalActivateForkHeight = 2016;
 
     int64_t nLastRetargetTime = 7;  // Force an excessive retarget time to trigger overflow
     CBlockIndex pindexLast;
-    pindexLast.nHeight = 68543;
+    pindexLast.nHeight = 2024;
     pindexLast.nTime = 1279297671;  // Block #68543
-    pindexLast.nBits = 0x200aaaaa;  // Almost overflowing already
+    pindexLast.nBits = 0x207aaaaa;  // Almost overflowing already
 
-    // an overflow causes the old bits to be used again
-    BOOST_CHECK_EQUAL(CalculateNextWorkRequired(&pindexLast, nLastRetargetTime, params), pindexLast.nBits);
+    // an overflow causes the POW limit to be returned
+    // need to set -force-retarget, otherwise cannot test overflow
+    // because it would never reach the computation
+    SoftSetBoolArg("-force-retarget", true);
+    BOOST_CHECK_EQUAL(CalculateNextWorkRequired(&pindexLast, nLastRetargetTime, params), 0x207fffff);
 }
 // MVF-BU end
 
