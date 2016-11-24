@@ -101,8 +101,10 @@ class BIP68_112_113Test(ComparisonTestFramework):
 
     def setup_network(self):
         # Must set the blockversion for this test
+        # MVF-BU TODO: clarify why fork diff reset to 0x207eeeee at default forkheight 100 produces interference with this test
+        #              once that problem is sorted out, remove the forkheight parameter again
         self.nodes = start_nodes(1, self.options.tmpdir,
-                                 extra_args=[['-debug', '-whitelist=127.0.0.1', '-blockversion=4']],
+                                 extra_args=[['-forkheight=999999', '-debug', '-whitelist=127.0.0.1', '-blockversion=4']],
                                  binary=[self.options.testbinary])
 
     def run_test(self):
