@@ -36,7 +36,7 @@ def CalcForkResetWorkRequired(bits):
     nTargetTimespan = nActualTimespan / nDropFactor
 
     # compare with debug.log
-    print "nTargetTimespan %d nActualTimespan=%d" % (nTargetTimespan,nActualTimespan)
+    #print "nTargetTimespan=%d nActualTimespan=%d" % (nTargetTimespan,nActualTimespan)
 
     bnOld = bits2target_int(hex2bin(bits))     # SetCompact
     bnNew1 = bnOld / nTargetTimespan
@@ -132,15 +132,13 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
         prev_blocks_delta_avg = 0
         diff_factor = 0
 
+        # print column titles
+        print "nBits changed @ Time,Block,Delta(secs),nBits,Used,DiffInterval,Difficulty,NextDifficulty,DiffFactor"
+
         # start generating MVF blocks with varying time stamps
         for n in xrange(HARDFORK_RETARGET_BLOCKS + 2017):
             best_block = self.nodes[0].getblock(self.nodes[0].getbestblockhash(), True)
             prev_block = self.nodes[0].getblock(best_block['previousblockhash'], True)
-
-            if best_block['height'] == FORK_BLOCK + 1 :
-                # print column titles
-                print "nBits changed @ Time,Block,Delta(secs),nBits,Used,DiffInterval,Difficulty,NextDifficulty,DiffFactor"
-            # end if best_block['height'] == FORK_BLOCK + 1
 
             # track bits used
             if prev_block['bits'] == best_block['bits'] or best_block['height'] == FORK_BLOCK:
@@ -214,7 +212,7 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
                 diff_interval_expected = 6     # 1 hour
             elif n in range(102,2012) :
                 diff_interval_expected = 18    # 3 hours
-            elif n in range(2012,HARDFORK_RETARGET_BLOCKS+1) :
+            elif n in range(2012,HARDFORK_RETARGET_BLOCKS) :
                 diff_interval_expected = 72    # 12 hours
             else:
                 diff_interval_expected = 2016  # 14 days original
