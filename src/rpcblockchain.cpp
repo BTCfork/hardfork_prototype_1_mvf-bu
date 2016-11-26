@@ -390,7 +390,8 @@ UniValue getblock(const UniValue& params, bool fHelp)
             "  \"chainwork\" : \"xxxx\",  (string) Expected number of hashes required to produce the chain up to this block (in hex)\n"
             "  \"previousblockhash\" : \"hash\",  (string) The hash of the previous block\n"
             "  \"nextblockhash\" : \"hash\"       (string) The hash of the next block\n"
-           "}\n"
+            "  \"difficultyadjinterval\" : n,     (numeric) The number of blocks between difficulty adjustment \n"  // MVF-BU (MVHF-BU-DES-DIAD-7)
+            "}\n"
             "\nResult (for verbose=false):\n"
             "\"data\"             (string) A string that is serialized, hex-encoded data for block 'hash'.\n"
             "\nExamples:\n"
