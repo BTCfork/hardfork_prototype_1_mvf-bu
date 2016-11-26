@@ -22,55 +22,57 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
         return nProofOfWorkLimit;
 
     // MVF-BU begin difficulty re-targeting reset (MVHF-BU-DES-DIAD-2)
-    if (pindexLast->nHeight == FinalActivateForkHeight)
+    if (pindexLast->nHeight+1 == FinalActivateForkHeight)
     {
-        arith_uint256 bnNew;
+        int nHeightFirst = pindexLast->nHeight - params.DifficultyAdjustmentInterval(pindexLast->nHeight);
+        assert(nHeightFirst >= 0);
+        const CBlockIndex* pindexFirst = pindexLast->GetAncestor(nHeightFirst);
+        assert(pindexFirst);
 
-        bnNew.SetCompact(0x207eeeee);
-        //bnNew *= 10;     // drop difficulty by factor of 10
-
-        LogPrintf("MVF FORK BLOCK DIFFICULTY RESET  %08x  \n", bnNew.GetCompact());
-        return bnNew.GetCompact();
+        return CalcForkResetWorkRequired(pindexLast, pindexFirst->GetBlockTime(), params);
     }
-    LogPrintf("MVF DEBUG DifficultyAdjInterval = %d , TargetTimeSpan = %d \n", params.DifficultyAdjustmentInterval(pindexLast->nHeight), params.MVFPowTargetTimespan(pindexLast->nHeight));
-    // MVF-BU end
-
-    // Only change once per difficulty adjustment interval
-    if ((pindexLast->nHeight+1) % params.DifficultyAdjustmentInterval(pindexLast->nHeight) != 0)  // MVF-BU: use height-dependent interval
+    else
     {
-        // MVF-BU: added force parameter to enable adjusting difficulty for regtest tests
-        if (params.fPowAllowMinDifficultyBlocks && !GetBoolArg("-force-retarget", false))
+        LogPrintf("MVF DEBUG DifficultyAdjInterval = %d , TargetTimeSpan = %d \n", params.DifficultyAdjustmentInterval(pindexLast->nHeight), params.MVFPowTargetTimespan(pindexLast->nHeight));
+        // MVF-BU end
+
+        // Only change once per difficulty adjustment interval
+        if ((pindexLast->nHeight+1) % params.DifficultyAdjustmentInterval(pindexLast->nHeight) != 0)  // MVF-BU: use height-dependent interval
         {
-            // Special difficulty rule for testnet:
-            // If the new block's timestamp is more than 2* 10 minutes
-            // then allow mining of a min-difficulty block.
-            if (pblock->GetBlockTime() > pindexLast->GetBlockTime() + params.nPowTargetSpacing*2)
-                return nProofOfWorkLimit;
-            else
+            // MVF-BU: added force parameter to enable adjusting difficulty for regtest tests
+            if (params.fPowAllowMinDifficultyBlocks && !GetBoolArg("-force-retarget", false))
             {
-                // Return the last non-special-min-difficulty-rules-block
-                const CBlockIndex* pindex = pindexLast;
-                // MVF-BU: use height-dependent interval
-                while (pindex->pprev && pindex->nHeight % params.DifficultyAdjustmentInterval(pindexLast->nHeight) != 0 && pindex->nBits == nProofOfWorkLimit)
-                    pindex = pindex->pprev;
-                return pindex->nBits;
+                // Special difficulty rule for testnet:
+                // If the new block's timestamp is more than 2* 10 minutes
+                // then allow mining of a min-difficulty block.
+                if (pblock->GetBlockTime() > pindexLast->GetBlockTime() + params.nPowTargetSpacing*2)
+                    return nProofOfWorkLimit;
+                else
+                {
+                    // Return the last non-special-min-difficulty-rules-block
+                    const CBlockIndex* pindex = pindexLast;
+                    // MVF-BU: use height-dependent interval
+                    while (pindex->pprev && pindex->nHeight % params.DifficultyAdjustmentInterval(pindexLast->nHeight) != 0 && pindex->nBits == nProofOfWorkLimit)
+                        pindex = pindex->pprev;
+                    return pindex->nBits;
+                }
             }
+            return pindexLast->nBits;
         }
-        return pindexLast->nBits;
-    }
 
-    // MVF-BU begin
-    // Go back by what we want to be 14 days worth of blocks (normally)
-    int nHeightFirst = pindexLast->nHeight - (params.DifficultyAdjustmentInterval(pindexLast->nHeight)-1);
-    // while within the retarget period override the original formula to handle a dynamic time span
-    if (params.MVFisWithinRetargetPeriod(pindexLast->nHeight))
-        nHeightFirst = pindexLast->nHeight - params.DifficultyAdjustmentInterval(pindexLast->nHeight);
-    // MVF-BU end
-    assert(nHeightFirst >= 0);
-    const CBlockIndex* pindexFirst = pindexLast->GetAncestor(nHeightFirst);
-    assert(pindexFirst);
+        // MVF-BU begin
+        // Go back by what we want to be 14 days worth of blocks (normally)
+        int nHeightFirst = pindexLast->nHeight - (params.DifficultyAdjustmentInterval(pindexLast->nHeight)-1);
+        // while within the retarget period override the original formula to handle a dynamic time span
+        if (params.MVFisWithinRetargetPeriod(pindexLast->nHeight))
+            nHeightFirst = pindexLast->nHeight - params.DifficultyAdjustmentInterval(pindexLast->nHeight);
+        // MVF-BU end
+        assert(nHeightFirst >= 0);
+        const CBlockIndex* pindexFirst = pindexLast->GetAncestor(nHeightFirst);
+        assert(pindexFirst);
 
-    return CalculateNextWorkRequired(pindexLast, pindexFirst->GetBlockTime(), params);
+        return CalculateNextWorkRequired(pindexLast, pindexFirst->GetBlockTime(), params);
+    } // end fork reset
 }
 
 unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nFirstBlockTime, const Consensus::Params& params)
@@ -114,13 +116,11 @@ unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nF
     // MVF-BU end
 
     // Retarget
-    arith_uint256 bnNew, bnNew1, bnNew2;
-    arith_uint256 bnOld;
-    bnNew.SetCompact(pindexLast->nBits);
-    bnOld = bnNew;
+    arith_uint256 bnNew, bnNew1, bnNew2, bnOld;
+    bnOld.SetCompact(pindexLast->nBits);
     // MVF-BU begin: move division before multiplication
     // at regtest difficulty, the multiplication is prone to overflowing
-    bnNew1 = bnNew / nTargetTimespan;
+    bnNew1 = bnOld / nTargetTimespan;
     bnNew2 = bnNew1 * nActualTimespan;
 
     // Test for overflow
@@ -144,6 +144,39 @@ unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nF
     LogPrintf("Before: %08x  %s\n", pindexLast->nBits, bnOld.ToString());
     LogPrintf("After:  %08x  %s\n", bnNew.GetCompact(), bnNew.ToString());
 
+    return bnNew.GetCompact();
+}
+
+unsigned int CalcForkResetWorkRequired(const CBlockIndex* pindexLast, int64_t nFirstBlockTime, const Consensus::Params& params)
+{
+    const arith_uint256 bnPowLimit = UintToArith256(params.powLimit); // MVF-BU moved here
+
+    arith_uint256 bnNew, bnNew1, bnNew2, bnOld;
+
+    // drop difficulty via factor
+    int nDropFactor = 4;
+    // use same formula as standard
+    int64_t nActualTimespan = pindexLast->GetBlockTime() - nFirstBlockTime;
+    // used reduced target time span
+    int64_t nTargetTimespan = nActualTimespan / nDropFactor;
+
+    bnOld.SetCompact(pindexLast->nBits);
+    bnNew1 = bnOld / nTargetTimespan;
+    bnNew2 = bnNew1 * nActualTimespan;
+
+    // check for overflow or overlimit
+    if (bnNew2 / nActualTimespan != bnNew1 || bnNew2 > bnPowLimit)
+        bnNew = bnPowLimit;
+    else bnNew = bnNew2;
+
+    // fix difficulty to constant near the limit
+    //bnNew.SetCompact(0x207eeeee);
+
+    /// debug print
+    LogPrintf("GetNextWorkRequired RETARGET\n");
+    LogPrintf("nTargetTimespan = %d    nActualTimespan = %d\n", nTargetTimespan, nActualTimespan);
+    LogPrintf("Before: %08x  %s\n", pindexLast->nBits, bnOld.ToString());
+    LogPrintf("After MVF FORK BLOCK DIFFICULTY RESET  %08x  %s\n", bnNew.GetCompact(),bnNew.ToString());
     return bnNew.GetCompact();
 }
 
