@@ -109,6 +109,8 @@ BOOST_AUTO_TEST_CASE(MVFCheckOverflowCalculation_test)
 {
     SelectParams(CBaseChainParams::REGTEST);
     const Consensus::Params& params = Params().GetConsensus();
+    const arith_uint256 bnPowLimit = UintToArith256(params.powLimit); // MVF-BU moved here
+
 
     FinalActivateForkHeight = 2016;
 
@@ -122,7 +124,7 @@ BOOST_AUTO_TEST_CASE(MVFCheckOverflowCalculation_test)
     // need to set -force-retarget, otherwise cannot test overflow
     // because it would never reach the computation
     SoftSetBoolArg("-force-retarget", true);
-    BOOST_CHECK_EQUAL(CalculateNextWorkRequired(&pindexLast, nLastRetargetTime, params), 0x207fffff);
+    BOOST_CHECK_EQUAL(CalculateNextWorkRequired(&pindexLast, nLastRetargetTime, params), bnPowLimit.GetCompact());
 }
 // MVF-BU end
 

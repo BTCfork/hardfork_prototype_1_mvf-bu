@@ -15,7 +15,8 @@ from random import randint
 import decimal
 
 # period (in blocks) from fork activation until retargeting returns to normal
-HARDFORK_RETARGET_BLOCKS = 180*144
+# MVF-BU TODO: Revert to 180*144
+HARDFORK_RETARGET_BLOCKS = 90*144
 FORK_BLOCK = 2017
 
 class MVF_RETARGET_Test(BitcoinTestFramework):
