@@ -25,7 +25,7 @@ enum {
 HARDFORK_HEIGHT_MAINNET =  666666,   // operational network trigger height
 HARDFORK_HEIGHT_TESTNET = 9999999,   // public test network trigger height
 HARDFORK_HEIGHT_NOLNET  = 8888888,   // BU public no-limit test network  trigger height
-HARDFORK_HEIGHT_REGTEST =     100,   // regression test network (local)  trigger height
+HARDFORK_HEIGHT_REGTEST = 9999999,   // regression test network (local)  trigger height
 
 // MVHF-BU-DES-DIAD-3 / MVHF-BU-DES-DIAD-4
 // period (in blocks) from fork activation until retargeting returns to normal

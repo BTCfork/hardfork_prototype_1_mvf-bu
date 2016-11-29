@@ -13,25 +13,64 @@ from test_framework.test_framework import BitcoinTestFramework
 from test_framework.util import *
 from test_framework.arith import *
 from random import randint
-import math, decimal
-
-l = math.log
-e = math.e
 
 # period (in blocks) from fork activation until retargeting returns to normal
 # MVF-BU TODO: Revert to 180*144
 HARDFORK_RETARGET_BLOCKS = 90*144    # the period when retargeting returns to original
-FORK_BLOCK = 2017                    # needs to be >= 2017 to test fork difficulty reset
+FORK_BLOCK = 2020                    # needs to be >= 2018 to test fork difficulty reset
 POW_LIMIT = 0x207fffff
-PREFORK_BLOCKTIME = 1                # before the fork need to track the ActualTimespan
+PREFORK_BLOCKTIME = 1                # before the fork during the regtest
+ORIGINAL_DIFFADJINTERVAL = 2016      # the original difficulty adjustment interval
+STANDARD_BLOCKTIME = 600             # the standard target seconds for a block
 
-def CalcForkResetWorkRequired(bits):
-    # Returns difficulty using the fork reset formula in pow.cpp:CalcForkResetTarget()
+def CalculateMVFNextWorkRequired(bits, actualBlockTimeSecs, targetBlockInterval):
+    # Returns difficulty using the fork reset formula in pow.cpp:CalculateMVFNextWorkRequired()
+
+    bnPowLimit = bits2target_int(hex2bin(int2hex(POW_LIMIT))) # MVF-BU moved here
+
+    # Limit adjustment step
+    nActualTimespan = actualBlockTimeSecs
+
+    # Target by interval
+    nTargetTimespan = targetBlockInterval * STANDARD_BLOCKTIME
+
+    # permit abrupt changes for a few blocks after the fork i.e. when nTargetTimespan is < 30 minutes (MVHF-BU-DES-DIAD-5)
+    if (nTargetTimespan >= STANDARD_BLOCKTIME * 3) :
+        # prevent abrupt changes to target
+        if (nActualTimespan < nTargetTimespan/4) :
+            nActualTimespan = nTargetTimespan/4
+        if (nActualTimespan > nTargetTimespan*4) :
+            nActualTimespan = nTargetTimespan*4
+
+    # compare with debug.log
+    #print "nTargetTimespan=%d nActualTimespan=%d" % (nTargetTimespan,nActualTimespan)
+
+    # Retarget
+    bnOld = bits2target_int(hex2bin(bits))     # SetCompact
+    # MVF-BU begin: move division before multiplication
+    # at regtest difficulty, the multiplication is prone to overflowing
+    bnNew1 = bnOld / nTargetTimespan
+    bnNew2 = bnNew1 * nActualTimespan
+
+    # Test for overflow
+    if (bnNew2 / nActualTimespan != bnNew1 or bnNew2 > bnPowLimit):
+        bnNew = bnPowLimit
+    else :
+        bnNew = bnNew2
+
+    newBits = "0x%s" % bin2hex(target_int2bits(bnNew)) # GetCompact
+    nBitsReset = int(newBits,0)
+    return nBitsReset
+
+
+def CalculateMVFResetWorkRequired(bits):
+    # Returns difficulty using the fork reset formula in pow.cpp:CalculateMVFResetWorkRequired()
+
     bnPowLimit = bits2target_int(hex2bin(int2hex(POW_LIMIT)))
     # drop difficulty via factor
     nDropFactor = 4
     # total blocktimes prefork during run_test
-    nActualTimespan = (FORK_BLOCK * PREFORK_BLOCKTIME) - PREFORK_BLOCKTIME
+    nActualTimespan = ORIGINAL_DIFFADJINTERVAL * PREFORK_BLOCKTIME
     # used reduced target time span while within the re-target period
     nTargetTimespan = nActualTimespan / nDropFactor
 
@@ -54,13 +93,14 @@ def CalcForkResetWorkRequired(bits):
 # formula debug testing
 # useful for testing whenever the reset formula changes pow.cpp:CalcForkResetTarget()
 ##bits = "1d00ffff" # 1.000000000
-#bits = "201fffff" # 0.0000000019
+##bits = "201fffff" # 0.0000000019
 ##bits = "203ffff6" # 0.0000000009
 ##bits = "1f03f355" # 0.0000038624
-
+#bits = "1e132d35"  # 1e19919b 0.0001527719
 #print "before: 0x%s = %.10f" % (bits,bits2difficulty(int("0x%s"%bits,0)))
 
-#reset = CalcForkResetWorkRequired(bits)
+##reset = CalculateMVFResetWorkRequired(bits)
+#reset = CalculateMVFNextWorkRequired(bits,800,1)
 #diff = bits2difficulty(reset)
 #print "after : 0x%s = %.10f" % (int2hex(reset),diff)
 #raw_input()
@@ -101,7 +141,9 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
         # Read difficulty before the fork
         best_block = self.nodes[0].getblock(self.nodes[0].getbestblockhash(), True)
         print "Pre-fork difficulty: %.10f %s " % (best_block['difficulty'], best_block['bits'])
-        reset_diff_expected = bits2difficulty(CalcForkResetWorkRequired(best_block['bits']))
+        nBits = CalculateMVFResetWorkRequired(best_block['bits'])
+        reset_bits = int2hex(nBits)
+        reset_diff_expected = bits2difficulty(nBits)
         assert_greater_than(reset_diff_expected, 0)
 
         # Test fork did not trigger prematurely
@@ -110,33 +152,31 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
 
         # Generate fork block
         best_block = self.nodes[0].getblock(self.nodes[0].getbestblockhash(), True)
-        self.nodes[0].setmocktime(best_block['time'] + 600)
+        self.nodes[0].setmocktime(best_block['time'] + STANDARD_BLOCKTIME)
         self.nodes[0].generate(1)
         assert_equal(True,   self.is_fork_triggered_on_node(0))
 
         best_block = self.nodes[0].getblock(self.nodes[0].getbestblockhash(), True)
-        print "Fork triggered successfully (block height %s)" % FORK_BLOCK
+        print "Fork triggered successfully (block height %s)" % best_block['height']
 
         # Test fork difficulty reset
-        #print "expected = %.10f" % reset_diff_expected
-        assert_equal(round(best_block['difficulty'],10),round(reset_diff_expected,10))
+        #print "expected = %.10f actual = %.10f" % (reset_diff_expected,best_block['difficulty'])
+        assert_equal(best_block['bits'],reset_bits)
         #assert_equal(best_block['bits'], "207eeeee") # fixed reset
         print "Post-fork difficulty reset success: %.10f %s " % (best_block['difficulty'], best_block['bits'])
 
         # use to track how many times the same bits are used in a row
         prev_block = 0
         diffadjinterval = 0
-        next_block_time = 0
+        next_block_time = 300
         count_bits_used = 0
-        prev_block_delta = 0
-        prev_blocks_delta_avg = 0
-        diff_factor = 0
 
         # print column titles
-        print "nBits changed @ Time,Block,Delta(secs),nBits,Used,DiffInterval,Difficulty,NextDifficulty,DiffFactor"
+        print "nBits changed @ Time,Block,Delta(secs),nBits,Used,DiffInterval,Difficulty,NextBits"
 
         # start generating MVF blocks with varying time stamps
-        for n in xrange(HARDFORK_RETARGET_BLOCKS + 2017):
+        oneRetargetBlockAfterMVFRetargetPeriod = HARDFORK_RETARGET_BLOCKS+ORIGINAL_DIFFADJINTERVAL+1
+        for n in xrange(oneRetargetBlockAfterMVFRetargetPeriod):
             best_block = self.nodes[0].getblock(self.nodes[0].getbestblockhash(), True)
             prev_block = self.nodes[0].getblock(best_block['previousblockhash'], True)
 
@@ -146,37 +186,49 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
             else:
                 # when the bits change then output the retargeting metrics
                 # for the previous group of bits
-                prev_blocks_delta_avg = decimal.Decimal(prev_block_delta) / count_bits_used
-                diff_factor = 600 / decimal.Decimal(prev_blocks_delta_avg)
-                best_diff_expected = prev_block['difficulty'] * diff_factor
+                first_block = self.nodes[0].getblock(self.nodes[0].getblockhash(prev_block['height'] - diffadjinterval))
+                actualBlockTimeSecs = prev_block['time'] - first_block['time']
+                avgBlockTimeSecs = actualBlockTimeSecs / count_bits_used
 
-                print "%s,%d,%d,%s,%d,%d,%.8f,%.8f,%.4f " %(
+                if n > HARDFORK_RETARGET_BLOCKS :
+                    # returns to standard targetting
+                    nextBits = "standard"
+                    #best_diff_expected = ""
+                    nBits = 0
+                else:
+                    # during MVF retarget period test retarget difficulty function
+                    nBits = CalculateMVFNextWorkRequired(prev_block['bits'], actualBlockTimeSecs, diffadjinterval)
+                    nextBits = int2hex(nBits)
+                    #best_diff_expected = bits2difficulty(nBits)
+                    #print "%s %.10f" % (int2hex(nextBits), best_diff_expected)
+
+                    # Test difficulty
+                    assert_equal(best_block['bits'], nextBits)
+
+                print "%s,%d,%d,%s,%d,%d,%.10f,%s " %(
                     time.strftime("%Y-%m-%d %H:%M",time.gmtime(prev_block['time'])),
                     prev_block['height'],
-                    prev_blocks_delta_avg,
+                    avgBlockTimeSecs,
                     prev_block['bits'],
                     count_bits_used,
                     diffadjinterval,
                     prev_block['difficulty'],
-                    best_diff_expected,
-                    diff_factor
+                    nextBits
                     )
-
-                # Test processed bits are used within the expected difficulty interval
-                # except when the bits is at the bits limit: 207fffff
-                if int("0x%s"%prev_block['bits'],0) <> POW_LIMIT :
-                    assert_less_than_equal(count_bits_used, diffadjinterval)
-
-                # Test difficulty
-                if n <= 500 :
-                    assert_equal(round(best_block['difficulty'],8), round(best_diff_expected,8))
 
                 # reset bits tracking variables
                 count_bits_used = 1
-                prev_block_delta = 0
+                #raw_input()
             #### end if prev_block['bits'] == best_block['bits']
 
-            # setup various block time interval tests
+            # Test processed bits are used within the expected difficulty interval
+            # except when the bits is at the bits limit: 207fffff
+            diffadjinterval = self.nodes[0].getblockchaininfo()['difficultyadjinterval']
+
+            if int("0x%s"%prev_block['bits'],0) <> POW_LIMIT :
+                assert_less_than_equal(count_bits_used, diffadjinterval)
+
+            # Setup various block time interval tests
             if n in range(0,11) :
                 next_block_time = next_block_time + 50
             elif n in range(11,18) :
@@ -199,10 +251,6 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
 
             self.nodes[0].setmocktime(best_block['time'] + next_block_time)
 
-            # track block metrics
-            prev_block_delta = prev_block_delta + (best_block['time'] - prev_block['time'])
-            diffadjinterval = self.nodes[0].getblockchaininfo()['difficultyadjinterval']
-
             # Test the interval matches the interval defined in params.MVFPowTargetTimespan()
             if n in range(0,11) :
                 diff_interval_expected = 1     # 10 mins
@@ -215,17 +263,14 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
             elif n in range(2012,HARDFORK_RETARGET_BLOCKS) :
                 diff_interval_expected = 72    # 12 hours
             else:
-                diff_interval_expected = 2016  # 14 days original
+                diff_interval_expected = ORIGINAL_DIFFADJINTERVAL  # 14 days original
 
-            #print "%d %d" % (diff_interval_expected, diffadjinterval)
-            #if diff_interval_expected <> diffadjinterval : raw_input()
             assert_equal(diff_interval_expected, diffadjinterval)
 
             # print info for every block
             #print "%s :: %s :: %d :: %s :: %d" %(
                 #best_block['height'],
                 #time.strftime("%H:%M",time.gmtime(best_block['time'])),
-                #decimal.Decimal(prev_block_delta) / count_bits_used,
                 #best_block['bits'],
                 #count_bits_used)
 

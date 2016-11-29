@@ -82,7 +82,7 @@ void ForkSetup(const CChainParams& chainparams)
     FinalActivateForkHeight = GetArg("-forkheight", minForkHeightForNetwork);
 
     // shut down immediately if specified fork height is invalid
-    if (FinalActivateForkHeight < minForkHeightForNetwork)
+    if (FinalActivateForkHeight <= 0)
     {
         LogPrintf("MVF: Error: specified fork height (%d) is less than minimum for '%s' network (%d)\n", FinalActivateForkHeight, activeNetworkID, minForkHeightForNetwork);
         StartShutdown();
@@ -221,3 +221,6 @@ void DeactivateFork(void)
     LogPrintf("%s: MVF: disabling isMVFHardForkActive\n", __func__);
     isMVFHardForkActive = false;
 }
+
+
+
