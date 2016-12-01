@@ -168,6 +168,8 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
         # use to track how many times the same bits are used in a row
         prev_block = 0
         diffadjinterval = 0
+        # the first nexttimeblock test phase is cyclical increases of 50 seconds starting from here
+        # if the starting number is too low it may cause timeout errors too often
         next_block_time = 300
         count_bits_used = 0
 

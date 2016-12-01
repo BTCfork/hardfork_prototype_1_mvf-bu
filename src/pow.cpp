@@ -165,7 +165,7 @@ unsigned int CalculateMVFNextWorkRequired(const CBlockIndex* pindexLast, int64_t
          return bnPowLimit.GetCompact();
     }
     // MVF-BU end
-    LogPrintf("  mvf: nActualTimespan = %d  before bounds\n", nActualTimespan);
+    LogPrintf("  MVF: nActualTimespan = %d  before bounds\n", nActualTimespan);
 
     // MVF-BU begin
     // target time span while within the re-target period
@@ -226,6 +226,7 @@ unsigned int CalculateMVFResetWorkRequired(const CBlockIndex* pindexLast, int64_
 
     arith_uint256 bnNew, bnNew1, bnNew2, bnOld;
 
+    // TODO : Determine best reset formula
     // drop difficulty via factor
     int nDropFactor = 4;
     // use same formula as standard
