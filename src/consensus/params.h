@@ -69,20 +69,34 @@ struct Params {
     // return height-dependent target time span used to compute retargeting interval (MVHF-BU-DES-DIAD-4)
     int64_t MVFPowTargetTimespan(int Height) const
     {
-        int MVFHeight = Height - FinalActivateForkHeight;
-
-        switch (MVFHeight)
+        if (MVFisWithinRetargetPeriod(Height))
         {
-            case    0 ... 10: return nPowTargetSpacing;           // 10 minutes (abrupt retargeting permitted)
+            int MVFHeight = Height - FinalActivateForkHeight;
 
-            case    11 ... 43: return nPowTargetSpacing * 3;       // 30 minutes
+            switch (MVFHeight)
+            {
+                case    0 ... 7         : return nPowTargetSpacing;          // 10 minutes (abrupt retargeting permitted)
 
-            case    44 ... 101: return nPowTargetSpacing * 6;      // 1 hour
+                case    8 ... 46        : return nPowTargetSpacing * 6;      // 1 hour
 
-            case    102 ... 2011: return nPowTargetSpacing * 6 * 3; // 3 hours
+                case    47 ... 153      : return nPowTargetSpacing * 36;     // 6 hours
 
-            default : return nPowTargetSpacing * 6 * 12;    // 12 hours
+                case    154 ... 299     : return nPowTargetSpacing * 72;    // 12 hours
+
+                case    300 ... 1299     : return nPowTargetSpacing * 144;   // 24 hours - 1 day
+
+                case    1300 ... 4999   : return nPowTargetSpacing * 288;   // 48 hours - 2 days
+
+                case    5000 ... 9999   : return nPowTargetSpacing * 432;   // 72 hours - 3 days
+
+                case    10000 ... 14999 : return nPowTargetSpacing * 576;   // 96 hours - 4 days
+
+                case    15000 ... 25000 : return nPowTargetSpacing * 1152;  // 192 hours - 8 days
+
+                default : return nPowTargetTimespan;    // original 14 days
+            }
         }
+        else return nPowTargetTimespan;
     }
 
     bool MVFisWithinRetargetPeriod(int Height) const
@@ -100,7 +114,23 @@ struct Params {
         // otherwise use a height-dependent window size
         if (MVFisWithinRetargetPeriod(Height)) {
            // re-target MVF
-           return MVFPowTargetTimespan(Height) / nPowTargetSpacing;
+            int MVFHeight = Height - FinalActivateForkHeight;
+            switch (MVFHeight)
+            {
+                case    0 ... 2016:         return 1;           // every block (abrupt retargeting permitted)
+
+                case    2017 ... 3999:      return 10;         // every 10 blocks
+
+                case    4000 ... 9999:      return 40;        // every 40 blocks
+
+                case    10000 ... 14999:    return 100;     // every 100 blocks
+
+                case    15000 ... 19999:    return 400;    // every 400 blocks
+
+                case    20000 ... 25000:    return 1000;  // every 1000 blocks
+
+                default : return 2016;                      // every 2016 blocks
+            }
         }
         else {
            // re-target original (MVHF-BU-DES-DIAD-4)
