@@ -94,6 +94,7 @@ unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nF
 }
 
 // MVF-BU begin: difficulty functions
+// TODO: Move these functions into mvf-bu.cpp
 unsigned int GetMVFNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock, const Consensus::Params& params)
 {
     unsigned int nProofOfWorkLimit = UintToArith256(params.powLimit).GetCompact();
