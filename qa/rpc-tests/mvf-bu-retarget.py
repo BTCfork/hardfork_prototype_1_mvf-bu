@@ -13,6 +13,9 @@ from test_framework.test_framework import BitcoinTestFramework
 from test_framework.util import *
 from test_framework.arith import *
 from random import randint
+seed = time.time()
+random.seed(seed)
+print "Random seed: %d " % seed
 
 # period (in blocks) from fork activation until retargeting returns to normal
 # MVF-BU TODO: Revert to 180*144
