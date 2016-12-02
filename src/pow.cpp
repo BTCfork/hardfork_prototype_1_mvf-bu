@@ -165,21 +165,22 @@ unsigned int CalculateMVFNextWorkRequired(const CBlockIndex* pindexLast, int64_t
          return bnPowLimit.GetCompact();
     }
     // MVF-BU end
-    LogPrintf("  mvf: nActualTimespan = %d  before bounds\n", nActualTimespan);
+    LogPrintf("  MVF: nActualTimespan = %d  before bounds\n", nActualTimespan);
 
-    // Since in MVF fork re-target period, use faster retarget time span dependent on height (MVHF-BU-DES-DIAD-3)
-    int64_t nTargetTimespan = params.MVFPowTargetTimespan(pindexLast->nHeight);
+    // MVF-BU begin
+    // Since in MVF fork recovery period, use faster retarget time span dependent on height (MVHF-BU-DES-DIAD-3)
+    int nTargetTimespan = params.MVFPowTargetTimespan(pindexLast->nHeight);
 
-    // permit abrupt changes for a few blocks after the fork i.e. when nTargetTimespan is < 30 minutes (MVHF-BU-DES-DIAD-5)
+    // permit x10 retarget changes for a few blocks after the fork i.e. when nTargetTimespan is < 30 minutes (MVHF-BU-DES-DIAD-5)
+    int retargetLimit;
     if (nTargetTimespan >= params.nPowTargetSpacing * 3)
-    {
-        // prevent abrupt changes to target
-        if (nActualTimespan < nTargetTimespan/4)
-            nActualTimespan = nTargetTimespan/4;
-        if (nActualTimespan > nTargetTimespan*4)
-            nActualTimespan = nTargetTimespan*4;
-    }
-    else LogPrintf("MVF Abrupt RETARGET permitted.\n");
+        retargetLimit = 4; else retargetLimit = 10;
+
+    // prevent abrupt changes to target
+    if (nActualTimespan < nTargetTimespan/retargetLimit)
+        nActualTimespan = nTargetTimespan/retargetLimit;
+    if (nActualTimespan > nTargetTimespan*retargetLimit)
+        nActualTimespan = nTargetTimespan*retargetLimit;
     // MVF-BU end
 
     // Retarget
@@ -221,6 +222,7 @@ unsigned int CalculateMVFResetWorkRequired(const CBlockIndex* pindexLast, int64_
 
     arith_uint256 bnNew, bnNew1, bnNew2, bnOld;
 
+    // TODO : Determine best reset formula
     // drop difficulty via factor
     int nDropFactor = 4;
     // use same formula as standard

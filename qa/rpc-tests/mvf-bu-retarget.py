@@ -33,13 +33,16 @@ def CalculateMVFNextWorkRequired(bits, actualBlockTimeSecs, targetBlockTimeSecs)
     # Target by interval
     nTargetTimespan = targetBlockTimeSecs
 
-    # permit abrupt changes for a few blocks after the fork i.e. when nTargetTimespan is < 30 minutes (MVHF-BU-DES-DIAD-5)
+    # permit 10x retargetchanges for a few blocks after the fork i.e. when nTargetTimespan is < 30 minutes (MVHF-BU-DES-DIAD-5)
     if (nTargetTimespan >= STANDARD_BLOCKTIME * 3) :
-        # prevent abrupt changes to target
-        if (nActualTimespan < nTargetTimespan/4) :
-            nActualTimespan = nTargetTimespan/4
-        if (nActualTimespan > nTargetTimespan*4) :
-            nActualTimespan = nTargetTimespan*4
+        retargetLimit = 4
+    else :
+        retargetLimit = 10
+    # prevent abrupt changes to target
+    if (nActualTimespan < nTargetTimespan/retargetLimit) :
+        nActualTimespan = nTargetTimespan/retargetLimit
+    if (nActualTimespan > nTargetTimespan*retargetLimit) :
+        nActualTimespan = nTargetTimespan*retargetLimit
 
     # compare with debug.log
     #print "nTargetTimespan=%d nActualTimespan=%d" % (nTargetTimespan,nActualTimespan)
