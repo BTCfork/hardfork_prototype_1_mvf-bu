@@ -106,7 +106,7 @@ unsigned int GetMVFNextWorkRequired(const CBlockIndex* pindexLast, const CBlockH
     // Genesis block
     if (pindexLast == NULL) return nProofOfWorkLimit;
 
-    int nHeightFirst = pindexLast->nHeight - params.DifficultyAdjustmentInterval(pindexLast->nHeight);
+    int nHeightFirst = pindexLast->nHeight - (params.MVFPowTargetTimespan(pindexLast->nHeight) / params.nPowTargetSpacing);
     if (nHeightFirst < 0) nHeightFirst = 0;
     const CBlockIndex* pindexFirst = pindexLast->GetAncestor(nHeightFirst);
     assert(pindexFirst);
@@ -169,23 +169,19 @@ unsigned int CalculateMVFNextWorkRequired(const CBlockIndex* pindexLast, int64_t
     LogPrintf("  MVF: nActualTimespan = %d  before bounds\n", nActualTimespan);
 
     // MVF-BU begin
-    // target time span while within the re-target period
-    int64_t nTargetTimespan = params.nPowTargetTimespan; // the original 14 days
+    // Since in MVF fork recovery period, use faster retarget time span dependent on height (MVHF-BU-DES-DIAD-3)
+    int nTargetTimespan = params.MVFPowTargetTimespan(pindexLast->nHeight);
 
-    // if in MVF fork recovery period, use faster retarget time span dependent on height (MVHF-BU-DES-DIAD-3)
-    if (params.MVFisWithinRetargetPeriod(pindexLast->nHeight))
-        nTargetTimespan = params.MVFPowTargetTimespan(pindexLast->nHeight);
-
-    // permit abrupt changes for a few blocks after the fork i.e. when nTargetTimespan is < 30 minutes (MVHF-BU-DES-DIAD-5)
+    // permit x10 retarget changes for a few blocks after the fork i.e. when nTargetTimespan is < 30 minutes (MVHF-BU-DES-DIAD-5)
+    int retargetLimit;
     if (nTargetTimespan >= params.nPowTargetSpacing * 3)
-    {
-        // prevent abrupt changes to target
-        if (nActualTimespan < nTargetTimespan/4)
-            nActualTimespan = nTargetTimespan/4;
-        if (nActualTimespan > nTargetTimespan*4)
-            nActualTimespan = nTargetTimespan*4;
-    }
-    else LogPrintf("MVF Abrupt RETARGET permitted.\n");
+        retargetLimit = 4; else retargetLimit = 10;
+
+    // prevent abrupt changes to target
+    if (nActualTimespan < nTargetTimespan/retargetLimit)
+        nActualTimespan = nTargetTimespan/retargetLimit;
+    if (nActualTimespan > nTargetTimespan*retargetLimit)
+        nActualTimespan = nTargetTimespan*retargetLimit;
     // MVF-BU end
 
     // Retarget

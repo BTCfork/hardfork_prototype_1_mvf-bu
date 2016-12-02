@@ -390,7 +390,8 @@ UniValue getblock(const UniValue& params, bool fHelp)
             "  \"chainwork\" : \"xxxx\",  (string) Expected number of hashes required to produce the chain up to this block (in hex)\n"
             "  \"previousblockhash\" : \"hash\",  (string) The hash of the previous block\n"
             "  \"nextblockhash\" : \"hash\"       (string) The hash of the next block\n"
-            "  \"difficultyadjinterval\" : n,     (numeric) The number of blocks between difficulty adjustment \n"  // MVF-BU (MVHF-BU-DES-DIAD-7)
+            "  \"difficultyadjinterval\" : n,     (numeric) The number of seconds targeted between difficulty adjustment \n"  // MVF-BU (MVHF-BU-DES-DIAD-7)
+            "  \"difficultytimespan\" : n,     (numeric) The number of seconds to aggregate when retargeting difficulty \n"  // MVF-BU (MVHF-BU-DES-DIAD-7)
             "}\n"
             "\nResult (for verbose=false):\n"
             "\"data\"             (string) A string that is serialized, hex-encoded data for block 'hash'.\n"
@@ -654,6 +655,7 @@ UniValue getblockchaininfo(const UniValue& params, bool fHelp)
             "  \"bestblockhash\": \"...\", (string) the hash of the currently best block\n"
             "  \"difficulty\": xxxxxx,     (numeric) the current difficulty\n"
             "  \"difficultyadjinterval\": xxxxxx,         (numeric) the number of blocks between difficulty adjustments\n"  // MVF-BU
+            "  \"difficultytimespan\": xxxxxx,         (numeric) the number of seconds targeted to aggregate when retargeting difficulty \n"  // MVF-BU
             "  \"mediantime\": xxxxxx,     (numeric) median time for the current best block\n"
             "  \"verificationprogress\": xxxx, (numeric) estimate of verification progress [0..1]\n"
             "  \"chainwork\": \"xxxx\"     (string) total amount of work in active chain, in hexadecimal\n"
@@ -709,6 +711,7 @@ UniValue getblockchaininfo(const UniValue& params, bool fHelp)
     obj.push_back(Pair("softforks",             softforks));
     obj.push_back(Pair("bip9_softforks", bip9_softforks));
     obj.push_back(Pair("difficultyadjinterval", consensusParams.DifficultyAdjustmentInterval(tip->nHeight)));  // MVF-BU (MVHF-BU-DES-DIAD-7)
+    obj.push_back(Pair("difficultytimespan", consensusParams.MVFPowTargetTimespan(tip->nHeight)));  // MVF-BU (MVHF-BU-DES-DIAD-7)
 
     // MVF-BU begin output hardfork description (MVHF-BU-DES-TRIG-9)
     if (!isMVFHardForkActive)
