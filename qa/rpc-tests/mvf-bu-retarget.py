@@ -189,7 +189,7 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
             prev_block = self.nodes[0].getblock(best_block['previousblockhash'], True)
 
             # track bits used
-            if (prev_block['bits'] == best_block['bits'] or best_block['height'] == FORK_BLOCK)and n < oneRetargetPeriodAfterMVFRetargetPeriod :
+            if (prev_block['bits'] == best_block['bits'] or best_block['height'] == FORK_BLOCK)and n < oneRetargetPeriodAfterMVFRetargetPeriod -1 :
                 count_bits_used += 1
             else:
                 # when the bits change then output the retargeting metrics
