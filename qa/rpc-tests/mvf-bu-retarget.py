@@ -12,6 +12,9 @@ from test_framework.test_framework import BitcoinTestFramework
 from test_framework.util import *
 from test_framework.arith import *
 from random import randint
+seed = time.time()
+random.seed(seed)
+print "Random seed: %d " % seed
 
 # period (in blocks) from fork activation until retargeting returns to normal
 # MVF-BU TODO: Revert to 180*144
@@ -170,6 +173,8 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
         # use to track how many times the same bits are used in a row
         prev_block = 0
         diffadjinterval = 0
+        # the first nexttimeblock test phase is cyclical increases of 50 seconds starting from here
+        # if the starting number is too low it may cause timeout errors too often
         next_block_time = 300
         count_bits_used = 0
 

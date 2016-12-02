@@ -106,7 +106,7 @@ struct Params {
         else
             return false;
     }
-
+    int64_t DifficultyAdjustmentInterval() const { return nPowTargetTimespan / nPowTargetSpacing; }
     int64_t DifficultyAdjustmentInterval(int Height) const
     {
         // MVF-BU:
