@@ -125,7 +125,7 @@ testScriptsExt = [ RpcTest(t) for t in [
     Disabled('bip68-sequence', "TODO"),
     'bipdersig-p2p',
     'bipdersig',
-    #'getblocktemplate_longpoll', # commented out because its failing on core 0.12 src
+    'getblocktemplate_longpoll',
     'getblocktemplate_proposals',
     'txn_doublespend',
     'txn_clone --mineblock',
