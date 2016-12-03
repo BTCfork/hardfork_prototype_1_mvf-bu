@@ -130,7 +130,9 @@ class ExcessiveBlockTest (BitcoinTestFramework):
       
 
         print "Random test"
-        random.seed(1)
+        # MVF-BU: removed random.seed(1) as not much point to a constant seed
+        # random seed is initialized by test framework, we print it for reference
+        print "Random seed: %s" % self.randomseed
         for i in range(0,2):
           print "round ", i,
           for n in self.nodes:
