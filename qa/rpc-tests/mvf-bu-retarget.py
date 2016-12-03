@@ -15,7 +15,7 @@ from random import randint
 
 # period (in blocks) from fork activation until retargeting returns to normal
 # MVF-BU TODO: Revert to 180*144
-HARDFORK_RETARGET_BLOCKS = 90*144    # the period when retargeting returns to original
+HARDFORK_RETARGET_BLOCKS = 180*144    # the period when retargeting returns to original
 FORK_BLOCK = 2020                    # needs to be >= 2018 to test fork difficulty reset
 POW_LIMIT = 0x207fffff
 PREFORK_BLOCKTIME = 800              # the seconds for a block during the regtest prefork
@@ -285,6 +285,8 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
             # Test the interval matches the interval defined in params.DifficultyAdjustmentInterval()
             if n >= HARDFORK_RETARGET_BLOCKS :                      # outside MVF retarget period
                 diff_interval_expected = ORIGINAL_DIFFADJINTERVAL  # every 14 days original
+
+            # notice the range() high setting is plus one versus c++ switch
             elif n in range(0,2017) :
                 diff_interval_expected = 1     # retarget every block
             elif n in range(2017,4000) :
@@ -295,7 +297,7 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
                 diff_interval_expected = 100
             elif n in range(15000,20000) :
                 diff_interval_expected = 400
-            elif n in range(20000,25000) :
+            elif n in range(20000,25001) :
                 diff_interval_expected = 1000
             else:
                 diff_interval_expected = ORIGINAL_DIFFADJINTERVAL  # every 14 days original
