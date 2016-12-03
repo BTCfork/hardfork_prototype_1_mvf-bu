@@ -12,9 +12,6 @@ from test_framework.test_framework import BitcoinTestFramework
 from test_framework.util import *
 from test_framework.arith import *
 from random import randint
-seed = time.time()
-random.seed(seed)
-print "Random seed: %d " % seed
 
 # period (in blocks) from fork activation until retargeting returns to normal
 # MVF-BU TODO: Revert to 180*144
@@ -115,6 +112,8 @@ def CalculateMVFResetWorkRequired(bits):
 class MVF_RETARGET_Test(BitcoinTestFramework):
 
     def setup_chain(self):
+        # random seed is initialized by the test framework
+        print "Random seed: %d " % self.randomseed
         print("Initializing test directory " + self.options.tmpdir)
         initialize_chain_clean(self.options.tmpdir, 1)
 
