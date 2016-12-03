@@ -100,8 +100,20 @@ void ForkSetup(const CChainParams& chainparams)
         }
     }
 
+    if (GetBoolArg("-segwitfork", DEFAULT_TRIGGER_ON_SEGWIT))
+        LogPrintf("%s: MVF: Segregated Witness trigger is ENABLED\n", __func__);
+    else
+        LogPrintf("%s: MVF: Segregated Witness trigger is DISABLED\n", __func__);
+
     LogPrintf("%s: MVF: active fork height = %d\n", __func__, FinalActivateForkHeight);
+
     LogPrintf("%s: MVF: active fork id = 0x%06x (%d)\n", __func__, FinalForkId, FinalForkId);
+
+    if (GetBoolArg("-force-retarget", DEFAULT_FORCE_RETARGET))
+        LogPrintf("%s: MVF: force-retarget is ENABLED\n", __func__);
+    else
+        LogPrintf("%s: MVF: force-retarget is DISABLED\n", __func__);
+
     LogPrintf("%s: MVF: auto backup block = %d\n", __func__, GetArg("-autobackupblock", FinalActivateForkHeight - 1));
 
     // check if btcfork.conf exists (MVHF-BU-DES-TRIG-10)

@@ -30,7 +30,7 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
     if ((pindexLast->nHeight+1) % params.DifficultyAdjustmentInterval() != 0)
     {
         // MVF-BU: added force-retarget parameter to enable adjusting difficulty for regtest tests
-        if (params.fPowAllowMinDifficultyBlocks && !GetBoolArg("-force-retarget", false))
+        if (params.fPowAllowMinDifficultyBlocks && !GetBoolArg("-force-retarget", DEFAULT_FORCE_RETARGET))
         {
             // Special difficulty rule for testnet:
             // If the new block's timestamp is more than 2* 10 minutes
@@ -61,7 +61,7 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
 unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nFirstBlockTime, const Consensus::Params& params)
 {
     // MVF-BU: added force-retarget parameter to enable adjusting difficulty for regtest tests
-    if (params.fPowNoRetargeting && !GetBoolArg("-force-retarget", false))
+    if (params.fPowNoRetargeting && !GetBoolArg("-force-retarget", DEFAULT_FORCE_RETARGET))
         return pindexLast->nBits;
 
     // Limit adjustment step
@@ -150,7 +150,7 @@ unsigned int GetMVFNextWorkRequired(const CBlockIndex* pindexLast, const CBlockH
 
 unsigned int CalculateMVFNextWorkRequired(const CBlockIndex* pindexLast, int64_t nFirstBlockTime, const Consensus::Params& params)
 {
-    bool force_retarget=GetBoolArg("-force-retarget", false);  // MVF-BU added for retargeting tests on regtestnet (MVHF-BU-DES-DIAD-6)
+    bool force_retarget=GetBoolArg("-force-retarget", DEFAULT_FORCE_RETARGET);  // MVF-BU added for retargeting tests on regtestnet (MVHF-BU-DES-DIAD-6)
     const arith_uint256 bnPowLimit = UintToArith256(params.powLimit); // MVF-BU moved here
 
     if (params.fPowNoRetargeting && !force_retarget)
@@ -257,7 +257,7 @@ bool CheckProofOfWork(uint256 hash, unsigned int nBits, const Consensus::Params&
     bool fNegative;
     bool fOverflow;
     arith_uint256 bnTarget;
-    static bool force_retarget=GetBoolArg("-force-retarget", false);  // MVF-BU (MVHF-BU-DES-DIAD-6)
+    static bool force_retarget=GetBoolArg("-force-retarget", DEFAULT_FORCE_RETARGET);  // MVF-BU (MVHF-BU-DES-DIAD-6)
 
     bnTarget.SetCompact(nBits, &fNegative, &fOverflow);
 

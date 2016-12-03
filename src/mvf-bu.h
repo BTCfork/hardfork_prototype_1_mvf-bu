@@ -67,6 +67,16 @@ static const uint256 HARDFORK_POWRESET_MAINNET = uint256S("00007ffffffffffffffff
 // MVHF-BU-DES-TRIG-10 - config file that is written when forking, and used to detect "forked" condition at start
 const char * const BTCFORK_CONF_FILENAME = "btcfork.conf";
 
+// MVHF-BU-DES-DIAD-? -force-retarget option determines  whether to actively retarget on regtest after fork happens
+// (not all tests need that, so the POW/difficulty fork related ones that do specifically invoke this option)
+const bool DEFAULT_FORCE_RETARGET = false;
+
+// default value for -nosegwitfork option to disable the fork trigger on SegWit activation
+// caution: -noX options are turned into -X=0 by util.cpp, therefore the
+// parameter must be accessed as '-segwitfork' and the default below pertains
+// to that.
+const bool DEFAULT_TRIGGER_ON_SEGWIT = true;
+
 extern std::string ForkCmdLineHelp();  // fork-specific command line option help (MVHF-BU-DES-TRIG-8)
 extern void ForkSetup(const CChainParams& chainparams);  // actions to perform at program setup (parameter validation etc.)
 extern void ActivateFork(int actualForkHeight, bool doBackup=true);  // actions to perform at fork triggering (MVHF-BU-DES-TRIG-6)
