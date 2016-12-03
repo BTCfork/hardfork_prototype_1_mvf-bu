@@ -18,7 +18,7 @@ from random import randint
 HARDFORK_RETARGET_BLOCKS = 90*144    # the period when retargeting returns to original
 FORK_BLOCK = 2020                    # needs to be >= 2018 to test fork difficulty reset
 POW_LIMIT = 0x207fffff
-PREFORK_BLOCKTIME = 1                # the seconds for a block during the regtest prefork
+PREFORK_BLOCKTIME = 800              # the seconds for a block during the regtest prefork
 ORIGINAL_DIFFADJINTERVAL = 2016      # the original difficulty adjustment interval
 STANDARD_BLOCKTIME = 600             # the standard target seconds for a block
 
@@ -137,10 +137,12 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
         print "Generating %s pre-fork blocks" % (FORK_BLOCK - 1)
 
         #block0 already exists
+        best_block = self.nodes[0].getblock(self.nodes[0].getbestblockhash(), True)
+        preblocktime = best_block['time']
         for n in range(FORK_BLOCK - 1):
             # Change block times so that difficulty develops
-            best_block = self.nodes[0].getblock(self.nodes[0].getbestblockhash(), True)
-            self.nodes[0].setmocktime(best_block['time'] + PREFORK_BLOCKTIME)
+            preblocktime = preblocktime + PREFORK_BLOCKTIME
+            self.nodes[0].setmocktime(preblocktime)
             self.nodes[0].generate(1)
 
         # Read difficulty before the fork
@@ -197,8 +199,8 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
                 avgDeltaBlockTime = (prev_block['time'] - print_block['time']) / count_bits_used
 
                 if n >= HARDFORK_RETARGET_BLOCKS :
-                    # returns to standard targetting
-                    nextBits = "standard"
+                    # returns to original targetting
+                    nextBits = "original"
                 else:
                     # Test difficulty during MVF retarget period
                     first_block = self.nodes[0].getblock(self.nodes[0].getblockhash(prev_block['height'] - timespanblocks))
@@ -253,14 +255,15 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
             # Setup various block time interval tests
             if n in range(0,11) :
                 next_block_time = next_block_time + 50
-            elif n in range(11,16) :
-                # this may cause timeout errors
-                next_block_time = 300
-            elif n in range(16,26) :
+            elif n in range(11,22) :
                 # this may cause bits to hit the limit POW_LIMIT
                 next_block_time = 1200
+            elif n in range(22,26) :
+                # this may cause timeout errors
+                next_block_time = 300
             elif n in range(26,500) :
-                next_block_time = 600
+                # exactly standard block times
+                next_block_time = STANDARD_BLOCKTIME
             elif n in range(500,525) :
                 # simulate faster blocks
                 # this may cause timeout errors
@@ -269,6 +272,10 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
                 # simulate slow blocks
                 # this may cause bits to hit the limit POW_LIMIT
                 next_block_time = randint(1000,3000)
+            elif n >= HARDFORK_RETARGET_BLOCKS :
+                # exactly standard block times so when the original retargeting
+                # begins again the difficulty will stay about the same
+                next_block_time = STANDARD_BLOCKTIME
             else:
                 # simulate ontime blocks i.e. hash power/difficult around 600 secs
                 next_block_time = randint(500,700)
@@ -299,12 +306,17 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
             assert_equal(diff_interval_expected, diffadjinterval)
 
             # print info for every block
-            #print "%s :: %s :: %d :: %s :: %d" %(
-                #best_block['height'],
-                #time.strftime("%H:%M",time.gmtime(best_block['time'])),
-                #decimal.Decimal(prev_block_delta) / count_bits_used,
-                #best_block['bits'],
-                #count_bits_used)
+            #if best_block['height'] >= 16127 :
+                #first_block = self.nodes[0].getblock(self.nodes[0].getblockhash(prev_block['height'] - timespanblocks))
+                #print "%s :: %s :: %d :: %s :: %.10f :: %d :: %d" %(
+                    #best_block['height'],
+                    #time.strftime("%H:%M",time.gmtime(best_block['time'])),
+                    #best_block['time'] - prev_block['time'],
+                    #best_block['bits'],
+                    #best_block['difficulty'],
+                    #count_bits_used,
+                    #first_block['height'])
+                #raw_input()
 
             # generate the next block
             self.nodes[0].generate(1)

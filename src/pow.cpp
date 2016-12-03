@@ -79,6 +79,7 @@ unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nF
     bnNew.SetCompact(pindexLast->nBits);
     bnOld = bnNew;
     bnNew *= nActualTimespan;
+    if (bnNew / nActualTimespan != bnOld) bnNew = bnPowLimit; else //MVF-BU Add overflow handle
     bnNew /= params.nPowTargetTimespan;
 
     if (bnNew > bnPowLimit)
