@@ -94,15 +94,16 @@ def CalculateMVFResetWorkRequired(bits):
 
 # formula debug testing
 # useful for testing whenever the reset formula changes pow.cpp:CalcForkResetTarget()
-##bits = "1d00ffff" # 1.000000000
-##bits = "201fffff" # 0.0000000019
-##bits = "203ffff6" # 0.0000000009
-##bits = "1f03f355" # 0.0000038624
-#bits = "1e132d35"  # 1e19919b 0.0001527719
+#bits = "1d00ffff" # 1.000000000
+#bits = "201fffff" # 0.0000000019
+#bits = "203ffff6" # 0.0000000009
+#bits = "1f03f355" # 0.0000038624
+#bits = "1e19919b"  # 1e19919b 0.0001527719
+#bits = "1c05a3f4"  # from pow_tests.cpp MVFCheckCalculateMVFResetWorkRequired
 #print "before: 0x%s = %.10f" % (bits,bits2difficulty(int("0x%s"%bits,0)))
 
-##reset = CalculateMVFResetWorkRequired(bits)
-#reset = CalculateMVFNextWorkRequired(bits,800,1)
+#reset = CalculateMVFResetWorkRequired(bits)
+##reset = CalculateMVFNextWorkRequired(bits,800,1)
 #diff = bits2difficulty(reset)
 #print "after : 0x%s = %.10f" % (int2hex(reset),diff)
 #raw_input()

@@ -122,6 +122,30 @@ BOOST_AUTO_TEST_CASE(MVFCheckOverflowCalculation_test)
     SoftSetBoolArg("-force-retarget", true);
     BOOST_CHECK_EQUAL(CalculateMVFNextWorkRequired(&pindexLast, nLastRetargetTime, params), bnPowLimit.GetCompact());
 }
+
+/* added unit test for fork reset. doesn't test easily in regtest
+ * because takes some retargets before raising bits off the limit  */
+BOOST_AUTO_TEST_CASE(MVFCheckCalculateMVFResetWorkRequired)
+{
+    SelectParams(CBaseChainParams::REGTEST);
+    const Consensus::Params& params = Params().GetConsensus();
+    const arith_uint256 bnPowLimit = UintToArith256(params.powLimit); // MVF-BU moved here
+
+    // define last block
+    CBlockIndex pindexLast;
+    pindexLast.nHeight = 68543;
+    pindexLast.nTime = 1279297671;  // Block #68543
+    pindexLast.nBits = 0x1c05a3f4;
+
+    // retarget time for test
+    int64_t nLastRetargetTime = pindexLast.nTime - (params.nPowTargetSpacing * params.DifficultyAdjustmentInterval());
+
+    // force retargeting in CalculateMVFNextWorkRequired
+    SoftSetBoolArg("-force-retarget", true);
+
+    // test for drop factor x4
+    BOOST_CHECK_EQUAL(CalculateMVFResetWorkRequired(&pindexLast, nLastRetargetTime, params), 0x1c168fcf);
+}
 // MVF-BU end
 
 BOOST_AUTO_TEST_SUITE_END()
