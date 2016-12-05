@@ -191,7 +191,7 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
             prev_block = self.nodes[0].getblock(best_block['previousblockhash'], True)
 
             # track bits used
-            if (prev_block['bits'] == best_block['bits'] or best_block['height'] == FORK_BLOCK)and n < oneRetargetPeriodAfterMVFRetargetPeriod -1 :
+            if (prev_block['bits'] == best_block['bits'] or best_block['height'] == FORK_BLOCK) and n < oneRetargetPeriodAfterMVFRetargetPeriod -1 :
                 count_bits_used += 1
             else:
                 # when the bits change then output the retargeting metrics
@@ -199,10 +199,9 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
                 print_block = self.nodes[0].getblock(self.nodes[0].getblockhash(prev_block['height'] - count_bits_used))
                 avgDeltaBlockTime = (prev_block['time'] - print_block['time']) / count_bits_used
 
-                if n >= HARDFORK_RETARGET_BLOCKS :
-                    # returns to original targetting
-                    nextBits = "original"
-                else:
+                if n == oneRetargetPeriodAfterMVFRetargetPeriod -1 :
+                    nextBits = "end"
+                else :
                     # Test difficulty during MVF retarget period
                     first_block = self.nodes[0].getblock(self.nodes[0].getblockhash(prev_block['height'] - timespanblocks))
                     actualBlockTimeSecs = prev_block['time'] - first_block['time']
@@ -284,11 +283,8 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
             self.nodes[0].setmocktime(best_block['time'] + next_block_time)
 
             # Test the interval matches the interval defined in params.DifficultyAdjustmentInterval()
-            if n >= HARDFORK_RETARGET_BLOCKS :                      # outside MVF retarget period
-                diff_interval_expected = ORIGINAL_DIFFADJINTERVAL  # every 14 days original
-
             # notice the range() high setting is plus one versus c++ switch
-            elif n in range(0,2017) :
+            if n in range(0,2017) :
                 diff_interval_expected = 1     # retarget every block
             elif n in range(2017,4000) :
                 diff_interval_expected = 10
@@ -298,7 +294,7 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
                 diff_interval_expected = 100
             elif n in range(15000,20000) :
                 diff_interval_expected = 400
-            elif n in range(20000,25001) :
+            elif n in range(20000,HARDFORK_RETARGET_BLOCKS+1) :
                 diff_interval_expected = 1000
             else:
                 diff_interval_expected = ORIGINAL_DIFFADJINTERVAL  # every 14 days original

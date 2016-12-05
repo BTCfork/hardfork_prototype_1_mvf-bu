@@ -91,7 +91,7 @@ struct Params {
 
                 case    10000 ... 14999 : return nPowTargetSpacing * 576;   // 96 hours - 4 days
 
-                case    15000 ... 25000 : return nPowTargetSpacing * 1152;  // 192 hours - 8 days
+                case    15000 ... HARDFORK_RETARGET_BLOCKS : return nPowTargetSpacing * 1152;  // 192 hours - 8 days
 
                 default : return nPowTargetTimespan;    // original 14 days
             }
@@ -101,7 +101,7 @@ struct Params {
 
     bool MVFisWithinRetargetPeriod(int Height) const
     {
-        if (Height >= FinalActivateForkHeight && Height < MVFRetargetPeriodEnd())
+        if (Height >= FinalActivateForkHeight)
             return true;
         else
             return false;
@@ -127,7 +127,7 @@ struct Params {
 
                 case    15000 ... 19999:    return 400;    // every 400 blocks
 
-                case    20000 ... 25000:    return 1000;  // every 1000 blocks
+                case    20000 ... HARDFORK_RETARGET_BLOCKS:    return 1000;  // every 1000 blocks
 
                 default : return 2016;                      // every 2016 blocks
             }
