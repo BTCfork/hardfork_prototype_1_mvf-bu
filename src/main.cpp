@@ -124,6 +124,9 @@ CScript COINBASE_FLAGS;
 
 const string strMessageMagic = "Bitcoin Signed Message:\n";
 
+extern CCriticalSection cs_LastBlockFile;
+extern CCriticalSection cs_nBlockSequenceId;
+
 // Internal stuff
 namespace {
 
@@ -163,7 +166,6 @@ namespace {
      */
     multimap<CBlockIndex*, CBlockIndex*> mapBlocksUnlinked;
 
-    CCriticalSection cs_LastBlockFile;
     std::vector<CBlockFileInfo> vinfoBlockFile;
     int nLastBlockFile = 0;
     /** Global flag to indicate we should check to see if there are
@@ -176,7 +178,6 @@ namespace {
      * Every received block is assigned a unique and increasing identifier, so we
      * know which one to give priority in case of a fork.
      */
-    CCriticalSection cs_nBlockSequenceId;
     /** Blocks loaded from disk are assigned id 0, so start the counter at 1. */
     uint32_t nBlockSequenceId = 1;
 
@@ -6834,15 +6835,23 @@ ThresholdState VersionBitsTipState(const Consensus::Params& params, Consensus::D
     return VersionBitsState(chainActive.Tip(), params, pos, versionbitscache);
 }
 
-CMainCleanup::~CMainCleanup() 
+void MainCleanup()
   {
+    if (1)
+      {
+        LOCK(cs_main);  // BU apply the appropriate lock so no contention during destruction
         // block headers
         BlockMap::iterator it1 = mapBlockIndex.begin();
         for (; it1 != mapBlockIndex.end(); it1++)
             delete (*it1).second;
         mapBlockIndex.clear();
+      }
 
+    if (1)
+      {
+        LOCK(cs_orphancache);  // BU apply the appropriate lock so no contention during destruction
         // orphan transactions
         mapOrphanTransactions.clear();
         mapOrphanTransactionsByPrev.clear();  
+      }
   }
