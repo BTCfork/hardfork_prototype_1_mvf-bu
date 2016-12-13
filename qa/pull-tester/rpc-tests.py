@@ -79,8 +79,8 @@ test_script_opts = ('--tracerpc',
                     '--srcdir',
                     '--tmpdir',
                     '--coveragedir',
-                    '--randomseed',
                     '--mineblock',
+                    '--randomseed',
                     '--testbinary',
                     '--refbinary')
 

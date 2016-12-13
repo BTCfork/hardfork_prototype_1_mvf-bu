@@ -113,8 +113,7 @@ def CalculateMVFResetWorkRequired(bits):
 class MVF_RETARGET_Test(BitcoinTestFramework):
 
     def setup_chain(self):
-        # random seed is initialized by the test framework
-        print "Random seed: %d " % self.randomseed
+        # random seed is initialized and output by the test framework
         print("Initializing test directory " + self.options.tmpdir)
         initialize_chain_clean(self.options.tmpdir, 1)
 
