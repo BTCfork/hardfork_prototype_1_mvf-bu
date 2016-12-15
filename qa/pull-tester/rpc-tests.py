@@ -307,15 +307,18 @@ def runtests():
         # weed out the disabled / skipped tests and print them beforehand
         # this allows earlier intervention in case a test is unexpectedly
         # skipped
+        trimmed_tests_to_run = []
         for t in tests_to_run:
             if t.is_disabled():
                 print("Disabled testscript %s%s%s (reason: %s)" % (bold[1], t, bold[0], t.reason))
                 disabled.append(str(t))
-                tests_to_run.remove(t)
             elif t.is_skipped():
                 print("Skipping testscript %s%s%s on this platform (reason: %s)" % (bold[1], t, bold[0], t.reason))
                 skipped.append(str(t))
-                tests_to_run.remove(t)
+            else:
+                trimmed_tests_to_run.append(t)
+
+        tests_to_run = trimmed_tests_to_run
 
         #print "tests after trimming disabled/skipped:"
         #print tests_to_run
