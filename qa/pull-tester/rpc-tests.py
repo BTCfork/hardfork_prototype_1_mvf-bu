@@ -62,16 +62,19 @@ p = re.compile("^--")
 # are also allowed in double-dash format (but are not passed on to the
 # test scripts themselves)
 private_single_opts = ('-h',
+                       '-f',    # equivalent to -force-enable
                        '-help',
                        '-list',
                        '-extended',
                        '-extended-only',
                        '-only-extended',
+                       '-force-enable',
                        '-win')
 private_double_opts = ('--list',
                        '--extended',
                        '--extended-only',
                        '--only-extended',
+                       '--force-enable',
                        '--win')
 test_script_opts = ('--tracerpc',
                     '--help',
@@ -222,6 +225,8 @@ def show_wrapper_options():
           "                        run ONLY the extended tests"
     print "  -list / --list        only list test names"
     print "  -win / --win          signal running on Windows and run those tests"
+    print "  -f / -force-enable / --force-enable\n" + \
+          "                        attempt to run disabled/skipped tests"
     print "  -h / -help / --help   print this help"
 
 def runtests():
@@ -234,6 +239,7 @@ def runtests():
     skipped = []
     tests_to_run = []
 
+    force_enable = option_passed('force-enable') or '-f' in opts
     run_only_extended = option_passed('only-extended') or option_passed('extended-only')
 
     if option_passed('list'):
@@ -307,18 +313,18 @@ def runtests():
         # weed out the disabled / skipped tests and print them beforehand
         # this allows earlier intervention in case a test is unexpectedly
         # skipped
-        trimmed_tests_to_run = []
-        for t in tests_to_run:
-            if t.is_disabled():
-                print("Disabled testscript %s%s%s (reason: %s)" % (bold[1], t, bold[0], t.reason))
-                disabled.append(str(t))
-            elif t.is_skipped():
-                print("Skipping testscript %s%s%s on this platform (reason: %s)" % (bold[1], t, bold[0], t.reason))
-                skipped.append(str(t))
-            else:
-                trimmed_tests_to_run.append(t)
-
-        tests_to_run = trimmed_tests_to_run
+        if not force_enable:
+            trimmed_tests_to_run = []
+            for t in tests_to_run:
+                if t.is_disabled():
+                    print("Disabled testscript %s%s%s (reason: %s)" % (bold[1], t, bold[0], t.reason))
+                    disabled.append(str(t))
+                elif t.is_skipped():
+                    print("Skipping testscript %s%s%s on this platform (reason: %s)" % (bold[1], t, bold[0], t.reason))
+                    skipped.append(str(t))
+                else:
+                    trimmed_tests_to_run.append(t)
+            tests_to_run = trimmed_tests_to_run
 
         #print "tests after trimming disabled/skipped:"
         #print tests_to_run
@@ -330,7 +336,7 @@ def runtests():
             fullscriptcmd=str(t)
 
             # print the wrapper-specific help options
-            if p.match(passOn):
+            if showHelp:
                 show_wrapper_options()
 
             if bad_opts_found:
