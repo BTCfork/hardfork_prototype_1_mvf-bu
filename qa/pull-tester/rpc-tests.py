@@ -56,6 +56,7 @@ ENABLE_COVERAGE=0
 opts = set()
 double_opts = set()  # BU: added for checking validity of -- opts
 passOn = ""
+showHelp = False  # if we need to print help
 p = re.compile("^--")
 # some of the single-dash options applicable only to this runner script
 # are also allowed in double-dash format (but are not passed on to the
@@ -80,6 +81,7 @@ test_script_opts = ('--tracerpc',
                     '--tmpdir',
                     '--coveragedir',
                     '--mineblock',
+                    '--quick',
                     '--randomseed',
                     '--testbinary',
                     '--refbinary')
@@ -98,11 +100,12 @@ for arg in sys.argv[1:]:
         ENABLE_COVERAGE = 1
     elif (p.match(arg) or arg in ('-h', '-help')):
         if arg not in private_double_opts:
-            if arg == '-help' or arg == '-h':
-                pass_arg = '--help'
+            if arg == '--help' or arg == '-help' or arg == '-h':
+                passOn = '--help'
+                showHelp = True
             else:
-                pass_arg = arg
-            passOn += " " + pass_arg
+                if passOn is not '--help':
+                    passOn += " " + arg
         # add it to double_opts only for validation
         double_opts.add(arg)
     else:
@@ -141,7 +144,7 @@ if EXEEXT == ".exe" and not option_passed('win'):
 testScripts = [ RpcTest(t) for t in [
     'bip68-112-113-p2p',
     'wallet',
-    'mvf-bu-retarget', # MVF-BU
+    'mvf-bu-retarget --quick', # MVF-BU: quick version for Travis
     'mvf-bu-trig',  # MVF-BU
     'excessive',
     'listtransactions',
@@ -194,6 +197,7 @@ testScriptsExt = [ RpcTest(t) for t in [
     Disabled('pruning', "too much disk"),
     'forknotify',
     'invalidateblock',
+    'mvf-bu-retarget', # MVF-BU: long version of test
     Disabled('rpcbind_test', "temporary, bug in libevent, see #6655"),
     'smartfees',
     'maxblocksinflight',
@@ -228,6 +232,7 @@ def runtests():
     test_failure_info = {}
     disabled = []
     skipped = []
+    tests_to_run = []
 
     run_only_extended = option_passed('only-extended') or option_passed('extended-only')
 
@@ -253,85 +258,113 @@ def runtests():
         cov_flag = coverage.flag if coverage else ''
         flags = " --srcdir %s/src %s %s" % (buildDir, cov_flag, passOn)
 
-        #Run Tests
+        # compile the list of tests to check
+
+        # check for explicit tests
+        if showHelp:
+            tests_to_run = [ testScripts[0] ]
+        else:
+            print passOn
+            for o in opts:
+                if not o.startswith('-'):
+                    found = False
+                    for t in testScripts + testScriptsExt:
+                        t_rep = str(t).split(' ')
+                        if (t_rep[0] == o or t_rep[0] == o + '.py') and len(t_rep) > 1:
+                            # it is a test with args - check all args match what was passed, otherwise don't add this test
+                            t_args = t_rep[1:]
+                            all_args_found = True
+                            for targ in t_args:
+                                if not targ in passOn.split(' '):
+                                    all_args_found = False
+                            if all_args_found:
+                                tests_to_run.append(t)
+                                found = True
+                        elif str(t) == o or str(t) == o + '.py': 
+                            # it is a test without args - just add it or only add it if no passed on args?
+                            if not passOn:
+                                tests_to_run.append(t)
+                                found = True
+                    if not found:
+                        print "Error: %s is not a known test." % o
+                        sys.exit(1)
+
+        #print "tests after explicit collection:"
+        #print tests_to_run
+
+        # if no explicit tests specified, use the lists
+        if not len(tests_to_run):
+            if run_only_extended:
+                tests_to_run = testScriptsExt
+            else:
+                tests_to_run += testScripts
+                if run_extended:
+                    tests_to_run += testScriptsExt
+
+        #print "tests after general collection:"
+        #print tests_to_run
+
+        # weed out the disabled / skipped tests and print them beforehand
+        # this allows earlier intervention in case a test is unexpectedly
+        # skipped
+        for t in tests_to_run:
+            if t.is_disabled():
+                print("Disabled testscript %s%s%s (reason: %s)" % (bold[1], t, bold[0], t.reason))
+                disabled.append(str(t))
+                tests_to_run.remove(t)
+            elif t.is_skipped():
+                print("Skipping testscript %s%s%s on this platform (reason: %s)" % (bold[1], t, bold[0], t.reason))
+                skipped.append(str(t))
+                tests_to_run.remove(t)
+
+        #print "tests after trimming disabled/skipped:"
+        #print tests_to_run
+
+        # now run the tests
         p = re.compile(" -h| --help| -help")
-        for i in range(len(testScripts)):
-            scriptname=re.sub(".py$", "", str(testScripts[i]).split(' ')[0])
-            fullscriptcmd=str(testScripts[i])
-            if ((len(opts) == 0
-                    or p.match(passOn)
-                    or option_passed('extended')
-                    or option_passed('win')
-                    or scriptname in opts
-                    or (scriptname + '.py') in opts )
-                and not run_only_extended):
+        for t in tests_to_run:
+            scriptname=re.sub(".py$", "", str(t).split(' ')[0])
+            fullscriptcmd=str(t)
 
-                if testScripts[i].is_disabled():
-                    print("Disabled testscript %s%s%s (reason: %s)" % (bold[1], testScripts[i], bold[0], testScripts[i].reason))
-                    disabled.append(str(testScripts[i]))
-                elif testScripts[i].is_skipped():
-                    print("Skipping testscript %s%s%s on this platform (reason: %s)" % (bold[1], testScripts[i], bold[0], testScripts[i].reason))
-                    skipped.append(str(testScripts[i]))
+            # print the wrapper-specific help options
+            if p.match(passOn):
+                show_wrapper_options()
+
+            if bad_opts_found:
+                if not ' --help' in passOn:
+                    passOn += ' --help'
+
+            if len(double_opts):
+                for additional_opt in fullscriptcmd.split(' ')[1:]:
+                    if additional_opt not in double_opts:
+                        continue
+
+            if fullscriptcmd not in execution_time.keys():
+                if t in testScripts:
+                    print("Running testscript %s%s%s ..." % (bold[1], t, bold[0]))
                 else:
-                    # not disabled or skipped - execute test (or print help if requested)
+                    print("Running 2nd level testscript "
+                          + "%s%s%s ..." % (bold[1], t, bold[0]))
 
-                    # print the wrapper-specific help options
-                    if p.match(passOn):
-                        show_wrapper_options()
+                time0 = time.time()
+                test_passed[fullscriptcmd] = False
+                try:
+                    subprocess.check_call(
+                        rpcTestDir + repr(t) + flags, shell=True)
+                    test_passed[fullscriptcmd] = True
+                except subprocess.CalledProcessError as e:
+                    test_failure_info[fullscriptcmd] = e
+                    #print "CalledProcessError for test %s: %s" % (scriptname, e)
 
-                    if bad_opts_found:
-                        if not ' --help' in passOn:
-                            passOn += ' --help'
-
-                    print("Running testscript %s%s%s ..." % (bold[1], testScripts[i], bold[0]))
-                    time0 = time.time()
-                    test_passed[fullscriptcmd] = False
-                    try:
-                        subprocess.check_call(
-                            rpcTestDir + repr(testScripts[i]) + flags, shell=True)
-                        test_passed[fullscriptcmd] = True
-                    except subprocess.CalledProcessError as e:
-                        test_failure_info[fullscriptcmd] = e
-                        #print "CalledProcessError for test %s: %s" % (scriptname, e)
-
-                    # exit if help was called
-                    if p.match(passOn):
-                        sys.exit(0)
-                    else:
-                        execution_time[fullscriptcmd] = int(time.time() - time0)
-                        print "Duration: %s s\n" % execution_time[fullscriptcmd]
-
-        # Run Extended Tests
-        for i in range(len(testScriptsExt)):
-            scriptname = re.sub(".py$", "", str(testScriptsExt[i]).split(' ')[0])
-            fullscriptcmd=str(testScriptsExt[i])
-            if (run_extended or str(testScriptsExt[i]) in opts
-                    or re.sub(".py$", "", str(testScriptsExt[i])) in opts):
-
-                if testScriptsExt[i].is_disabled():
-                    print("Disabled testscript %s%s%s (reason: %s)" % (bold[1], testScriptsExt[i], bold[0], testScriptsExt[i].reason))
-                    disabled.append(str(testScriptsExt[i]))
-                elif testScripts[i].is_skipped():
-                    print("Skipping testscript %s%s%s on this platform (reason: %s)" % (bold[1], testScriptsExt[i], bold[0], testScriptsExt[i].reason))
-                    skipped.append(str(testScriptsExt[i]))
-                elif fullscriptcmd not in execution_time.keys():
-                    # not disabled, skipped or already executed - run test
-                    print(
-                        "Running 2nd level testscript "
-                        + "%s%s%s ..." % (bold[1], testScriptsExt[i], bold[0]))
-                    time0 = time.time()
-                    test_passed[fullscriptcmd] = False
-                    try:
-                        subprocess.check_call(
-                            rpcTestDir + repr(testScriptsExt[i]) + flags, shell=True)
-                        test_passed[fullscriptcmd] = True
-                    except subprocess.CalledProcessError as e:
-                        test_failure_info[fullscriptcmd] = e
-                        #print "CalledProcessError for test %s: %s" % (scriptname, e)
+                # exit if help was called
+                if showHelp:
+                    sys.exit(0)
+                else:
                     execution_time[fullscriptcmd] = int(time.time() - time0)
                     print "Duration: %s s\n" % execution_time[fullscriptcmd]
-                else:
-                    print "Skipping extended test name %s - already executed in regular\n" % scriptname
+
+            else:
+                print "Skipping extended test name %s - already executed in regular\n" % scriptname
 
         if coverage:
             coverage.report_rpc_coverage()
@@ -339,24 +372,25 @@ def runtests():
             print("Cleaning up coverage data")
             coverage.cleanup()
 
-        # show some overall results and aggregates
-        print
-        print "%-50s  Status    Time (s)" % "Test"
-        print '-' * 70
-        for k in sorted(execution_time.keys()):
-            print "%-50s  %-6s    %7s" % (k, "PASS" if test_passed[k] else "FAILED", execution_time[k])
-        for d in disabled:
-            print "%-50s  %-8s" % (d, "DISABLED")
-        for s in skipped:
-            print "%-50s  %-8s" % (s, "SKIPPED")
-        print '-' * 70
-        print "%-44s  Total time (s): %7s" % (" ", sum(execution_time.values()))
+        if not showHelp:
+            # show some overall results and aggregates
+            print
+            print "%-50s  Status    Time (s)" % "Test"
+            print '-' * 70
+            for k in sorted(execution_time.keys()):
+                print "%-50s  %-6s    %7s" % (k, "PASS" if test_passed[k] else "FAILED", execution_time[k])
+            for d in disabled:
+                print "%-50s  %-8s" % (d, "DISABLED")
+            for s in skipped:
+                print "%-50s  %-8s" % (s, "SKIPPED")
+            print '-' * 70
+            print "%-44s  Total time (s): %7s" % (" ", sum(execution_time.values()))
 
-        print
-        print "%d test(s) passed / %d test(s) failed / %d test(s) executed" % (test_passed.values().count(True),
-                                                                   test_passed.values().count(False),
-                                                                   len(test_passed))
-        print "%d test(s) disabled / %d test(s) skipped due to platform" % (len(disabled), len(skipped))
+            print
+            print "%d test(s) passed / %d test(s) failed / %d test(s) executed" % (test_passed.values().count(True),
+                                                                       test_passed.values().count(False),
+                                                                       len(test_passed))
+            print "%d test(s) disabled / %d test(s) skipped due to platform" % (len(disabled), len(skipped))
 
     else:
         print "No rpc tests to run. Wallet, utils, and bitcoind must all be enabled"
