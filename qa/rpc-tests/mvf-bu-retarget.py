@@ -141,8 +141,6 @@ class MVF_RETARGET_BlockHeight_Test(BitcoinTestFramework):
         return (len(hf_active) > 0 and len(fork_actions_performed) == 1)
 
     def run_test(self):
-        if not self.options.quick:
-            return True
         # check that fork does not trigger before the forkheight
         print "Generating %s pre-fork blocks" % (FORK_BLOCK - 1)
 
