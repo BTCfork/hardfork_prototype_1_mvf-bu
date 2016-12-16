@@ -200,7 +200,7 @@ testScriptsExt = [ RpcTest(t) for t in [
     Disabled('pruning', "too much disk"),
     'forknotify',
     'invalidateblock',
-    Disabled('mvf-bu-retarget', 'Travis testing'), # MVF-BU: long version of test
+    'mvf-bu-retarget',  # MVF-BU: long version of test
     Disabled('rpcbind_test', "temporary, bug in libevent, see #6655"),
     'smartfees',
     'maxblocksinflight',
