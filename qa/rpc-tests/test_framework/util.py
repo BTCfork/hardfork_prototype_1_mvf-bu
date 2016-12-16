@@ -286,8 +286,8 @@ def start_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=
     args = [ binary, "-datadir="+datadir, "-server", "-keypool=1", "-discover=0", "-rest", "-blockprioritysize=50000" ]
     if extra_args is not None: args.extend(extra_args)
     if os.getenv("PYTHON_DEBUG", ""):
-        for i in range(len(args)):
-            print "bitcoind args: " + args[i]
+        for k in range(len(args)):
+            print "bitcoind args: " + args[k]
 
     bitcoind_processes[i] = subprocess.Popen(args)
     if os.getenv("PYTHON_DEBUG", ""):
