@@ -1,6 +1,6 @@
 [Website](https://www.bitcoinunlimited.info)  | [Download](https://www.bitcoinunlimited.info/download) | [Setup](doc/README.md)  |  [Xthin](doc/bu-xthin.md)  |  [Xpedited](doc/bu-xpedited-forwarding.md)  |   [Miner](doc/miner.md)
 
-[![Build Status](https://travis-ci.org/BitcoinUnlimited/BitcoinUnlimited.svg?branch=0.12.1bu)](https://travis-ci.org/BitcoinUnlimited/BitcoinUnlimited)
+[![Build Status](https://travis-ci.org/BTCfork/hardfork_prototype_1_mvf-bu.svg?branch=master)](https://travis-ci.org/BTCfork/hardfork_prototype_1_mvf-bu)
 
 What is Bitcoin?
 =====================================
