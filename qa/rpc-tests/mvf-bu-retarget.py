@@ -110,7 +110,11 @@ def CalculateMVFResetWorkRequired(bits):
 #assert_equal(0,1)
 # end debug testing
 
-class MVF_RETARGET_Test(BitcoinTestFramework):
+class MVF_RETARGET_BlockHeight_Test(BitcoinTestFramework):
+
+    def add_options(self, parser):
+        parser.add_option("--quick", dest="quick", default=False, action="store_true",
+        help="Run shortened version of test")
 
     def setup_chain(self):
         # random seed is initialized and output by the test framework
@@ -120,8 +124,12 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
     def setup_network(self):
         self.nodes = []
         self.is_network_split = False
+        # the blockversion below implicitly disables SegWit fork
+        #self.nodes.append(start_node(0, self.options.tmpdir
+        #    ,["-forkheight=%s"%FORK_BLOCK, "-force-retarget","-rpcthreads=100","-blockversion=%s" % "0x20000000" ]
+        #    ))
         self.nodes.append(start_node(0, self.options.tmpdir
-            ,["-forkheight=%s"%FORK_BLOCK, "-force-retarget","-rpcthreads=100","-blockversion=%s" % "0x20000000" ]
+            ,["-forkheight=%s"%FORK_BLOCK, "-rpcthreads=100","-blockversion=%s" % "0x20000000" ]
             ))
 
     def is_fork_triggered_on_node(self, node=0):
@@ -144,6 +152,14 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
             preblocktime = preblocktime + PREFORK_BLOCKTIME
             self.nodes[0].setmocktime(preblocktime)
             self.nodes[0].generate(1)
+
+        print "Done generating %s pre-fork blocks" % (FORK_BLOCK - 1)
+        print "Stopping node 0"
+        stop_node(self.nodes[0],0)
+        print "Restarting node 0 with -force-retarget"
+        self.nodes[0] = start_node(0, self.options.tmpdir
+            ,["-forkheight=%s"%FORK_BLOCK, "-force-retarget", "-rpcthreads=100","-blockversion=%s" % "0x20000000" ]
+            )
 
         # Read difficulty before the fork
         best_block = self.nodes[0].getblock(self.nodes[0].getbestblockhash(), True)
@@ -185,7 +201,15 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
 
         # start generating MVF blocks with varying time stamps
         oneRetargetPeriodAfterMVFRetargetPeriod = HARDFORK_RETARGET_BLOCKS+ORIGINAL_DIFFADJINTERVAL+1
-        for n in xrange(oneRetargetPeriodAfterMVFRetargetPeriod):
+        if self.options.quick:
+            # used for CI - just test one day after fork
+            # this is basically just to test reset and initial response
+            number_of_blocks_to_test_after_fork = 144
+        else:
+            # full range
+            number_of_blocks_to_test_after_fork = oneRetargetPeriodAfterMVFRetargetPeriod = HARDFORK_RETARGET_BLOCKS+ORIGINAL_DIFFADJINTERVAL+1
+
+        for n in xrange(number_of_blocks_to_test_after_fork):
             best_block = self.nodes[0].getblock(self.nodes[0].getbestblockhash(), True)
             prev_block = self.nodes[0].getblock(best_block['previousblockhash'], True)
 
@@ -325,4 +349,4 @@ class MVF_RETARGET_Test(BitcoinTestFramework):
         #raw_input() # uncomment here to pause shutdown and check the logs
 
 if __name__ == '__main__':
-    MVF_RETARGET_Test().main()
+    MVF_RETARGET_BlockHeight_Test().main()
