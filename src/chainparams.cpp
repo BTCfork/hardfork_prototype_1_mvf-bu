@@ -19,13 +19,18 @@
 
 #include "chainparamsseeds.h"
 
+/*
+#include <stdio.h>          // MVF-BU only for mining genesis block of bfgtest network
+#include "arith_uint256.h"  // MVF-BU only for mining genesis block of bfgtest network
+*/
+
 static CBlock CreateGenesisBlock(const char* pszTimestamp, const CScript& genesisOutputScript, uint32_t nTime, uint32_t nNonce, uint32_t nBits, int32_t nVersion, const CAmount& genesisReward)
 {
     CMutableTransaction txNew;
     txNew.nVersion = 1;
     txNew.vin.resize(1);
     txNew.vout.resize(1);
-    txNew.vin[0].scriptSig = CScript() << 486604799 << CScriptNum(4) << std::vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
+    txNew.vin[0].scriptSig = CScript() << 0x1d00ffff << CScriptNum(4) << std::vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));  // MVF-BU changed integer to hex to make it clear that it is nBits
     txNew.vout[0].nValue = genesisReward;
     txNew.vout[0].scriptPubKey = genesisOutputScript;
 
@@ -224,7 +229,7 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nStartTime = 1456790400; // March 1st, 2016
         consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nTimeout = 1493596800; // May 1st, 2017
         // MVF-BU end
-        /** 
+        /**
          * The message start string is designed to be unlikely to occur in normal data.
          * The characters are rarely used upper ASCII, not valid as UTF-8, and produce
          * a large 32-bit integer with any alignment.
@@ -280,6 +285,119 @@ public:
     }
 };
 CUnlParams unlParams;
+
+// MVF-BU begin: added btcforks genesis testnet (bfgtest)
+class CBFGTestParams : public CChainParams {
+public:
+    CBFGTestParams() {
+        strNetworkID = "bfgtest";  // btcforks genesis testnet
+        consensus.nSubsidyHalvingInterval = 210000;
+        consensus.nMajorityEnforceBlockUpgrade = 750;
+        consensus.nMajorityRejectBlockOutdated = 950;
+        consensus.nMajorityWindow = 1000;
+        consensus.BIP34Height = 10;
+        consensus.BIP34Hash = uint256S("0x000000000000024b89b42a942fe0d9fea3bb44ab7bd1b19115dd6a759c0808b8");
+        consensus.powLimit = uint256S("0000007fffffffffffffffffffffffffffffffffffffffffffffffffffffffff");  // 0x1d7fffff
+        consensus.nPowTargetTimespan = 14 * 24 * 60 * 60; // two weeks
+        consensus.nPowTargetSpacing = 10 * 60;
+        consensus.fPowAllowMinDifficultyBlocks = false;
+        consensus.fPowNoRetargeting = false;
+        consensus.nRuleChangeActivationThreshold = 1916; // 95% of 2016
+        consensus.nMinerConfirmationWindow = 2016; // nPowTargetTimespan / nPowTargetSpacing
+        // MVF-BU begin added soft-fork deployments identical with testnet, for consistency
+        consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].bit = 28;
+        consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nStartTime = 1199145601; // January 1, 2008
+        consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nTimeout = 1230767999; // December 31, 2008
+
+        // Deployment of BIP68, BIP112, and BIP113.
+        consensus.vDeployments[Consensus::DEPLOYMENT_CSV].bit = 0;
+        consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nStartTime = 1456790400; // March 1st, 2016
+        consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nTimeout = 1493596800; // May 1st, 2017
+
+        // MVF-BU begin: added deployment of BIP141/143/147 (MVHF-BU-DES-TRIG-2)
+        consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].bit = 1;
+        consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nStartTime = 1483228800; // Jan 1st, 2017
+        consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nTimeout = 1520035200; // Mar 3rd, 2018
+        // MVF-BU end
+        /**
+         * The message start string is designed to be unlikely to occur in normal data.
+         * The characters *should be* rarely used upper ASCII, not valid as UTF-8, and produce
+         * a large 32-bit integer with any alignment.
+         * For BFG testnet, they have not been chosen very carefully, so may
+         * fail some of these criteria.
+         */
+        pchMessageStart[0] = 0xda;
+        pchMessageStart[1] = 0xe3;
+        pchMessageStart[2] = 0xc7;
+        pchMessageStart[3] = 0xd0;
+        vAlertPubKey = ParseHex("04b20ea6bc4d67bf9fa4bf9186df1b1d983ad186ac712ccb5191a738177e430c0e3ece450c0ca1021abef4c28b6ec6c089da84f1fc7b165be7ed1bdb3f292cdbd0");
+        nDefaultPort = 19888;
+        nMaxTipAge = 30 * 24 * 60 * 60;  // this chain is not consistently mined
+        nPruneAfterHeight = 100000;
+
+        // script below is equivalent to "76a914 hash160(compressed pubkey) 88ac"
+        // which decodes to "OP_DUP OP_HASH160 d7b6e7527ebbcb86571544d2d934867349baccf3 OP_EQUALVERIFY OP_CHECKSIG"
+        const CScript genesisOutputScript = CScript() << ParseHex("76a914d7b6e7527ebbcb86571544d2d934867349baccf388ac");
+
+        // replace with generated genesis block (nNonce) - the actual block can be mined at higher difficulty than the given nBits
+        // CreateGenesisBlock(const char* pszTimestamp, const CScript& genesisOutputScript, uint32_t nTime, uint32_t nNonce, uint32_t nBits, int32_t nVersion, const CAmount& genesisReward)
+        genesis = CreateGenesisBlock("To boldly fork where no-one has forked before", genesisOutputScript, 1481996048, 3180522, 0x1d7fffff, 0x20000000, CAmount(5000000000));
+        consensus.hashGenesisBlock = genesis.GetHash();  // MVF-BU: temporarily disabled to mine genesis block
+
+        /*
+        // set "false" to "true" and uncomment all code in this block to mine the chain's genesis block
+        consensus.hashGenesisBlock = uint256S("0000000000000000000000000000000000000000000000000000000000000001");
+        arith_uint256 bnTarget = UintToArith256(consensus.powLimit);
+        if (false && genesis.GetHash() != consensus.hashGenesisBlock)
+        {
+            printf("mining genesis block for bfgtest - recalculating params\n");
+            printf("old bfgtest genesis nonce: %u\n", genesis.nNonce);
+            printf("old bfgtest genesis hash:  %s\n", consensus.hashGenesisBlock.ToString().c_str());
+            // deliberately empty for loop finds nonce value.
+            for(genesis.nNonce = 0; UintToArith256(genesis.GetHash()) > bnTarget; genesis.nNonce++){ }
+            printf("new bfgtest genesis merkle root: %s\n", genesis.hashMerkleRoot.ToString().c_str());
+            printf("new bfgtest genesis nonce: %u\n", genesis.nNonce);
+            printf("new bfgtest genesis hash: %s\n", genesis.GetHash().ToString().c_str());
+        }
+        */
+
+        // update these with the mined genesis params
+        assert(consensus.hashGenesisBlock == uint256S("0x0000004557d7deb53c5642a1df3a4becd7d5e748f409d5d68a8677e04cc7cb6c"));
+        assert(genesis.hashMerkleRoot == uint256S("0x9f4ec9d5f23fb06a65c461a0d63dc8d28133bb8873233c88240fbbad6fe3c770"));
+
+        // MVF-BU begin disabled for now
+        //vSeeds.push_back(CDNSSeedData("btcc.com", "seed.btcc.com"));    // BTCC
+        //vSeeds.push_back(CDNSSeedData("bitnodes.io", "seed.bitnodes.io"));      // Bitnodes (Addy Yeow)
+        //vSeeds.push_back(CDNSSeedData("bitcoin.sipa.be", "seed.bitcoin.sipa.be")); // Pieter Wuille
+        // MVF-BU end
+
+        base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,111);
+        base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1,196);
+        base58Prefixes[SECRET_KEY] =     std::vector<unsigned char>(1,239);
+        base58Prefixes[EXT_PUBLIC_KEY] = boost::assign::list_of(0x04)(0x35)(0x87)(0xCF).convert_to_container<std::vector<unsigned char> >();
+        base58Prefixes[EXT_SECRET_KEY] = boost::assign::list_of(0x04)(0x35)(0x83)(0x94).convert_to_container<std::vector<unsigned char> >();
+
+        // BITCOINUNLIMITED START
+        vFixedSeeds = std::vector<SeedSpec6>();
+        // BITCOINUNLIMITED END
+
+        fMiningRequiresPeers = true;
+        fDefaultConsistencyChecks = false;
+        fRequireStandard = true;
+        fMineBlocksOnDemand = false;
+        fTestnetToBeDeprecatedFieldRPC = false;
+
+        checkpointData = (CCheckpointData){
+            boost::assign::map_list_of
+            ( 0, uint256S("0000000000000000000000000000000000000000000000000000000000000000")),
+            0,
+            0,
+            0
+        };
+    }
+};
+CBFGTestParams bfgTestParams;
+// MVF-BU end
 
 
 /**
@@ -452,6 +570,8 @@ CChainParams& Params(const std::string& chain)
             return regTestParams;
     else if (chain == CBaseChainParams::UNL)
             return unlParams;
+    else if (chain == CBaseChainParams::BFGTEST)
+            return bfgTestParams;
     else
         throw std::runtime_error(strprintf("%s: Unknown chain %s.", __func__, chain));
 }

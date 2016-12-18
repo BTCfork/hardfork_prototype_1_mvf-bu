@@ -48,7 +48,7 @@ std::string ForkCmdLineHelp()
     strUsage += HelpMessageOpt("-autobackupblock=<n>", _("Specify the block number that triggers the automatic wallet backup. Default: forkheight-1"));
 
     // fork height parameter (MVHF-BU-DES-TRIG-1)
-    strUsage += HelpMessageOpt("-forkheight=<n>", strprintf(_("Block height at which to fork on active network (integer). Defaults (also minimums): mainnet:%u,testnet=%u,nolnet=%u,regtest=%u"), (unsigned)HARDFORK_HEIGHT_MAINNET, (unsigned)HARDFORK_HEIGHT_TESTNET, (unsigned)HARDFORK_HEIGHT_NOLNET, (unsigned)HARDFORK_HEIGHT_REGTEST));
+    strUsage += HelpMessageOpt("-forkheight=<n>", strprintf(_("Block height at which to fork on active network (integer). Defaults (also minimums): mainnet:%u,testnet=%u,nolnet=%u,regtest=%u,bfgtest=%u"), (unsigned)HARDFORK_HEIGHT_MAINNET, (unsigned)HARDFORK_HEIGHT_TESTNET, (unsigned)HARDFORK_HEIGHT_NOLNET, (unsigned)HARDFORK_HEIGHT_REGTEST, (unsigned)HARDFORK_HEIGHT_BFGTEST));
 
     // fork id (MVHF-BU-DES-CSIG-1)
     strUsage += HelpMessageOpt("-forkid=<n>", strprintf(_("Fork id to use for signature change. Value must be between 0 and %d. Default is 0x%06x (%u)"), (unsigned)MAX_HARDFORK_SIGHASH_ID, (unsigned)HARDFORK_SIGHASH_ID, (unsigned)HARDFORK_SIGHASH_ID));
@@ -76,6 +76,8 @@ void ForkSetup(const CChainParams& chainparams)
         minForkHeightForNetwork = HARDFORK_HEIGHT_REGTEST;
     else if (activeNetworkID == CBaseChainParams::UNL)
         minForkHeightForNetwork = HARDFORK_HEIGHT_NOLNET;
+    else if (activeNetworkID == CBaseChainParams::BFGTEST)
+        minForkHeightForNetwork = HARDFORK_HEIGHT_BFGTEST;
     else
         throw std::runtime_error(strprintf("%s: Unknown chain %s.", __func__, activeNetworkID));
 
