@@ -19,18 +19,13 @@
 
 #include "chainparamsseeds.h"
 
-/*
-#include <stdio.h>          // MVF-BU only for mining genesis block of bfgtest network
-#include "arith_uint256.h"  // MVF-BU only for mining genesis block of bfgtest network
-*/
-
 static CBlock CreateGenesisBlock(const char* pszTimestamp, const CScript& genesisOutputScript, uint32_t nTime, uint32_t nNonce, uint32_t nBits, int32_t nVersion, const CAmount& genesisReward)
 {
     CMutableTransaction txNew;
     txNew.nVersion = 1;
     txNew.vin.resize(1);
     txNew.vout.resize(1);
-    txNew.vin[0].scriptSig = CScript() << 0x1d00ffff << CScriptNum(4) << std::vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));  // MVF-BU changed integer to hex to make it clear that it is nBits
+    txNew.vin[0].scriptSig = CScript() << 0x1d00ffff << CScriptNum(4) << std::vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
     txNew.vout[0].nValue = genesisReward;
     txNew.vout[0].scriptPubKey = genesisOutputScript;
 
@@ -340,26 +335,8 @@ public:
         const CScript genesisOutputScript = CScript() << ParseHex("76a914d7b6e7527ebbcb86571544d2d934867349baccf388ac");
 
         // replace with generated genesis block (nNonce) - the actual block can be mined at higher difficulty than the given nBits
-        // CreateGenesisBlock(const char* pszTimestamp, const CScript& genesisOutputScript, uint32_t nTime, uint32_t nNonce, uint32_t nBits, int32_t nVersion, const CAmount& genesisReward)
         genesis = CreateGenesisBlock("To boldly fork where no-one has forked before", genesisOutputScript, 1481996048, 3180522, 0x1d7fffff, 0x20000000, CAmount(5000000000));
-        consensus.hashGenesisBlock = genesis.GetHash();  // MVF-BU: temporarily disabled to mine genesis block
-
-        /*
-        // set "false" to "true" and uncomment all code in this block to mine the chain's genesis block
-        consensus.hashGenesisBlock = uint256S("0000000000000000000000000000000000000000000000000000000000000001");
-        arith_uint256 bnTarget = UintToArith256(consensus.powLimit);
-        if (false && genesis.GetHash() != consensus.hashGenesisBlock)
-        {
-            printf("mining genesis block for bfgtest - recalculating params\n");
-            printf("old bfgtest genesis nonce: %u\n", genesis.nNonce);
-            printf("old bfgtest genesis hash:  %s\n", consensus.hashGenesisBlock.ToString().c_str());
-            // deliberately empty for loop finds nonce value.
-            for(genesis.nNonce = 0; UintToArith256(genesis.GetHash()) > bnTarget; genesis.nNonce++){ }
-            printf("new bfgtest genesis merkle root: %s\n", genesis.hashMerkleRoot.ToString().c_str());
-            printf("new bfgtest genesis nonce: %u\n", genesis.nNonce);
-            printf("new bfgtest genesis hash: %s\n", genesis.GetHash().ToString().c_str());
-        }
-        */
+        consensus.hashGenesisBlock = genesis.GetHash();
 
         // update these with the mined genesis params
         assert(consensus.hashGenesisBlock == uint256S("0x0000004557d7deb53c5642a1df3a4becd7d5e748f409d5d68a8677e04cc7cb6c"));
