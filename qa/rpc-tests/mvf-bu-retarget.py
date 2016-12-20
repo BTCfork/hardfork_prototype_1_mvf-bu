@@ -92,23 +92,6 @@ def CalculateMVFResetWorkRequired(bits):
     nBitsReset = int("0x%s" % bin2hex(target_int2bits(bnNew)),0) # GetCompact
     return nBitsReset
 
-# formula debug testing
-# useful for testing whenever the reset formula changes pow.cpp:CalcForkResetTarget()
-#bits = "1d00ffff" # 1.000000000
-#bits = "201fffff" # 0.0000000019
-#bits = "203ffff6" # 0.0000000009
-#bits = "1f03f355" # 0.0000038624
-#bits = "1e19919b"  # 1e19919b 0.0001527719
-#bits = "1c05a3f4"  # from pow_tests.cpp MVFCheckCalculateMVFResetWorkRequired
-#print "before: 0x%s = %.10f" % (bits,bits2difficulty(int("0x%s"%bits,0)))
-
-#reset = CalculateMVFResetWorkRequired(bits)
-##reset = CalculateMVFNextWorkRequired(bits,800,1)
-#diff = bits2difficulty(reset)
-#print "after : 0x%s = %.10f" % (int2hex(reset),diff)
-#raw_input()
-#assert_equal(0,1)
-# end debug testing
 
 class MVF_RETARGET_BlockHeight_Test(BitcoinTestFramework):
 
@@ -124,10 +107,6 @@ class MVF_RETARGET_BlockHeight_Test(BitcoinTestFramework):
     def setup_network(self):
         self.nodes = []
         self.is_network_split = False
-        # the blockversion below implicitly disables SegWit fork
-        #self.nodes.append(start_node(0, self.options.tmpdir
-        #    ,["-forkheight=%s"%FORK_BLOCK, "-force-retarget","-rpcthreads=100","-blockversion=%s" % "0x20000000" ]
-        #    ))
         self.nodes.append(start_node(0, self.options.tmpdir
             ,["-forkheight=%s"%FORK_BLOCK, "-rpcthreads=100","-blockversion=%s" % "0x20000000" ]
             ))
@@ -346,7 +325,6 @@ class MVF_RETARGET_BlockHeight_Test(BitcoinTestFramework):
         #### end for n in xrange
 
         print "Done."
-        #raw_input() # uncomment here to pause shutdown and check the logs
 
 if __name__ == '__main__':
     MVF_RETARGET_BlockHeight_Test().main()

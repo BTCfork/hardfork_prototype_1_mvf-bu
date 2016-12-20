@@ -2,15 +2,25 @@
 # Copyright (c) 2016 The Bitcoin developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
-#
-# This file was copied from Slush's stratum-mining project
-# with some modifications.
-#
-#
-#
+'''
+>>> max_diff_bits = target_int2bits(MAX_DIFF_1)
+>>> bin2hex(max_diff_bits)
+'1d00ffff'
+>>> pool_diff_bits = target_int2bits(POOL_DIFF_1)
+>>> bin2hex(pool_diff_bits)
+'1d00ffff'
+>>> bits_bytes = target_int2bits(22791193517536179595645637622052884930882401463536451358196587084939)
+>>> bin2hex(bits_bytes)
+'1d00d86a'
+>>> bits2target_int(bits_bytes)
+22791060871177364286867400663010583169263383106957897897309909286912L
+'''
+
 import binascii
 
-# from http://bitcoin.stackexchange.com/a/30458
+############################################################################
+# begin code from from http://bitcoin.stackexchange.com/a/30458
+
 def target_int2bits(target):
     # comprehensive explanation here: bitcoin.stackexchange.com/a/2926/2116
 
@@ -59,19 +69,9 @@ def bin2hex(binary):
     # convert raw binary data to a hex string. also accepts ascii chars (0 - 255)
     return binascii.b2a_hex(binary)
 
-#>>> bits_bytes = target_int2bits(22791193517536179595645637622052884930882401463536451358196587084939)
-#>>> bin2hex(bits_bytes)
-#'1d00d86a'
-#>>> # this ^^ is the value in blockexplorer.com in brackets.
-#>>> # display the "bits" as an integer:
-#>>> bits2target_int(bits_bytes)
-#22791060871177364286867400663010583169263383106957897897309909286912L
-#>>> # this ^^ is the value at the end of your answer.
+# end code from from http://bitcoin.stackexchange.com/a/30458
+############################################################################
 
-#################################################################################
-
-
-# own code:
 
 # Bitcoin difficulty 1 target - used for computing difficulty
 MAX_DIFF_1  = 0x00000000FFFF0000000000000000000000000000000000000000000000000000
@@ -81,27 +81,58 @@ POOL_DIFF_1 = 0x00000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 
 
 def bits2difficulty(bits):
-    # Floating point number that is a multiple of the minimum difficulty,
-    # minimum difficulty = 1.0.
-
+    '''
+    Python implementation of rpcblockchain.cpp:GetDifficulty()
+    Returns floating point number that represents the difficulty.
+    Minimum difficulty = 1.0 corresponds to the maximum target (MAX_DIFF_1)
+    Returned difficulty can be below this minimum for testnets.
+    >>> bits2difficulty(0x1d00ffff)
+    1.0
+    >>> bits2difficulty(0x207fffff)
+    4.6565423739069247e-10
+    >>> bits2difficulty(0xffffffff)
+    0.0
+    >>> bits2difficulty(0x201fffff)
+    1.8626176156868173e-09
+    >>> bits2difficulty(0x203ffff6)
+    9.313105841782251e-10
+    >>> bits2difficulty(0x1f03f355)
+    3.862421316298267e-06
+    >>> bits2difficulty(0x1e19919b)
+    0.0001527719240007758
+    >>> bits2difficulty(0x1c05a3f4)
+    45.38582234101263
+    >>> bits2difficulty(0)
+    Traceback (most recent call last):
+    ...
+    ZeroDivisionError: float division by zero
+    '''
     nShift = (bits >> 24) & 0xff
-
     dDiff = float(0x0000ffff) / float(bits & 0x00ffffff)
-
     while nShift < 29:
         dDiff *= 256.0
         nShift += 1
     while nShift > 29:
         dDiff /= 256.0
         nShift -= 1
-
     # not supposed to return diff < 1.0
     # but it seems this is possible indeed, despite the above comment in CPP function
     #assert dDiff >= 1.0, "diff M 1.0: %s" % dDiff
-
     return dDiff
 
+
 def bin2int(bytestring):
+    '''
+    Return integer representation of byte string.
+    >>> bin2int(hex2bin('00'))
+    0
+    >>> bin2int(hex2bin('fe'))
+    254
+    >>> bin2int(hex2bin('1d00ffff'))
+    486604799
+    >>> bin2int(hex2bin('207fffff'))
+    545259519
+    '''
     result = 0
     remainder = bytestring
     while len(remainder) > 0:
@@ -114,3 +145,6 @@ def bin2int(bytestring):
     return result
 
 
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()
