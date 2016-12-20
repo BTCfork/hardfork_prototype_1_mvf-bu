@@ -92,6 +92,16 @@ def bits2difficulty(bits):
     4.6565423739069247e-10
     >>> bits2difficulty(0xffffffff)
     0.0
+    >>> bits2difficulty(0x201fffff)
+    1.8626176156868173e-09
+    >>> bits2difficulty(0x203ffff6)
+    9.313105841782251e-10
+    >>> bits2difficulty(0x1f03f355)
+    3.862421316298267e-06
+    >>> bits2difficulty(0x1e19919b)
+    0.0001527719240007758
+    >>> bits2difficulty(0x1c05a3f4)
+    45.38582234101263
     >>> bits2difficulty(0)
     Traceback (most recent call last):
     ...
