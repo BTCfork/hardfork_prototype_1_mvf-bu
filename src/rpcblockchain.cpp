@@ -680,6 +680,17 @@ UniValue getblockchaininfo(const UniValue& params, bool fHelp)
             "        \"status\": \"xxxx\",    (string) one of \"defined\", \"started\", \"lockedin\", \"active\", \"failed\"\n"
             "     }\n"
             "  ]\n"
+            // MVF-BU begin hardfork description (MVHF-BU-DES-TRIG-9)
+            "  \"hardforks\": [       (array) status of hardforks in progress\n"
+            "     {\n"
+            "        \"id\": \"xxxx\",        (string) name of the hardfork (currently only \"mvhf\")\n"
+            "        \"forkheight\": \"xxxxxx\",      (numeric) block height of the hardfork (unless pre-empted by SegWit)\n"
+            "        \"forkid\": \"xxxxxx\",          (numeric) ID of the fork (used for tx signatures)\n"
+            "        \"blocks_remaining\": \"xxxxx\", (numeric) blocks remaining before fixed height activation\n"
+            "        \"segwit_status\": \"xxxx\",     (string) one of \"defined\", \"started\", \"lockedin\", \"active\", \"failed\"\n"
+            "     }\n"
+            "  ]\n"
+            // MVF-BU end
             "}\n"
             "\nExamples:\n"
             + HelpExampleCli("getblockchaininfo", "")
@@ -689,18 +700,22 @@ UniValue getblockchaininfo(const UniValue& params, bool fHelp)
     LOCK(cs_main);
 
     UniValue obj(UniValue::VOBJ);
+    // MVF-BU begin relocate tip and consensusParams upwards, refactor a little
+    const Consensus::Params& consensusParams = Params().GetConsensus();
+    CBlockIndex* tip = chainActive.Tip();
     obj.push_back(Pair("chain",                 Params().NetworkIDString()));
     obj.push_back(Pair("blocks",                (int)chainActive.Height()));
     obj.push_back(Pair("headers",               pindexBestHeader ? pindexBestHeader->nHeight : -1));
     obj.push_back(Pair("bestblockhash",         chainActive.Tip()->GetBlockHash().GetHex()));
     obj.push_back(Pair("difficulty",            (double)GetDifficulty()));
+    obj.push_back(Pair("difficultyadjinterval", consensusParams.DifficultyAdjustmentInterval(tip->nHeight)));  // MVF-BU (MVHF-BU-DES-DIAD-7)
+    obj.push_back(Pair("difficultytimespan", consensusParams.MVFPowTargetTimespan(tip->nHeight)));  // MVF-BU (MVHF-BU-DES-DIAD-7)
     obj.push_back(Pair("mediantime",            (int64_t)chainActive.Tip()->GetMedianTimePast()));
     obj.push_back(Pair("verificationprogress",  Checkpoints::GuessVerificationProgress(Params().Checkpoints(), chainActive.Tip())));
     obj.push_back(Pair("chainwork",             chainActive.Tip()->nChainWork.GetHex()));
     obj.push_back(Pair("pruned",                fPruneMode));
+    // MVF-BU end
 
-    const Consensus::Params& consensusParams = Params().GetConsensus();
-    CBlockIndex* tip = chainActive.Tip();
     UniValue softforks(UniValue::VARR);
     UniValue bip9_softforks(UniValue::VARR);
     softforks.push_back(SoftForkDesc("bip34", 2, tip, consensusParams));
@@ -710,8 +725,6 @@ UniValue getblockchaininfo(const UniValue& params, bool fHelp)
     bip9_softforks.push_back(BIP9SoftForkDesc("segwit", consensusParams, Consensus::DEPLOYMENT_SEGWIT));  // MVF-BU (MVHF-BU-DES-TRIG-9)
     obj.push_back(Pair("softforks",             softforks));
     obj.push_back(Pair("bip9_softforks", bip9_softforks));
-    obj.push_back(Pair("difficultyadjinterval", consensusParams.DifficultyAdjustmentInterval(tip->nHeight)));  // MVF-BU (MVHF-BU-DES-DIAD-7)
-    obj.push_back(Pair("difficultytimespan", consensusParams.MVFPowTargetTimespan(tip->nHeight)));  // MVF-BU (MVHF-BU-DES-DIAD-7)
 
     // MVF-BU begin output hardfork description (MVHF-BU-DES-TRIG-9)
     if (!isMVFHardForkActive)
