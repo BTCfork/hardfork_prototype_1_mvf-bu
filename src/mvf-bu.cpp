@@ -15,6 +15,15 @@
 
 using namespace std;
 
+// version string identifying the consensus-relevant algorithmic changes
+// so that a user can quickly see if MVF fork clients are compatible
+// for test purposes (since they may diverge during development/testing).
+// A new value must be chosen whenever there are changes to consensus
+// relevant functionality (excepting things which are parameterized).
+// Values are surnames chosen from the name list of space travelers at
+// https://en.wikipedia.org/wiki/List_of_space_travelers_by_name
+std::string post_fork_consensus_id = "YAMAZAKI";
+
 // actual fork height, taking into account user configuration parameters (MVHF-BU-DES-TRIG-4)
 int FinalActivateForkHeight = 0;
 
@@ -64,6 +73,7 @@ void ForkSetup(const CChainParams& chainparams)
     std:string activeNetworkID = chainparams.NetworkIDString();
 
     LogPrintf("%s: MVF: doing setup\n", __func__);
+    LogPrintf("%s: MVF: fork consensus code = %s\n", __func__, post_fork_consensus_id);
     LogPrintf("%s: MVF: active network = %s\n", __func__, activeNetworkID);
 
     // determine minimum fork height according to network
