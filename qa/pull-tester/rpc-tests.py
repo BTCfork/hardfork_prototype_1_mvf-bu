@@ -270,7 +270,6 @@ def runtests():
         if showHelp:
             tests_to_run = [ testScripts[0] ]
         else:
-            print passOn
             for o in opts:
                 if not o.startswith('-'):
                     found = False
