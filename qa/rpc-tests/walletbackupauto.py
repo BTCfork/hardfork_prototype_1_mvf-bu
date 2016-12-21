@@ -11,11 +11,15 @@ See https://github.com/BTCfork/hardfork_prototype_1_mvf-bu/blob/master/doc/mvf-b
 Exercise the auto backup wallet code.  Ported from walletbackup.sh.
 
 Test case is:
-5 nodes. 1 2 and 3 send transactions between each other, fourth node is a miner.
+6 nodes: node0..node5 .
+Nodes 1 2 and 3 send transactions between each other, fourth node is a miner.
 The 5th node does no transactions and only tests for the -disablewallet conflict.
-.
-1 2 3 each mine a block to start, then
-Miner creates 100 blocks so 1 2 3 each have 50 mature coins to spend.
+The 6th node is stopped at pre-fork block and restarted post-fork to check
+that it does not perform another backup since it already has performed one
+at the pre-fork block.
+
+Nodes 1 2 3 each mine a block to start, then miner (node 4) creates
+100 blocks so 1 2 3 each have 50 mature coins to spend.
 Then 5 iterations of 1/2/3 sending coins amongst
 themselves to get transactions in the wallets,
 and the miner mining one block.
@@ -28,11 +32,16 @@ as defined in the backupblock constant 114.
 Balances are saved for sanity check:
   Sum(1,2,3,4 balances) == 114*50
 
-1/2/3/4 are shutdown, and their wallets erased.
-Then restored using the auto backup wallets eg wallet.dat.auto.114.bak.
-Sanity check to confirm 1/2/3/4 balances match the 114 block balances.
+Node5 is stopped after its backup block (right before the fork activation
+block). It is only restarted after the fork block.
+
+1/2/3/4 are shutdown after the fork. Their wallets are erased and then
+restored using the auto backup wallets eg wallet.dat.auto.114.bak.
+Sanity check to confirm 1/2/3/4 balances match the pre-fork block 114 balances.
 Sanity check to confirm 5th node does NOT perform the auto backup
 and that the debug.log contains a conflict message
+Sanity check to confirm 6th node does NOT perform another backup at fork
+block after it has already performed a backup at pre-fork block.
 
 Node 2 is rewinded to before the backup height, and a check is made that
 an existing backup is copied to a .old file with identical contents if the
@@ -59,7 +68,7 @@ class WalletBackupTest(BitcoinTestFramework):
 
     def setup_chain(self):
         logging.info("Initializing test directory "+self.options.tmpdir)
-        initialize_chain_clean(self.options.tmpdir, 5)
+        initialize_chain_clean(self.options.tmpdir, 6)
 
     # This mirrors how the network was setup in the bash test
     def setup_network(self, split=False):
@@ -87,13 +96,15 @@ class WalletBackupTest(BitcoinTestFramework):
             ["-disablewallet",
                 "-autobackupwalletpath="+ os.path.join(self.options.tmpdir,"node4"),
                 "-forkheight=%s"%(backupblock+1),
-                "-autobackupblock=%s"%(backupblock)]]
+                "-autobackupblock=%s"%(backupblock)],
+            ["-autobackupblock=%s"%(backupblock),
+                "-forkheight=%s"%(backupblock+1)],
+            ]
 
-        self.nodes = start_nodes(5, self.options.tmpdir, self.extra_args)
-        connect_nodes(self.nodes[0], 3)
-        connect_nodes(self.nodes[1], 3)
-        connect_nodes(self.nodes[2], 3)
-        connect_nodes(self.nodes[4], 3)
+        self.nodes = start_nodes(6, self.options.tmpdir, self.extra_args)
+        # set up a star topology with everyone connected to miner
+        for ni in range(6):
+            if ni != 3: connect_nodes_bi(self.nodes, ni, 3)
         self.is_network_split=False
         self.sync_all()
 
@@ -124,16 +135,12 @@ class WalletBackupTest(BitcoinTestFramework):
         for i in range(4):
             self.nodes[i] = start_node(i, self.options.tmpdir, self.extra_args[i])
 
-        connect_nodes(self.nodes[0], 3)
-        connect_nodes(self.nodes[1], 3)
-        connect_nodes(self.nodes[2], 3)
-
+        for ni in range(6):
+            if ni != 3: connect_nodes_bi(self.nodes, ni, 3)
 
     def stop_four(self):
-        stop_node(self.nodes[0], 0)
-        stop_node(self.nodes[1], 1)
-        stop_node(self.nodes[2], 2)
-        stop_node(self.nodes[3], 3)
+        for i in range(4):
+            stop_node(self.nodes[i], i)
 
     def erase_hot_wallets(self):
         for node in xrange(4):
@@ -144,18 +151,18 @@ class WalletBackupTest(BitcoinTestFramework):
         assert_greater_than(backupblock, 113)
 
         # target backup files
-        node0backupfile = os.path.join(self.options.tmpdir,"node0","newabsdir","pathandfile.%s.bak"%(backupblock))
-        node1backupfile = os.path.join(self.options.tmpdir,"node1","regtest","filenameonly.%s.bak"%(backupblock))
-        node2backupfile = os.path.join(self.options.tmpdir,"node2","regtest","newreldir","wallet.dat.auto.%s.bak"%(backupblock))
-        node3backupfile = os.path.join(self.options.tmpdir,"node3","regtest","wallet.dat.auto.%s.bak"%(backupblock))
+        nodebackupfile = [ os.path.join(self.options.tmpdir,"node0","newabsdir","pathandfile.%s.bak"%(backupblock)),
+                           os.path.join(self.options.tmpdir,"node1","regtest","filenameonly.%s.bak"%(backupblock)),
+                           os.path.join(self.options.tmpdir,"node2","regtest","newreldir","wallet.dat.auto.%s.bak"%(backupblock)),
+                           os.path.join(self.options.tmpdir,"node3","regtest","wallet.dat.auto.%s.bak"%(backupblock)),
+                           os.path.join(self.options.tmpdir,"node4","regtest","wallet.dat.auto.%s.bak"%(backupblock)),
+                           os.path.join(self.options.tmpdir,"node5","regtest","wallet.dat.auto.%s.bak"%(backupblock)),
+                         ]
 
         logging.info("Generating initial blockchain")
-        self.nodes[0].generate(1)
-        sync_blocks(self.nodes)
-        self.nodes[1].generate(1)
-        sync_blocks(self.nodes)
-        self.nodes[2].generate(1)
-        sync_blocks(self.nodes)
+        for ni in range(3):
+            self.nodes[ni].generate(1)
+            sync_blocks(self.nodes)
         self.nodes[3].generate(100)
 
         sync_blocks(self.nodes)
@@ -191,31 +198,15 @@ class WalletBackupTest(BitcoinTestFramework):
 
         # Only 1 more block until the auto backup is triggered
         # Test the auto backup files do NOT exist yet
-        node0backupexists = 0
-        node1backupexists = 0
-        node2backupexists = 0
-        node3backupexists = 0
+        nodebackupexists = [0,0,0,0,0,0]
 
-        if os.path.isfile(node0backupfile):
-            node0backupexists = 1
-            logging.info("Error backup exists too early: %s"%(node0backupfile))
+        for ci in [0,1,2,3,5]:
+            if os.path.isfile(nodebackupfile[ci]):
+                nodebackupexists[ci] = 1
+                logging.info("Error backup exists too early: %s"%(nodebackupfile[ci]))
 
-        if os.path.isfile(node1backupfile):
-            node1backupexists = 1
-            logging.info("Error backup exists too early: %s"%(node1backupfile))
-
-        if os.path.isfile(node2backupfile):
-            node2backupexists = 1
-            logging.info("Error backup exists too early: %s"%(node2backupfile))
-
-        if os.path.isfile(node3backupfile):
-            node3backupexists = 1
-            logging.info("Error backup exists too early: %s"%(node3backupfile))
-
-        assert_equal(0, node0backupexists)
-        assert_equal(0, node1backupexists)
-        assert_equal(0, node2backupexists)
-        assert_equal(0, node3backupexists)
+        for ci in [0,1,2,3,5]:
+            assert_equal(0, nodebackupexists[ci])
 
         # Generate the block that should trigger the auto backup
         self.nodes[3].generate(1)
@@ -223,27 +214,27 @@ class WalletBackupTest(BitcoinTestFramework):
         assert_equal(self.nodes[0].getblockcount(),backupblock)
 
         logging.info("Reached backup block %s automatic backup triggered"%(self.nodes[0].getblockcount()))
+        logging.info("Stopping and restarting node 5 (to check backup is not made twice)")
+        stop_node(self.nodes[5], 5)
+        self.nodes[5] = start_node(5, self.options.tmpdir,["-forkheight=%s"%(backupblock+1),
+                                                           "-autobackupblock=%s"%(backupblock) ])
+        connect_nodes_bi(self.nodes, 5, 3)
 
         # Test if the backup files exist
-        if os.path.isfile(node0backupfile): node0backupexists = 1
-        else: logging.info("Error backup does not exist: %s"%(node0backupfile))
+        for ci in [0,1,3]:
+            if os.path.isfile(nodebackupfile[ci]):
+                nodebackupexists[ci] = 1
+            else:
+                logging.info("Error backup does not exist: %s"%(nodebackupfile[0]))
 
-        if os.path.isfile(node1backupfile): node1backupexists = 1
-        else: logging.info("Error backup does not exist: %s"%(node1backupfile))
-
-        if os.path.isfile(node2backupfile):
-            node2backupexists = 1
+        if os.path.isfile(nodebackupfile[2]):
+            nodebackupexists[2] = 1
             # take MD5 for comparison to .old file in later test
-            node2backupfile_orig_md5 = hashlib.md5(open(node2backupfile, 'rb').read()).hexdigest()
-        else: logging.info("Error backup does not exist: %s"%(node2backupfile))
+            node2backupfile_orig_md5 = hashlib.md5(open(nodebackupfile[2], 'rb').read()).hexdigest()
+        else: logging.info("Error backup does not exist: %s"%(nodebackupfile[2]))
 
-        if os.path.isfile(node3backupfile): node3backupexists = 1
-        else: logging.info("Error backup does not exist: %s"%(node3backupfile))
-
-        assert_equal(1, node0backupexists)
-        assert_equal(1, node1backupexists)
-        assert_equal(1, node2backupexists)
-        assert_equal(1, node3backupexists)
+        for ci in range(4):
+            assert_equal(1, nodebackupexists[ci])
 
         # generate one more block to trigger the fork
         self.nodes[3].generate(1)
@@ -254,18 +245,13 @@ class WalletBackupTest(BitcoinTestFramework):
         # Calculate wallet balances for comparison after restore
         ##
 
+        total = 0
+        balance = [0,0,0,0]
         # Balance of each wallet
-        balance0 = self.nodes[0].getbalance()
-        balance1 = self.nodes[1].getbalance()
-        balance2 = self.nodes[2].getbalance()
-        balance3 = self.nodes[3].getbalance()
-
-        total = balance0 + balance1 + balance2 + balance3
-
-        logging.info("Node0 balance:" + str(balance0))
-        logging.info("Node1 balance:" + str(balance1))
-        logging.info("Node2 balance:" + str(balance2))
-        logging.info("Node3 balance:" + str(balance3))
+        for nb in range(4):
+            balance[nb] = self.nodes[nb].getbalance()
+            logging.info("Node%d balance: %s" % (nb, str(balance[nb])))
+            total += balance[nb]
 
         logging.info("Original Wallet Total: " + str(total))
 
@@ -277,42 +263,36 @@ class WalletBackupTest(BitcoinTestFramework):
         self.erase_hot_wallets()
 
         # Restore wallets from backup
-        shutil.copyfile(node0backupfile, os.path.join(tmpdir,"node0","regtest","wallet.dat"))
-        shutil.copyfile(node1backupfile, os.path.join(tmpdir,"node1","regtest","wallet.dat"))
-        shutil.copyfile(node2backupfile, os.path.join(tmpdir,"node2","regtest","wallet.dat"))
-        shutil.copyfile(node3backupfile, os.path.join(tmpdir,"node3","regtest","wallet.dat"))
+        for ci in range(4):
+            shutil.copyfile(nodebackupfile[ci], os.path.join(tmpdir,"node%d"%ci,"regtest","wallet.dat"))
 
         logging.info("Re-starting nodes")
         self.start_four()
         self.sync_all()
 
         total2 = self.nodes[0].getbalance() + self.nodes[1].getbalance() + self.nodes[2].getbalance() + self.nodes[3].getbalance()
-        logging.info("Node0 balance:" + str(self.nodes[0].getbalance()))
-        logging.info("Node1 balance:" + str(self.nodes[1].getbalance()))
-        logging.info("Node2 balance:" + str(self.nodes[2].getbalance()))
-        logging.info("Node3.balance:" + str(self.nodes[3].getbalance()))
+        for ci in range(4):
+            logging.info("Node%d balance: %s" % (ci, str(self.nodes[ci].getbalance())))
 
         logging.info("Backup Wallet Total: " + str(total2))
 
         # balances should equal the auto backup balances
-        assert_equal(self.nodes[0].getbalance(), balance0)
-        assert_equal(self.nodes[1].getbalance(), balance1)
-        assert_equal(self.nodes[2].getbalance(), balance2)
-        assert_equal(self.nodes[3].getbalance(), balance3)
+        for ci in range(4):
+            assert_equal(self.nodes[ci].getbalance(), balance[ci])
         assert_equal(total,total2)
 
         # Test Node4 auto backup wallet does NOT exist: tmpdir + "/node4/wallet.dat.auto.114.bak"
         # when -disablewallet is enabled then no backup file should be created and graceful exit happens
         # without causing a runtime error
-        node4backupexists = 0
+        nodebackupexists[4] = 0
         if os.path.isfile(os.path.join(tmpdir,"node4","regtest","wallet.dat.auto.%s.bak"%(backupblock))):
-            node4backupexists = 1
+            nodebackupexists[4] = 1
             logging.info("Error: Auto backup performed on node4 with -disablewallet!")
 
         # Test Node4 debug.log contains a conflict message - length test should be > 0
         debugmsg_list = search_file(os.path.join(tmpdir,"node4","regtest","debug.log"),"-disablewallet and -autobackupwalletpath conflict")
 
-        assert_equal(0,node4backupexists)
+        assert_equal(0,nodebackupexists[4])
         assert_greater_than(len(debugmsg_list),0)
 
         # test that existing wallet backup is preserved
@@ -360,10 +340,10 @@ class WalletBackupTest(BitcoinTestFramework):
         # (otherwise it would backup a later-state wallet)
         logging.info("stopping node 1")
         stop_node(self.nodes[1], 1)
-        logging.info("checking that wallet backup file exists: %s" % node1backupfile)
-        assert(os.path.isfile(node1backupfile))
-        logging.info("removing wallet backup file %s" % node1backupfile)
-        os.remove(node1backupfile)
+        logging.info("checking that wallet backup file exists: %s" % nodebackupfile[1])
+        assert(os.path.isfile(nodebackupfile[1]))
+        logging.info("removing wallet backup file %s" % nodebackupfile[1])
+        os.remove(nodebackupfile[1])
         # check that no wallet backup file created
         logging.info("restarting node 1")
         os.unlink(os.path.join(tmpdir,"node1","btcfork.conf"))
@@ -374,11 +354,11 @@ class WalletBackupTest(BitcoinTestFramework):
         logging.info("generating another block on node 1")
         self.nodes[1].generate(1)
         logging.info("checking that backup file has not been created again...")
-        node1backupexists = 0
-        if os.path.isfile(node1backupfile):
-            node1backupexists = 1
+        nodebackupexists[1] = 0
+        if os.path.isfile(nodebackupfile[1]):
+            nodebackupexists[1] = 1
             logging.info("Error: Auto backup created again on node1 after fork has already activated!")
-        assert_equal(0, node1backupexists)
+        assert_equal(0, nodebackupexists[1])
 
 
 if __name__ == '__main__':
