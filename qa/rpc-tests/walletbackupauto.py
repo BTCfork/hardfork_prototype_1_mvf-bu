@@ -159,6 +159,9 @@ class WalletBackupTest(BitcoinTestFramework):
                            os.path.join(self.options.tmpdir,"node5","regtest","wallet.dat.auto.%s.bak"%(backupblock)),
                          ]
 
+        # we want to check later on that this duplicate is not generated
+        node5duplicate_path = os.path.join(self.options.tmpdir,"node5","regtest","wallet.dat.auto.%s.bak"%(backupblock+1))
+
         logging.info("Generating initial blockchain")
         for ni in range(3):
             self.nodes[ni].generate(1)
@@ -214,11 +217,9 @@ class WalletBackupTest(BitcoinTestFramework):
         assert_equal(self.nodes[0].getblockcount(),backupblock)
 
         logging.info("Reached backup block %s automatic backup triggered"%(self.nodes[0].getblockcount()))
-        logging.info("Stopping and restarting node 5 (to check backup is not made twice)")
+
+        logging.info("Stopping node 5 (to check backup is not made twice if we restart at fork)")
         stop_node(self.nodes[5], 5)
-        self.nodes[5] = start_node(5, self.options.tmpdir,["-forkheight=%s"%(backupblock+1),
-                                                           "-autobackupblock=%s"%(backupblock) ])
-        connect_nodes_bi(self.nodes, 5, 3)
 
         # Test if the backup files exist
         for ci in [0,1,3]:
@@ -238,8 +239,17 @@ class WalletBackupTest(BitcoinTestFramework):
 
         # generate one more block to trigger the fork
         self.nodes[3].generate(1)
-        self.sync_all()
+        sync_blocks(self.nodes[:-1])
         assert_equal(self.nodes[0].getblockcount(),backupblock+1)
+
+        logging.info("Restarting node 5 to check absence of soft-fork backup at fork")
+        self.nodes[5] = start_node(5, self.options.tmpdir,["-forkheight=%s"%(backupblock+1),
+                                                           "-autobackupblock=%s"%(backupblock) ])
+        connect_nodes_bi(self.nodes, 5, 3)
+        self.sync_all()
+        sync_blocks(self.nodes[:-1])
+        # check that restarting the node has NOT created another backup at the fork block height
+        assert(not os.path.exists(node5duplicate_path))
 
         ##
         # Calculate wallet balances for comparison after restore
