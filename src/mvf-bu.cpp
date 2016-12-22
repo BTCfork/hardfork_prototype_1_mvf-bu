@@ -12,6 +12,10 @@
 #include <iostream>
 #include <fstream>
 #include <boost/filesystem.hpp>
+#include <boost/algorithm/string/replace.hpp>
+//#include <boost/lexical_cast.hpp>
+//#include <boost/algorithm/string.hpp>
+#include <boost/exception/to_string_stub.hpp>
 
 using namespace std;
 
@@ -245,4 +249,36 @@ void DeactivateFork(void)
 }
 
 
+/** returns the finalized path of the auto wallet backup file (MVHF-BU-DES-WABU-2) */
+std::string MVFexpandWalletAutoBackupPath(const std::string& strDest, const std::string& strWalletFile, int BackupBlock, bool createDirs)
+{
+    boost::filesystem::path pathBackupWallet = strDest;
 
+    //if the backup destination is blank
+    if (strDest == "")
+    {
+        // then prefix it with the existing data dir and wallet filename
+        pathBackupWallet = GetDataDir() / strprintf("%s.%s",strWalletFile, autoWalletBackupSuffix);
+    }
+    else {
+        if (pathBackupWallet.is_relative())
+            // prefix existing data dir
+            pathBackupWallet = GetDataDir() / pathBackupWallet;
+
+        if (pathBackupWallet.extension() == "")
+            // no custom filename so append the default filename
+            pathBackupWallet /= strprintf("%s.%s",strWalletFile, autoWalletBackupSuffix);
+
+        if (pathBackupWallet.branch_path() != "" && createDirs)
+            // create directories if they don't exist
+            boost::filesystem::create_directories(pathBackupWallet.branch_path());
+    }
+
+    std::string strBackupFile = pathBackupWallet.string();
+
+    // replace # with BackupBlock number
+    boost::replace_all(strBackupFile,"@", boost::to_string_stub(BackupBlock));
+    //LogPrintf("DEBUG: strBackupFile=%s\n",strBackupFile);
+
+    return strBackupFile;
+}

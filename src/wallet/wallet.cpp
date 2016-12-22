@@ -1045,38 +1045,11 @@ CAmount CWallet::GetChange(const CTransaction& tx) const
     return nChange;
 }
 
-
-
 // MVF-BU begin auto wallet backup procedure (MVHF-BU-DES-WABU-4)
 bool CWallet::BackupWalletAuto(const std::string& strDest, int BackupBlock)
 {
-    boost::filesystem::path pathBackupWallet = strDest;
-
-    //if the backup destination is blank
-    if (strDest == "")
-    {
-        // then prefix it with the existing data dir and wallet filename
-        pathBackupWallet = GetDataDir() / strprintf("%s.%s",strWalletFile, autoWalletBackupSuffix);
-    }
-    else {
-        if (pathBackupWallet.is_relative())
-        	// prefix existing data dir
-        	pathBackupWallet = GetDataDir() / pathBackupWallet;
-
-        if (pathBackupWallet.extension() == "")
-            // no custom filename so append the default filename
-            pathBackupWallet /= strprintf("%s.%s",strWalletFile, autoWalletBackupSuffix);
-
-        if (pathBackupWallet.branch_path() != "")
-            // create directories if they don't exist
-            boost::filesystem::create_directories(pathBackupWallet.branch_path());
-    }
-
+    boost::filesystem::path pathBackupWallet = MVFexpandWalletAutoBackupPath(strDest, strWalletFile, BackupBlock);
     std::string strBackupFile = pathBackupWallet.string();
-
-    // replace # with BackupBlock number
-    boost::replace_all(strBackupFile,"@", boost::to_string_stub(BackupBlock));
-    //LogPrintf("DEBUG: strBackupFile=%s\n",strBackupFile);
 
     // rename with .old suffix if target already exists
     if (boost::filesystem::exists(strBackupFile))
