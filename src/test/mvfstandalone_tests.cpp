@@ -3,12 +3,13 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <iostream>
 #include <boost/test/unit_test.hpp>
 
-#include "wallet/wallet.h"
 #include "mvf-bu.h"
 #include "test/test_bitcoin.h"
+#ifdef ENABLE_WALLET
+#include "wallet/wallet.h"
+#endif
 
 BOOST_FIXTURE_TEST_SUITE(mvfstandalone_tests, BasicTestingSetup)
 
@@ -21,6 +22,7 @@ BOOST_AUTO_TEST_CASE(wallet_backup_path_expansion)
     static const boost::filesystem::path relpath = "rel";
     static const boost::filesystem::path fullpath = datadir / "w@.dat";
 
+#ifdef ENABLE_WALLET
     // if first arg is empty, then datadir is prefixed
     BOOST_CHECK_EQUAL(MVFexpandWalletAutoBackupPath("", "w.dat", 0, false),
                       datadir / "w.dat.auto.0.bak");
@@ -40,6 +42,7 @@ BOOST_AUTO_TEST_CASE(wallet_backup_path_expansion)
     // if first contains filename, then appending of filename is skipped
     BOOST_CHECK_EQUAL(MVFexpandWalletAutoBackupPath(fullpath.string(), "w.dat", 6, false),
                       datadir / "w6.dat");
+#endif
 }
 
 BOOST_AUTO_TEST_SUITE_END()
