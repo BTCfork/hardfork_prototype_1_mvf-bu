@@ -84,5 +84,6 @@ extern std::string ForkCmdLineHelp();  // fork-specific command line option help
 extern void ForkSetup(const CChainParams& chainparams);  // actions to perform at program setup (parameter validation etc.)
 extern void ActivateFork(int actualForkHeight, bool doBackup=true);  // actions to perform at fork triggering (MVHF-BU-DES-TRIG-6)
 extern void DeactivateFork(void);  // actions to revert if reorg deactivates fork (MVHF-BU-DES-TRIG-7)
+extern std::string MVFexpandWalletAutoBackupPath(const std::string& strDest, const std::string& strWalletFile, int BackupBlock, bool createDirs=true); // returns the finalized path of the auto wallet backup file (MVHF-BU-DES-WABU-2)
 
 #endif
