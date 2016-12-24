@@ -265,12 +265,17 @@ std::string MVFexpandWalletAutoBackupPath(const std::string& strDest, const std:
             // prefix existing data dir
             pathBackupWallet = GetDataDir() / pathBackupWallet;
 
-        if (pathBackupWallet.extension() == "")
-            // no custom filename so append the default filename
+        // if pathBackupWallet is a folder or symlink, or if it does end
+        // on a filename with an extension...
+        if (!pathBackupWallet.has_extension() || (boost::filesystem::is_directory(pathBackupWallet) && boost::filesystem::is_symlink(pathBackupWallet)))
+            // ... we assume no custom filename so append the default filename
             pathBackupWallet /= strprintf("%s.%s",strWalletFile, autoWalletBackupSuffix);
 
         if (pathBackupWallet.branch_path() != "" && createDirs)
             // create directories if they don't exist
+            // MVF-BU TODO: this directory creation should be factored out
+            // so that we do not need to pass a Boolean arg and this function
+            // should not have the side effect. Marked for cleanup.
             boost::filesystem::create_directories(pathBackupWallet.branch_path());
     }
 
