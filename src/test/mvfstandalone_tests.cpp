@@ -16,11 +16,27 @@ BOOST_FIXTURE_TEST_SUITE(mvfstandalone_tests, BasicTestingSetup)
 // tests of the wallet backup filename construction
 BOOST_AUTO_TEST_CASE(wallet_backup_path_expansion)
 {
+    std::string platform(BOOST_PLATFORM);
+
     boost::filesystem::path datadir = GetDataDir();
     std::string dds = datadir.string();
-    static const boost::filesystem::path abspath = "/abs";
-    static const boost::filesystem::path relpath = "rel";
+    static const boost::filesystem::path abspath(GetDataDir());
+    static const boost::filesystem::path relpath("rel");
     static const boost::filesystem::path fullpath = datadir / "w@.dat";
+    static const boost::filesystem::path userpath("/home/user/.bitcoin");
+
+    // sanity checks
+    BOOST_CHECK(abspath.is_absolute());
+    BOOST_CHECK(!abspath.is_relative());
+    BOOST_CHECK(relpath.is_relative());
+    BOOST_CHECK(!relpath.is_absolute());
+    BOOST_CHECK(!relpath.has_root_directory());
+    BOOST_CHECK(fullpath.has_filename());
+    BOOST_CHECK(userpath.has_filename());
+    BOOST_CHECK(userpath.has_extension());
+    BOOST_CHECK_EQUAL(userpath.filename(), ".bitcoin");
+    BOOST_CHECK_EQUAL(userpath.extension(), ".bitcoin");
+    BOOST_CHECK_EQUAL(userpath.extension(), userpath.filename());
 
 #ifdef ENABLE_WALLET
     // if first arg is empty, then datadir is prefixed
