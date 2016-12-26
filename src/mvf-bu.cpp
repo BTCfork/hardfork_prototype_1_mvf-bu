@@ -4,8 +4,10 @@
 // MVF-BU common objects and functions
 
 #include "mvf-bu.h"
+#include "mvf-btcfork_conf_parser.h"
 #include "init.h"
 #include "util.h"
+#include "utilstrencodings.h"   // for atoi64
 #include "chainparams.h"
 #include "validationinterface.h"
 
@@ -13,11 +15,13 @@
 #include <fstream>
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string/replace.hpp>
-//#include <boost/lexical_cast.hpp>
-//#include <boost/algorithm/string.hpp>
 #include <boost/exception/to_string_stub.hpp>
 
 using namespace std;
+
+// key-value maps for btcfork.conf configuration items
+map<string, string> btcforkMapArgs;
+map<string, vector<string> > btcforkMapMultiArgs;
 
 // version string identifying the consensus-relevant algorithmic changes
 // so that a user can quickly see if MVF fork clients are compatible
@@ -77,8 +81,9 @@ void ForkSetup(const CChainParams& chainparams)
     std:string activeNetworkID = chainparams.NetworkIDString();
 
     LogPrintf("%s: MVF: doing setup\n", __func__);
-    LogPrintf("%s: MVF: fork consensus code = %s\n", __func__, post_fork_consensus_id);
-    LogPrintf("%s: MVF: active network = %s\n", __func__, activeNetworkID);
+
+    // first, set initial values from built-in defaults
+    FinalForkId = GetArg("-forkid", HARDFORK_SIGHASH_ID);
 
     // determine minimum fork height according to network
     // (these are set to the same as the default fork heights for now, but could be made different)
@@ -94,6 +99,44 @@ void ForkSetup(const CChainParams& chainparams)
         throw std::runtime_error(strprintf("%s: Unknown chain %s.", __func__, activeNetworkID));
 
     FinalActivateForkHeight = GetArg("-forkheight", minForkHeightForNetwork);
+    if (mapArgs.count("-autobackupblock") == 0) {
+        // default value for backup block is 1 block prior to fixed fork trigger
+        mapArgs["-autobackupblock"] = FinalActivateForkHeight - 1;
+    }
+
+    // check if btcfork.conf exists (MVHF-BU-DES-TRIG-10)
+    boost::filesystem::path pathBTCforkConfigFile(BTCFORK_CONF_FILENAME);
+    if (!pathBTCforkConfigFile.is_complete())
+        pathBTCforkConfigFile = GetDataDir(false) / pathBTCforkConfigFile;
+    if (boost::filesystem::exists(pathBTCforkConfigFile)) {
+        LogPrintf("%s: MVF: found marker config file at %s - client has already forked before\n", __func__, pathBTCforkConfigFile.string().c_str());
+        // read the btcfork.conf file if it exists, override standard config values using its configuration
+        try
+        {
+            MVFReadConfigFile(btcforkMapArgs, btcforkMapMultiArgs);
+            if (btcforkMapArgs.count("-forkheight")) {
+                FinalActivateForkHeight = atoi(btcforkMapArgs["-forkheight"]);
+                mapArgs["-forkheight"] = FinalActivateForkHeight;
+            }
+            if (btcforkMapArgs.count("-autobackupblock")) {
+                mapArgs["-autobackupblock"] = btcforkMapArgs["-autobackupblock"];
+            }
+            if (btcforkMapArgs.count("-forkid")) {
+                FinalForkId = atoi(btcforkMapArgs["-forkid"]);
+                mapArgs["-forkid"] = btcforkMapArgs["-forkid"];
+            }
+        } catch (const std::exception& e) {
+            LogPrintf("MVF: Error reading %s configuration file: %s\n", BTCFORK_CONF_FILENAME, e.what());
+            fprintf(stderr,"MVF: Error reading %s configuration file: %s\n", BTCFORK_CONF_FILENAME, e.what());
+        }
+        wasMVFHardForkPreviouslyActivated = true;
+    }
+    else {
+        LogPrintf("%s: MVF: no marker config file at %s - client has not forked yet\n", __func__, pathBTCforkConfigFile.string().c_str());
+        wasMVFHardForkPreviouslyActivated = false;
+    }
+
+    // validation
 
     // shut down immediately if specified fork height is invalid
     if (FinalActivateForkHeight <= 0)
@@ -102,7 +145,6 @@ void ForkSetup(const CChainParams& chainparams)
         StartShutdown();
     }
 
-    FinalForkId = GetArg("-forkid", HARDFORK_SIGHASH_ID);
     // check fork id for validity (MVHF-BU-DES-CSIG-2)
     if (FinalForkId == 0) {
         LogPrintf("MVF: Warning: fork id = 0 will result in vulnerability to replay attacks\n");
@@ -114,39 +156,34 @@ void ForkSetup(const CChainParams& chainparams)
         }
     }
 
+    // debug traces of final values
+    LogPrintf("%s: MVF: fork consensus code = %s\n", __func__, post_fork_consensus_id);
+    LogPrintf("%s: MVF: active network = %s\n", __func__, activeNetworkID);
+    LogPrintf("%s: MVF: active fork id = 0x%06x (%d)\n", __func__, FinalForkId, FinalForkId);
+    LogPrintf("%s: MVF: active fork height = %d\n", __func__, FinalActivateForkHeight);
     if (GetBoolArg("-segwitfork", DEFAULT_TRIGGER_ON_SEGWIT))
         LogPrintf("%s: MVF: Segregated Witness trigger is ENABLED\n", __func__);
     else
         LogPrintf("%s: MVF: Segregated Witness trigger is DISABLED\n", __func__);
-
-    LogPrintf("%s: MVF: active fork height = %d\n", __func__, FinalActivateForkHeight);
-
-    LogPrintf("%s: MVF: active fork id = 0x%06x (%d)\n", __func__, FinalForkId, FinalForkId);
+    LogPrintf("%s: MVF: auto backup block = %d\n", __func__, atoi(mapArgs["-autobackupblock"]));
 
     if (GetBoolArg("-force-retarget", DEFAULT_FORCE_RETARGET))
         LogPrintf("%s: MVF: force-retarget is ENABLED\n", __func__);
     else
         LogPrintf("%s: MVF: force-retarget is DISABLED\n", __func__);
 
-    LogPrintf("%s: MVF: auto backup block = %d\n", __func__, GetArg("-autobackupblock", FinalActivateForkHeight - 1));
-
-    // check if btcfork.conf exists (MVHF-BU-DES-TRIG-10)
-    boost::filesystem::path pathBTCforkConfigFile(BTCFORK_CONF_FILENAME);
-    if (!pathBTCforkConfigFile.is_complete())
-        pathBTCforkConfigFile = GetDataDir(false) / pathBTCforkConfigFile;
-    if (boost::filesystem::exists(pathBTCforkConfigFile)) {
-        LogPrintf("%s: MVF: found marker config file at %s - client has already forked before\n", __func__, pathBTCforkConfigFile.string().c_str());
-        wasMVFHardForkPreviouslyActivated = true;
-    }
-    else {
-        LogPrintf("%s: MVF: no marker config file at %s - client has not forked yet\n", __func__, pathBTCforkConfigFile.string().c_str());
-        wasMVFHardForkPreviouslyActivated = false;
-    }
-
     // we should always set the activation flag to false during setup
     isMVFHardForkActive = false;
 }
 
+boost::filesystem::path MVFGetConfigFile()
+{
+    boost::filesystem::path pathConfigFile(BTCFORK_CONF_FILENAME);
+    if (!pathConfigFile.is_complete())
+        pathConfigFile = GetDataDir(false) / pathConfigFile;
+
+    return pathConfigFile;
+}
 
 /** Actions when the fork triggers (MVHF-BU-DES-TRIG-6) */
 // doBackup parameter default is true
@@ -162,10 +199,7 @@ void ActivateFork(int actualForkHeight, bool doBackup)
         // (e.g. soft-fork activated)
         FinalActivateForkHeight = actualForkHeight;
 
-        boost::filesystem::path pathBTCforkConfigFile(BTCFORK_CONF_FILENAME);
-        if (!pathBTCforkConfigFile.is_complete())
-            pathBTCforkConfigFile = GetDataDir(false) / pathBTCforkConfigFile;
-
+        boost::filesystem::path pathBTCforkConfigFile(MVFGetConfigFile());
         LogPrintf("%s: MVF: checking for existence of %s\n", __func__, pathBTCforkConfigFile.string().c_str());
 
         // remove btcfork.conf if it already exists - it shall be overwritten
@@ -174,7 +208,7 @@ void ActivateFork(int actualForkHeight, bool doBackup)
             try {
                 boost::filesystem::remove(pathBTCforkConfigFile);
             } catch (const boost::filesystem::filesystem_error& e) {
-                LogPrintf("%s: Unable to remove pidfile: %s\n", __func__, e.what());
+                LogPrintf("%s: MVF: Unable to remove %s config file: %s\n", __func__, pathBTCforkConfigFile.string().c_str(), e.what());
             }
         }
         // try to write the btcfork.conf (MVHF-BU-DES-TRIG-10)
@@ -286,4 +320,42 @@ std::string MVFexpandWalletAutoBackupPath(const std::string& strDest, const std:
     //LogPrintf("DEBUG: strBackupFile=%s\n",strBackupFile);
 
     return strBackupFile;
+}
+
+// get / set functions for btcforkMapArgs
+std::string MVFGetArg(const std::string& strArg, const std::string& strDefault)
+{
+    if (btcforkMapArgs.count(strArg))
+        return btcforkMapArgs[strArg];
+    return strDefault;
+}
+
+int64_t MVFGetArg(const std::string& strArg, int64_t nDefault)
+{
+    if (btcforkMapArgs.count(strArg))
+        return atoi64(btcforkMapArgs[strArg]);
+    return nDefault;
+}
+
+bool MVFGetBoolArg(const std::string& strArg, bool fDefault)
+{
+    if (btcforkMapArgs.count(strArg))
+        return InterpretBool(btcforkMapArgs[strArg]);
+    return fDefault;
+}
+
+bool MFVSoftSetArg(const std::string& strArg, const std::string& strValue)
+{
+    if (btcforkMapArgs.count(strArg))
+        return false;
+    btcforkMapArgs[strArg] = strValue;
+    return true;
+}
+
+bool MFVSoftSetBoolArg(const std::string& strArg, bool fValue)
+{
+    if (fValue)
+        return SoftSetArg(strArg, std::string("1"));
+    else
+        return SoftSetArg(strArg, std::string("0"));
 }

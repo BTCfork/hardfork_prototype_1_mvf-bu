@@ -6,7 +6,10 @@
 #include <boost/test/unit_test.hpp>
 
 #include "mvf-bu.h"
+//#include "mvf-btcfork_conf_parser.h"
+#include "util.h"
 #include "test/test_bitcoin.h"
+
 #ifdef ENABLE_WALLET
 #include "wallet/wallet.h"
 #endif
@@ -59,6 +62,31 @@ BOOST_AUTO_TEST_CASE(wallet_backup_path_expansion)
     BOOST_CHECK_EQUAL(MVFexpandWalletAutoBackupPath(fullpath.string(), "w.dat", 6, false),
                       datadir / "w6.dat");
 #endif
+}
+
+
+BOOST_AUTO_TEST_CASE(btcfork_conf_args)
+{
+    btcforkMapArgs.clear();
+    btcforkMapArgs["strtest1"] = "string...";
+    // strtest2 undefined on purpose
+    btcforkMapArgs["inttest1"] = "12345";
+    btcforkMapArgs["inttest2"] = "81985529216486895";
+    // inttest3 undefined on purpose
+    btcforkMapArgs["booltest1"] = "";
+    // booltest2 undefined on purpose
+    btcforkMapArgs["booltest3"] = "0";
+    btcforkMapArgs["booltest4"] = "1";
+
+    BOOST_CHECK_EQUAL(MVFGetArg("strtest1", "default"), "string...");
+    BOOST_CHECK_EQUAL(MVFGetArg("strtest2", "default"), "default");
+    BOOST_CHECK_EQUAL(MVFGetArg("inttest1", -1), 12345);
+    BOOST_CHECK_EQUAL(MVFGetArg("inttest2", -1), 81985529216486895LL);
+    BOOST_CHECK_EQUAL(MVFGetArg("inttest3", -1), -1);
+    BOOST_CHECK_EQUAL(MVFGetBoolArg("booltest1", false), true);
+    BOOST_CHECK_EQUAL(MVFGetBoolArg("booltest2", false), false);
+    BOOST_CHECK_EQUAL(MVFGetBoolArg("booltest3", false), false);
+    BOOST_CHECK_EQUAL(MVFGetBoolArg("booltest4", false), true);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
