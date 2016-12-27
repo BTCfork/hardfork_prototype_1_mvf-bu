@@ -3,11 +3,11 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <fstream>
 #include <boost/test/unit_test.hpp>
 
 #include "mvf-bu.h"
-//#include "mvf-btcfork_conf_parser.h"
-#include "util.h"
+#include "mvf-btcfork_conf_parser.h"
 #include "test/test_bitcoin.h"
 
 #ifdef ENABLE_WALLET
@@ -65,7 +65,7 @@ BOOST_AUTO_TEST_CASE(wallet_backup_path_expansion)
 }
 
 
-BOOST_AUTO_TEST_CASE(btcfork_conf_args)
+BOOST_AUTO_TEST_CASE(btcfork_conf_maps)
 {
     btcforkMapArgs.clear();
     btcforkMapArgs["strtest1"] = "string...";
@@ -87,6 +87,46 @@ BOOST_AUTO_TEST_CASE(btcfork_conf_args)
     BOOST_CHECK_EQUAL(MVFGetBoolArg("booltest2", false), false);
     BOOST_CHECK_EQUAL(MVFGetBoolArg("booltest3", false), false);
     BOOST_CHECK_EQUAL(MVFGetBoolArg("booltest4", false), true);
+}
+
+// test MVFGetConfigFile(), the MVF config (btcfork.conf) filename construction
+BOOST_AUTO_TEST_CASE(mvfgetconfigfile)
+{
+    BOOST_CHECK_EQUAL(MVFGetConfigFile(), GetDataDir() / BTCFORK_CONF_FILENAME);
+}
+
+// test MVFReadConfigFile() which reads a config file into arg maps
+BOOST_AUTO_TEST_CASE(mvfreadconfigfile)
+{
+    boost::filesystem::path pathBTCforkConfigFile = GetTempPath() / boost::filesystem::unique_path("btcfork.conf.%%%%.txt");
+    //fprintf(stderr,"btcfork_conf_file: set config file %s\n", pathBTCforkConfigFile.string().c_str());
+    BOOST_CHECK(!boost::filesystem::exists(pathBTCforkConfigFile));
+    try
+    {
+        std::ofstream btcforkfile(pathBTCforkConfigFile.string().c_str(), std::ios::out);
+        btcforkfile << "forkheight=" << HARDFORK_HEIGHT_REGTEST << "\n";
+        btcforkfile << "forkid=" << HARDFORK_SIGHASH_ID << "\n";
+        btcforkfile << "autobackupblock=" << (HARDFORK_HEIGHT_REGTEST - 1) << "\n";
+        btcforkfile.close();
+    } catch (const std::exception& e) {
+        BOOST_ERROR("Cound not write config file " << pathBTCforkConfigFile << " : " << e.what());
+    }
+    BOOST_CHECK(boost::filesystem::exists(pathBTCforkConfigFile));
+    // clear args map and read file
+    btcforkMapArgs.clear();
+    try
+    {
+        MVFReadConfigFile(pathBTCforkConfigFile, btcforkMapArgs, btcforkMapMultiArgs);
+    } catch (const std::exception& e) {
+        BOOST_ERROR("Cound not read config file " << pathBTCforkConfigFile << " : " << e.what());
+    }
+    // check map after reading
+    BOOST_CHECK_EQUAL(atoi(btcforkMapArgs["-forkheight"]), (int)HARDFORK_HEIGHT_REGTEST);
+    BOOST_CHECK_EQUAL(atoi(btcforkMapArgs["-forkid"]), (int)HARDFORK_SIGHASH_ID);
+    BOOST_CHECK_EQUAL(atoi(btcforkMapArgs["-autobackupblock"]), (int)(HARDFORK_HEIGHT_REGTEST - 1));
+    // cleanup
+    boost::filesystem::remove(pathBTCforkConfigFile);
+    BOOST_CHECK(!boost::filesystem::exists(pathBTCforkConfigFile));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -101,15 +101,13 @@ void ForkSetup(const CChainParams& chainparams)
     FinalActivateForkHeight = GetArg("-forkheight", minForkHeightForNetwork);
 
     // check if btcfork.conf exists (MVHF-BU-DES-TRIG-10)
-    boost::filesystem::path pathBTCforkConfigFile(BTCFORK_CONF_FILENAME);
-    if (!pathBTCforkConfigFile.is_complete())
-        pathBTCforkConfigFile = GetDataDir(false) / pathBTCforkConfigFile;
+    boost::filesystem::path pathBTCforkConfigFile(MVFGetConfigFile());
     if (boost::filesystem::exists(pathBTCforkConfigFile)) {
         LogPrintf("%s: MVF: found marker config file at %s - client has already forked before\n", __func__, pathBTCforkConfigFile.string().c_str());
         // read the btcfork.conf file if it exists, override standard config values using its configuration
         try
         {
-            MVFReadConfigFile(btcforkMapArgs, btcforkMapMultiArgs);
+            MVFReadConfigFile(pathBTCforkConfigFile, btcforkMapArgs, btcforkMapMultiArgs);
             if (btcforkMapArgs.count("-forkheight")) {
                 FinalActivateForkHeight = atoi(btcforkMapArgs["-forkheight"]);
                 mapArgs["-forkheight"] = FinalActivateForkHeight;
@@ -209,7 +207,7 @@ void ActivateFork(int actualForkHeight, bool doBackup)
         }
         // try to write the btcfork.conf (MVHF-BU-DES-TRIG-10)
         LogPrintf("%s: MVF: writing %s\n", __func__, pathBTCforkConfigFile.string().c_str());
-        std::ofstream  btcforkfile(pathBTCforkConfigFile.string().c_str(), std::ios::out);
+        std::ofstream btcforkfile(pathBTCforkConfigFile.string().c_str(), std::ios::out);
         btcforkfile << "forkheight=" << FinalActivateForkHeight << "\n";
         btcforkfile << "forkid=" << FinalForkId << "\n";
 

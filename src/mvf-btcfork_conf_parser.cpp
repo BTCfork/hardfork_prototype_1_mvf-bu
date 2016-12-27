@@ -3,7 +3,6 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 // MVF-BU common objects and functions
 
-#include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/program_options/detail/config_file.hpp>
 
@@ -24,10 +23,11 @@ using namespace std;
 
 // copied from util.cpp:ReadConfigFile with minor simplifications.
 // MVF-BU TOOD: would be good to refactor so we don't need separate procedures
-void MVFReadConfigFile(map<string, string>& mapSettingsRet,
+void MVFReadConfigFile(boost::filesystem::path pathCfgFile,
+                       map<string, string>& mapSettingsRet,
                        map<string, vector<string> >& mapMultiSettingsRet)
 {
-    boost::filesystem::ifstream streamConfig(MVFGetConfigFile());
+    boost::filesystem::ifstream streamConfig(pathCfgFile);
     if (!streamConfig.good())
         return; // No btcfork.conf file is OK
 

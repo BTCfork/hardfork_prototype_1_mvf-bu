@@ -6,10 +6,12 @@
 #ifndef BITCOIN_MVF_BTCFORK_CONF_PARSER_H
 #define BITCOIN_MVF_BTCFORK_CONF_PARSER_H
 
+#include <boost/filesystem.hpp>
+
 #include "mvf-bu.h"
 
 // read btcfork.conf file
-extern void MVFReadConfigFile(std::map<std::string, std::string>& mapSettingsRet, std::map<std::string, std::vector<std::string> >& mapMultiSettingsRet);
+extern void MVFReadConfigFile(boost::filesystem::path pathCfgFile, std::map<std::string, std::string>& mapSettingsRet, std::map<std::string, std::vector<std::string> >& mapMultiSettingsRet);
 
 #endif
 
