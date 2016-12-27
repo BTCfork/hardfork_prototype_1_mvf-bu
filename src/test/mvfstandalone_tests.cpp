@@ -124,6 +124,10 @@ BOOST_AUTO_TEST_CASE(mvfreadconfigfile)
     BOOST_CHECK_EQUAL(atoi(btcforkMapArgs["-forkheight"]), (int)HARDFORK_HEIGHT_REGTEST);
     BOOST_CHECK_EQUAL(atoi(btcforkMapArgs["-forkid"]), (int)HARDFORK_SIGHASH_ID);
     BOOST_CHECK_EQUAL(atoi(btcforkMapArgs["-autobackupblock"]), (int)(HARDFORK_HEIGHT_REGTEST - 1));
+
+    // added so that we can update this test when adding new entries
+    BOOST_CHECK_EQUAL(btcforkMapArgs.size(), 3);
+
     // cleanup
     boost::filesystem::remove(pathBTCforkConfigFile);
     BOOST_CHECK(!boost::filesystem::exists(pathBTCforkConfigFile));
