@@ -6,9 +6,18 @@
 #ifndef BITCOIN_MVF_BU_H
 #define BITCOIN_MVF_BU_H
 
+#include <boost/filesystem.hpp>
+
 #include "protocol.h"
 
 class CChainParams;
+
+// MVHF-BU-DES-TRIG-10 - config file that is written when forking, and used to detect "forked" condition at start
+const char * const BTCFORK_CONF_FILENAME = "btcfork.conf";
+
+// btcfork.conf configuration key-value maps (MVF TODO: reference associated design)
+extern std::map<std::string, std::string> btcforkMapArgs;
+extern std::map<std::string, std::vector<std::string> > btcforkMapMultiArgs;
 
 extern int FinalActivateForkHeight;             // MVHF-BU-DES-TRIG-4
 extern bool wasMVFHardForkPreviouslyActivated;  // MVHF-BU-DES-TRIG-5
@@ -67,9 +76,6 @@ static const uint256 HARDFORK_POWRESET_MAINNET = uint256S("00007ffffffffffffffff
                      HARDFORK_POWRESET_NOLNET  = uint256S("3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),  // nolnet
                      HARDFORK_POWRESET_REGTEST = uint256S("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");  // regtestnet
 
-// MVHF-BU-DES-TRIG-10 - config file that is written when forking, and used to detect "forked" condition at start
-const char * const BTCFORK_CONF_FILENAME = "btcfork.conf";
-
 // MVHF-BU-DES-DIAD-? -force-retarget option determines  whether to actively retarget on regtest after fork happens
 // (not all tests need that, so the POW/difficulty fork related ones that do specifically invoke this option)
 const bool DEFAULT_FORCE_RETARGET = false;
@@ -81,9 +87,15 @@ const bool DEFAULT_FORCE_RETARGET = false;
 const bool DEFAULT_TRIGGER_ON_SEGWIT = true;
 
 extern std::string ForkCmdLineHelp();  // fork-specific command line option help (MVHF-BU-DES-TRIG-8)
+extern boost::filesystem::path MVFGetConfigFile();  // get the full path to the btcfork.conf file
 extern void ForkSetup(const CChainParams& chainparams);  // actions to perform at program setup (parameter validation etc.)
 extern void ActivateFork(int actualForkHeight, bool doBackup=true);  // actions to perform at fork triggering (MVHF-BU-DES-TRIG-6)
 extern void DeactivateFork(void);  // actions to revert if reorg deactivates fork (MVHF-BU-DES-TRIG-7)
 extern std::string MVFexpandWalletAutoBackupPath(const std::string& strDest, const std::string& strWalletFile, int BackupBlock, bool createDirs=true); // returns the finalized path of the auto wallet backup file (MVHF-BU-DES-WABU-2)
+extern std::string MVFGetArg(const std::string& strArg, const std::string& strDefault);
+extern int64_t MVFGetArg(const std::string& strArg, int64_t nDefault);
+extern bool MVFGetBoolArg(const std::string& strArg, bool fDefault);
+extern bool MFVSoftSetArg(const std::string& strArg, const std::string& strValue);
+extern bool MFVSoftSetBoolArg(const std::string& strArg, bool fValue);
 
 #endif

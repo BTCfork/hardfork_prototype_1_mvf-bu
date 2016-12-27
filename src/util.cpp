@@ -326,7 +326,9 @@ int LogPrintStr(const std::string &str)
 }
 
 /** Interpret string as boolean, for argument parsing */
-static bool InterpretBool(const std::string& strValue)
+// MVF-BU begin: removed static and declared extern since used by MVFGetBoolArg
+bool InterpretBool(const std::string& strValue)
+// MVF-BU end
 {
     if (strValue.empty())
         return true;
