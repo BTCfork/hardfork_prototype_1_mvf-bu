@@ -1045,46 +1045,28 @@ CAmount CWallet::GetChange(const CTransaction& tx) const
     return nChange;
 }
 
-
-
 // MVF-BU begin auto wallet backup procedure (MVHF-BU-DES-WABU-4)
 bool CWallet::BackupWalletAuto(const std::string& strDest, int BackupBlock)
 {
-    boost::filesystem::path pathBackupWallet = strDest;
-
-    //if the backup destination is blank
-    if (strDest == "")
-    {
-        // then prefix it with the existing data dir and wallet filename
-        pathBackupWallet = GetDataDir() / strprintf("%s.%s",strWalletFile, autoWalletBackupSuffix);
-    }
-    else {
-        if (pathBackupWallet.is_relative())
-        	// prefix existing data dir
-        	pathBackupWallet = GetDataDir() / pathBackupWallet;
-
-        if (pathBackupWallet.extension() == "")
-            // no custom filename so append the default filename
-            pathBackupWallet /= strprintf("%s.%s",strWalletFile, autoWalletBackupSuffix);
-
-        if (pathBackupWallet.branch_path() != "")
-            // create directories if they don't exist
-            boost::filesystem::create_directories(pathBackupWallet.branch_path());
+    // check if backup from previous block exists
+    boost::filesystem::path pathBackupWalletPrev = MVFexpandWalletAutoBackupPath(strDest, strWalletFile, BackupBlock-1, false);
+    std::string strBackupFile = pathBackupWalletPrev.string();
+    if (boost::filesystem::exists(strBackupFile)) {
+		LogPrintf("MVF: Wallet was already backed on previous block: %s\n",strBackupFile);
+        return true;
     }
 
-    std::string strBackupFile = pathBackupWallet.string();
-
-    // replace # with BackupBlock number
-    boost::replace_all(strBackupFile,"@", boost::to_string_stub(BackupBlock));
-    //LogPrintf("DEBUG: strBackupFile=%s\n",strBackupFile);
-
+    // no previous-block backup found, so carry on...
+    // get final backup path (and create directories for it as needed)
+    boost::filesystem::path pathBackupWallet = MVFexpandWalletAutoBackupPath(strDest, strWalletFile, BackupBlock);
     // rename with .old suffix if target already exists
+    strBackupFile = pathBackupWallet.string();
     if (boost::filesystem::exists(strBackupFile))
         boost::filesystem::rename(strBackupFile,strprintf("%s.%s.old",strBackupFile,GetTime()));
 
     // call common backup wallet function
 	if (BackupWallet(*this, strBackupFile))
-		LogPrintf("Wallet automatically backed up to: %s\n",strBackupFile);
+		LogPrintf("MVF: Wallet automatically backed up to: %s\n",strBackupFile);
 	else
 		// backup failed
 		return false;

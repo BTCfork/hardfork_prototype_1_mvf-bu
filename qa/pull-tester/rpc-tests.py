@@ -76,18 +76,18 @@ private_double_opts = ('--list',
                        '--only-extended',
                        '--force-enable',
                        '--win')
-test_script_opts = ('--tracerpc',
-                    '--help',
-                    '--noshutdown',
-                    '--nocleanup',
-                    '--srcdir',
-                    '--tmpdir',
-                    '--coveragedir',
-                    '--mineblock',
-                    '--quick',
-                    '--randomseed',
-                    '--testbinary',
-                    '--refbinary')
+framework_opts = ('--tracerpc',
+                  '--help',
+                  '--noshutdown',
+                  '--nocleanup',
+                  '--srcdir',
+                  '--tmpdir',
+                  '--coveragedir',
+                  '--randomseed',
+                  '--testbinary',
+                  '--refbinary')
+test_script_opts = ('--mineblock',
+                    '--quick')
 
 def option_passed(option_without_dashes):
     """check if option was specified in single-dash or double-dash format"""
@@ -121,7 +121,7 @@ bad_opts_found = []
 bad_opt_str="Unrecognized option: %s"
 for o in opts | double_opts:
     if o.startswith('--'):
-        if o not in test_script_opts + private_double_opts:
+        if o not in framework_opts + test_script_opts + private_double_opts:
             print bad_opt_str % o
             bad_opts_found.append(o)
     elif o.startswith('-'):
@@ -285,17 +285,23 @@ def runtests():
                             if all_args_found:
                                 tests_to_run.append(t)
                                 found = True
-                        elif str(t) == o or str(t) == o + '.py': 
-                            # it is a test without args - just add it or only add it if no passed on args?
-                            if not passOn:
+                        elif t_rep[0] == o or t_rep[0] == o + '.py':
+                            passOnSplit = [x for x in passOn.split(' ') if x != '']
+                            found_non_framework_opt = False
+                            for p in passOnSplit:
+                                if p in test_script_opts:
+                                    found_non_framework_opt = True
+                            if not found_non_framework_opt:
                                 tests_to_run.append(t)
                                 found = True
                     if not found:
                         print "Error: %s is not a known test." % o
                         sys.exit(1)
 
-        #print "tests after explicit collection:"
-        #print tests_to_run
+        #if len(tests_to_run):
+        #    print "tests explicitly specified:"
+        #    for t in tests_to_run:
+        #        print t
 
         # if no explicit tests specified, use the lists
         if not len(tests_to_run):
@@ -399,6 +405,10 @@ def runtests():
                                                                        test_passed.values().count(False),
                                                                        len(test_passed))
             print "%d test(s) disabled / %d test(s) skipped due to platform" % (len(disabled), len(skipped))
+
+        # signal that tests have failed using exit code
+        if test_passed.values().count(False):
+            sys.exit(1)
 
     else:
         print "No rpc tests to run. Wallet, utils, and bitcoind must all be enabled"

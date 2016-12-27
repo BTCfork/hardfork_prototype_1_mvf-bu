@@ -23,10 +23,16 @@ class MVF_TRIG_Test(BitcoinTestFramework):
     def setup_chain(self):
         print("Initializing test directory " + self.options.tmpdir)
         initialize_chain_clean(self.options.tmpdir, 4)
+        self.nodelog = {}
+        self.btcfork_conf = {}
+        for n in range(0,4):
+            self.nodelog[n] = os.path.join(self.options.tmpdir,"node%d" % n,"regtest","debug.log")
+            self.btcfork_conf[n] = os.path.join(self.options.tmpdir,"node%d" % n,"btcfork.conf")
 
     def start_all_nodes(self):
         self.nodes = []
         self.is_network_split = False
+        self.expected_fork_entries = {}
         self.nodes.append(start_node(0, self.options.tmpdir,
                             ["-forkheight=100", ]))
         self.nodes.append(start_node(1, self.options.tmpdir,
@@ -37,23 +43,50 @@ class MVF_TRIG_Test(BitcoinTestFramework):
         self.nodes.append(start_node(3, self.options.tmpdir,
                             ["-forkheight=300",
                              "-blockversion=%s" % 0x20000002])) # signal SegWit, but forkheight should pre-empt
+        self.expected_fork_entries[0] = { "forkheight": "100", "forkid": "7827456", "autobackupblock": "99"}
+        self.expected_fork_entries[1] = { "forkheight": "200", "forkid": "7827456", "autobackupblock": "199"}
+        self.expected_fork_entries[2] = { "forkheight": "431", "forkid": "7827456", "autobackupblock": "431"}
+        self.expected_fork_entries[3] = { "forkheight": "300", "forkid": "7827456", "autobackupblock": "299"}
 
     def setup_network(self):
         self.start_all_nodes()
 
     def prior_fork_detected_on_node(self, node=0):
         """ check in log file if prior fork has been detected and return true/false """
-        nodelog = self.options.tmpdir + "/node%s/regtest/debug.log" % node
-        marker_found = search_file(nodelog, "MVF: found marker config file")
+        marker_found = search_file(self.nodelog[node], "MVF: found marker config file")
         return (len(marker_found) > 0)
+
+    def is_config_file_consistent(self, node=0, entry_map={}):
+        """ check whether btcfork.conf file matches expectations,
+        and return true/false. One of the assumptions is that the
+        config file should exist. Do not call this function otherwise."""
+        config_file_written = search_file(self.nodelog[node], "MVF: writing")
+        if len(config_file_written) == 0:
+            # absence of config file is unexpected
+            print "is_config_file_consistent: config file not found for node %d" % node
+            return False
+        verify_btcfork_conf = config_file_written[0].split(" ")[-1:][0].strip()
+        if verify_btcfork_conf != self.btcfork_conf[node]:
+            # check that filename matches what is expected
+            print "is_config_file_consistent: config filename %s mismatch %s for node %d" % (verify_btcfork_conf, self.btcfork_conf[node], node)
+            return False
+        for key in entry_map.keys():
+            key_found = search_file(self.btcfork_conf[node], "%s=" % key)
+            if (len(key_found) != 1):
+                print "is_config_file_consistent: key %s not found for node %d" % (key, node)
+                return False
+            val_found=key_found[0].split("=")[1].strip()
+            if (val_found != entry_map[key]):
+                print "is_config_file_consistent: unexpected value '%s' for key %s found for node %d" % (val_found, key, node)
+                return False
+        return True
 
     def is_fork_triggered_on_node(self, node=0):
         """ check in log file if fork has triggered and return true/false """
         # MVF-BU TODO: extend to check using RPC info about forks
-        nodelog = self.options.tmpdir + "/node%s/regtest/debug.log" % node
-        hf_active = (search_file(nodelog, "isMVFHardForkActive=1") and
-                     search_file(nodelog, "enabling isMVFHardForkActive"))
-        fork_actions_performed = search_file(nodelog, "MVF: performing fork activation actions")
+        hf_active = (search_file(self.nodelog[node], "isMVFHardForkActive=1") and
+                     search_file(self.nodelog[node], "enabling isMVFHardForkActive"))
+        fork_actions_performed = search_file(self.nodelog[node], "MVF: performing fork activation actions")
         return (len(hf_active) > 0 and len(fork_actions_performed) == 1)
 
     def run_test(self):
@@ -70,6 +103,7 @@ class MVF_TRIG_Test(BitcoinTestFramework):
         for n in xrange(len(self.nodes)):
             self.nodes[n].generate(1)
         assert_equal(True,  self.is_fork_triggered_on_node(0))
+        assert_equal(True,  self.is_config_file_consistent(0, self.expected_fork_entries[0]))
         assert_equal(False, self.prior_fork_detected_on_node(0))
         for n in [1,2,3]:
             assert_equal(False, self.is_fork_triggered_on_node(n))
@@ -82,6 +116,7 @@ class MVF_TRIG_Test(BitcoinTestFramework):
         assert_equal(False, self.is_fork_triggered_on_node(1))
         self.nodes[1].generate(1)
         assert_equal(True,  self.is_fork_triggered_on_node(1))
+        assert_equal(True,  self.is_config_file_consistent(1, self.expected_fork_entries[1]))
         print "Fork triggered successfully on node 1 (block height 200)"
 
         # check node 2 triggering around height 431
@@ -91,6 +126,7 @@ class MVF_TRIG_Test(BitcoinTestFramework):
                             or self.prior_fork_detected_on_node(2))
         self.nodes[2].generate(1)
         assert_equal(True,  self.is_fork_triggered_on_node(2))
+        assert_equal(True,  self.is_config_file_consistent(2, self.expected_fork_entries[2]))
         assert_equal(False, self.prior_fork_detected_on_node(2))
         # block 431 is when fork activation is performed.
         # block 432 is first block where new consensus rules are in effect.
@@ -103,6 +139,7 @@ class MVF_TRIG_Test(BitcoinTestFramework):
                             or self.prior_fork_detected_on_node(3))
         self.nodes[3].generate(1)
         assert_equal(True,  self.is_fork_triggered_on_node(3))
+        assert_equal(True,  self.is_config_file_consistent(3, self.expected_fork_entries[3]))
         assert_equal(False, self.prior_fork_detected_on_node(3))
         print "Fork triggered successfully on node 3 (block height 300 ahead of SegWit)"
 
@@ -120,8 +157,8 @@ class MVF_TRIG_Test(BitcoinTestFramework):
         self.start_all_nodes()
         for n in xrange(4):
             assert_equal(True, self.prior_fork_detected_on_node(n))
-            nodelog=os.path.join(self.options.tmpdir,"node%d" % n,"regtest","debug.log")
-            assert(len(search_file(nodelog, "enabling isMVFHardForkActive")) == 1)
+            assert(len(search_file(self.nodelog[n], "enabling isMVFHardForkActive")) == 1)
+            assert(len(search_file(self.nodelog[n], "found marker config file")) == 1)
         print "Prior fork activation detected on all nodes"
 
 if __name__ == '__main__':

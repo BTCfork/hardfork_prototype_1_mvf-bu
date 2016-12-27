@@ -119,6 +119,7 @@ BITCOIN_CORE_H = \
   merkleblock.h \
   miner.h \
   mvf-bu.h \
+  mvf-btcfork_conf_parser.h \
   net.h \
   leakybucket.h \
   netbase.h \
@@ -208,6 +209,7 @@ libbitcoin_server_a_SOURCES = \
   merkleblock.cpp \
   miner.cpp \
   mvf-bu.cpp \
+  mvf-btcfork_conf_parser.cpp \
   net.cpp \
   noui.cpp \
   policy/fees.cpp \
