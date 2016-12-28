@@ -224,12 +224,10 @@ unsigned int CalculateMVFResetWorkRequired(const CBlockIndex* pindexLast, int64_
     arith_uint256 bnNew, bnNew1, bnNew2, bnOld;
 
     // TODO : Determine best reset formula
-    // drop difficulty via factor
-    int nDropFactor = 4;
-    // use same formula as standard
+    // currently we drop difficulty by a factor (see help for -diffdrop option)
     int64_t nActualTimespan = pindexLast->GetBlockTime() - nFirstBlockTime;
     // used reduced target time span
-    int64_t nTargetTimespan = nActualTimespan / nDropFactor;
+    int64_t nTargetTimespan = nActualTimespan / FinalDifficultyDropFactor;
 
     bnOld.SetCompact(pindexLast->nBits);
     bnNew1 = bnOld / nTargetTimespan;
