@@ -35,6 +35,9 @@ std::string post_fork_consensus_id = "YAMAZAKI";
 // actual fork height, taking into account user configuration parameters (MVHF-BU-DES-TRIG-4)
 int FinalActivateForkHeight = 0;
 
+// actual difficulty drop factor, taking into account user configuration parameters (MVF-BU TODO: MVHF-BU-DES-DIAD-?)
+unsigned FinalDifficultyDropFactor = 0;
+
 // actual fork id, taking into account user configuration parameters (MVHF-BU-DES-CSIG-1)
 int FinalForkId = 0;
 
@@ -70,14 +73,112 @@ std::string ForkCmdLineHelp()
     // fork id (MVHF-BU-DES-CSIG-1)
     strUsage += HelpMessageOpt("-forkid=<n>", strprintf(_("Fork id to use for signature change. Value must be between 0 and %d. Default is 0x%06x (%u)"), (unsigned)MAX_HARDFORK_SIGHASH_ID, (unsigned)HARDFORK_SIGHASH_ID, (unsigned)HARDFORK_SIGHASH_ID));
 
+    // fork difficulty drop factor (MVF-BU TODO: MVHF-BU-DES-DIAD-?)
+    strUsage += HelpMessageOpt("-diffdrop=<n>", strprintf(_("Difficulty drop factor on active network (integer). Value must be between 1 (no drop) and %u. Defaults: mainnet:%u,testnet=%u,regtest=%u"), (unsigned)MAX_HARDFORK_DROPFACTOR, (unsigned)HARDFORK_DROPFACTOR_MAINNET, (unsigned)HARDFORK_DROPFACTOR_TESTNET, (unsigned)HARDFORK_DROPFACTOR_REGTEST));    
     return strUsage;
 }
 
 
 /** Performs fork-related setup / validation actions when the program starts */
+/* to be removed
+void ForkSetupCore(const CChainParams& chainparams)
+{
+    int minForkHeightForNetwork = 0;
+    unsigned defaultDropFactorForNetwork = 1;
+    std:string activeNetworkID = chainparams.NetworkIDString();
+
+    LogPrintf("%s: MVF: doing setup\n", __func__);
+    LogPrintf("%s: MVF: fork consensus code = %s\n", __func__, post_fork_consensus_id);
+    LogPrintf("%s: MVF: active network = %s\n", __func__, activeNetworkID);
+
+    // determine default drop factors and minimum fork heights according to network
+    // (minimum fork heights are set to the same as the default fork heights for now, but could be made different)
+    if (activeNetworkID == CBaseChainParams::MAIN) {
+        minForkHeightForNetwork = HARDFORK_HEIGHT_MAINNET;
+        defaultDropFactorForNetwork = HARDFORK_DROPFACTOR_MAINNET;
+    }
+    else if (activeNetworkID == CBaseChainParams::TESTNET) {
+        minForkHeightForNetwork = HARDFORK_HEIGHT_TESTNET;
+        defaultDropFactorForNetwork = HARDFORK_DROPFACTOR_TESTNET;
+    }
+    else if (activeNetworkID == CBaseChainParams::REGTEST) {
+        minForkHeightForNetwork = HARDFORK_HEIGHT_REGTEST;
+        defaultDropFactorForNetwork = HARDFORK_DROPFACTOR_REGTEST;
+    }
+    else if (activeNetworkID == CBaseChainParams::UNL) {
+        minForkHeightForNetwork = HARDFORK_HEIGHT_NOLNET;
+        defaultDropFactorForNetwork = HARDFORK_DROPFACTOR_NOLNET;
+    }
+    else {
+        throw std::runtime_error(strprintf("%s: Unknown chain %s.", __func__, activeNetworkID));
+    }
+
+    FinalActivateForkHeight = GetArg("-forkheight", minForkHeightForNetwork);
+
+    // shut down immediately if specified fork height is invalid
+    if (FinalActivateForkHeight <= 0)
+    {
+        LogPrintf("MVF: Error: specified fork height (%d) is less than minimum for '%s' network (%d)\n", FinalActivateForkHeight, activeNetworkID, minForkHeightForNetwork);
+        StartShutdown();
+    }
+
+    FinalDifficultyDropFactor = (unsigned) GetArg("-diffdrop", defaultDropFactorForNetwork);
+    if (FinalDifficultyDropFactor < 1 || FinalDifficultyDropFactor > MAX_HARDFORK_DROPFACTOR) {
+        LogPrintf("MVF: Error: specified difficulty drop (%u) is not in range 1..%u\n", FinalDifficultyDropFactor, (unsigned)MAX_HARDFORK_DROPFACTOR);
+        StartShutdown();
+    }
+
+    FinalForkId = GetArg("-forkid", HARDFORK_SIGHASH_ID);
+    // check fork id for validity (MVHF-BU-DES-CSIG-2)
+    if (FinalForkId == 0) {
+        LogPrintf("MVF: Warning: fork id = 0 will result in vulnerability to replay attacks\n");
+    }
+    else {
+        if (FinalForkId < 0 || FinalForkId > MAX_HARDFORK_SIGHASH_ID) {
+            LogPrintf("MVF: Error: specified fork id (%d) is not in range 0..%u\n", FinalForkId, (unsigned)MAX_HARDFORK_SIGHASH_ID);
+            StartShutdown();
+        }
+    }
+
+    if (GetBoolArg("-segwitfork", DEFAULT_TRIGGER_ON_SEGWIT))
+        LogPrintf("%s: MVF: Segregated Witness trigger is ENABLED\n", __func__);
+    else
+        LogPrintf("%s: MVF: Segregated Witness trigger is DISABLED\n", __func__);
+
+    LogPrintf("%s: MVF: active fork height = %d\n", __func__, FinalActivateForkHeight);
+
+    LogPrintf("%s: MVF: active fork id = 0x%06x (%d)\n", __func__, FinalForkId, FinalForkId);
+
+    if (GetBoolArg("-force-retarget", DEFAULT_FORCE_RETARGET))
+        LogPrintf("%s: MVF: force-retarget is ENABLED\n", __func__);
+    else
+        LogPrintf("%s: MVF: force-retarget is DISABLED\n", __func__);
+
+    LogPrintf("%s: MVF: auto backup block = %d\n", __func__, GetArg("-autobackupblock", FinalActivateForkHeight - 1));
+
+    // check if btcfork.conf exists (MVHF-CORE-DES-TRIG-10)
+    boost::filesystem::path pathBTCforkConfigFile(BTCFORK_CONF_FILENAME);
+    if (!pathBTCforkConfigFile.is_complete())
+        pathBTCforkConfigFile = GetDataDir(false) / pathBTCforkConfigFile;
+    if (boost::filesystem::exists(pathBTCforkConfigFile)) {
+        LogPrintf("%s: MVF: found marker config file at %s - client has already forked before\n", __func__, pathBTCforkConfigFile.string().c_str());
+        wasMVFHardForkPreviouslyActivated = true;
+    }
+    else {
+        LogPrintf("%s: MVF: no marker config file at %s - client has not forked yet\n", __func__, pathBTCforkConfigFile.string().c_str());
+        wasMVFHardForkPreviouslyActivated = false;
+    }
+
+    // we should always set the activation flag to false during setup
+    isMVFHardForkActive = false;
+}
+*/
+
+/** Performs fork-related setup / validation actions when the program starts */
 void ForkSetup(const CChainParams& chainparams)
 {
     int minForkHeightForNetwork = 0;
+    unsigned defaultDropFactorForNetwork = 1;
     std:string activeNetworkID = chainparams.NetworkIDString();
 
     LogPrintf("%s: MVF: doing setup\n", __func__);
@@ -85,20 +186,30 @@ void ForkSetup(const CChainParams& chainparams)
     // first, set initial values from built-in defaults
     FinalForkId = GetArg("-forkid", HARDFORK_SIGHASH_ID);
 
-    // determine minimum fork height according to network
-    // (these are set to the same as the default fork heights for now, but could be made different)
-    if (activeNetworkID == CBaseChainParams::MAIN)
+    // determine default drop factors and minimum fork heights according to network
+    // (minimum fork heights are set to the same as the default fork heights for now, but could be made different)
+    if (activeNetworkID == CBaseChainParams::MAIN) {
         minForkHeightForNetwork = HARDFORK_HEIGHT_MAINNET;
-    else if (activeNetworkID == CBaseChainParams::TESTNET)
+        defaultDropFactorForNetwork = HARDFORK_DROPFACTOR_MAINNET;
+    }
+    else if (activeNetworkID == CBaseChainParams::TESTNET) {
         minForkHeightForNetwork = HARDFORK_HEIGHT_TESTNET;
-    else if (activeNetworkID == CBaseChainParams::REGTEST)
+        defaultDropFactorForNetwork = HARDFORK_DROPFACTOR_TESTNET;
+    }
+    else if (activeNetworkID == CBaseChainParams::REGTEST) {
         minForkHeightForNetwork = HARDFORK_HEIGHT_REGTEST;
-    else if (activeNetworkID == CBaseChainParams::UNL)
+        defaultDropFactorForNetwork = HARDFORK_DROPFACTOR_REGTEST;
+    }
+    else if (activeNetworkID == CBaseChainParams::UNL) {
         minForkHeightForNetwork = HARDFORK_HEIGHT_NOLNET;
-    else
+        defaultDropFactorForNetwork = HARDFORK_DROPFACTOR_NOLNET;
+    }
+    else {
         throw std::runtime_error(strprintf("%s: Unknown chain %s.", __func__, activeNetworkID));
+    }
 
     FinalActivateForkHeight = GetArg("-forkheight", minForkHeightForNetwork);
+    FinalDifficultyDropFactor = (unsigned) GetArg("-diffdrop", defaultDropFactorForNetwork);
 
     // check if btcfork.conf exists (MVHF-BU-DES-TRIG-10)
     boost::filesystem::path pathBTCforkConfigFile(MVFGetConfigFile());
@@ -136,6 +247,11 @@ void ForkSetup(const CChainParams& chainparams)
     if (FinalActivateForkHeight <= 0)
     {
         LogPrintf("MVF: Error: specified fork height (%d) is less than minimum for '%s' network (%d)\n", FinalActivateForkHeight, activeNetworkID, minForkHeightForNetwork);
+        StartShutdown();
+    }
+
+    if (FinalDifficultyDropFactor < 1 || FinalDifficultyDropFactor > MAX_HARDFORK_DROPFACTOR) {
+        LogPrintf("MVF: Error: specified difficulty drop (%u) is not in range 1..%u\n", FinalDifficultyDropFactor, (unsigned)MAX_HARDFORK_DROPFACTOR);
         StartShutdown();
     }
 

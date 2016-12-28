@@ -70,7 +70,7 @@ def CalculateMVFResetWorkRequired(bits):
 
     bnPowLimit = bits2target_int(hex2bin(int2hex(POW_LIMIT)))
     # drop difficulty via factor
-    nDropFactor = 4
+    nDropFactor = HARDFORK_DROPFACTOR_REGTEST_DEFAULT
     # total blocktimes prefork during run_test
     nActualTimespan = ORIGINAL_DIFFADJINTERVAL * PREFORK_BLOCKTIME
     # used reduced target time span while within the re-target period
