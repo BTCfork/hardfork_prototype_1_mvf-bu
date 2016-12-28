@@ -96,7 +96,6 @@ BOOST_AUTO_TEST_CASE(btcfork_conf_maps)
 BOOST_AUTO_TEST_CASE(mvfgetconfigfile)
 {
     boost::filesystem::path cfgBaseFile(BTCFORK_CONF_FILENAME);
-    fprintf(stderr,"mvfgetconfigfile: %s\n", MVFGetConfigFile().string().c_str());
     BOOST_CHECK(!cfgBaseFile.is_complete());
     BOOST_CHECK_EQUAL(MVFGetConfigFile(), (GetDataDir() / BTCFORK_CONF_FILENAME));
 }
