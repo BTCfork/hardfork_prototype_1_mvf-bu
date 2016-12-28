@@ -14,7 +14,9 @@
 #include "wallet/wallet.h"
 #endif
 
+
 BOOST_FIXTURE_TEST_SUITE(mvfstandalone_tests, BasicTestingSetup)
+
 
 // tests of the wallet backup filename construction
 BOOST_AUTO_TEST_CASE(wallet_backup_path_expansion)
@@ -89,13 +91,16 @@ BOOST_AUTO_TEST_CASE(btcfork_conf_maps)
     BOOST_CHECK_EQUAL(MVFGetBoolArg("booltest4", false), true);
 }
 
+
 // test MVFGetConfigFile(), the MVF config (btcfork.conf) filename construction
 BOOST_AUTO_TEST_CASE(mvfgetconfigfile)
 {
     boost::filesystem::path cfgBaseFile(BTCFORK_CONF_FILENAME);
+    fprintf(stderr,"mvfgetconfigfile: %s\n", MVFGetConfigFile().string().c_str());
     BOOST_CHECK(!cfgBaseFile.is_complete());
-    BOOST_CHECK_EQUAL(MVFGetConfigFile(), GetDataDir() / BTCFORK_CONF_FILENAME);
+    BOOST_CHECK_EQUAL(MVFGetConfigFile(), (GetDataDir() / BTCFORK_CONF_FILENAME));
 }
+
 
 // test MVFReadConfigFile() which reads a config file into arg maps
 BOOST_AUTO_TEST_CASE(mvfreadconfigfile)

@@ -175,7 +175,7 @@ void ForkSetup(const CChainParams& chainparams)
 boost::filesystem::path MVFGetConfigFile()
 {
     boost::filesystem::path pathConfigFile(BTCFORK_CONF_FILENAME);
-    pathConfigFile = GetDataDir(false) / pathConfigFile;
+    pathConfigFile = GetDataDir() / pathConfigFile;
     return pathConfigFile;
 }
 
