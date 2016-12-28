@@ -316,7 +316,7 @@ std::string MVFexpandWalletAutoBackupPath(const std::string& strDest, const std:
 
         // if pathBackupWallet is a folder or symlink, or if it does end
         // on a filename with an extension...
-        if (!pathBackupWallet.has_extension() || (boost::filesystem::is_directory(pathBackupWallet) && boost::filesystem::is_symlink(pathBackupWallet)))
+        if (!pathBackupWallet.has_extension() || boost::filesystem::is_directory(pathBackupWallet) || boost::filesystem::is_symlink(pathBackupWallet))
             // ... we assume no custom filename so append the default filename
             pathBackupWallet /= strprintf("%s.%s",strWalletFile, autoWalletBackupSuffix);
 
