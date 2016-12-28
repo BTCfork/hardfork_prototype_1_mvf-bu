@@ -170,12 +170,12 @@ void ForkSetup(const CChainParams& chainparams)
     isMVFHardForkActive = false;
 }
 
+/** Return full path to btcfork.conf (MVHF-BU-DES-?-?) */
+// MVF-BU TODO: traceability
 boost::filesystem::path MVFGetConfigFile()
 {
     boost::filesystem::path pathConfigFile(BTCFORK_CONF_FILENAME);
-    if (!pathConfigFile.is_complete())
-        pathConfigFile = GetDataDir(false) / pathConfigFile;
-
+    pathConfigFile = GetDataDir(false) / pathConfigFile;
     return pathConfigFile;
 }
 

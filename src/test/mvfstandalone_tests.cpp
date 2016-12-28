@@ -92,6 +92,8 @@ BOOST_AUTO_TEST_CASE(btcfork_conf_maps)
 // test MVFGetConfigFile(), the MVF config (btcfork.conf) filename construction
 BOOST_AUTO_TEST_CASE(mvfgetconfigfile)
 {
+    boost::filesystem::path cfgBaseFile(BTCFORK_CONF_FILENAME);
+    BOOST_CHECK(!cfgBaseFile.is_complete());
     BOOST_CHECK_EQUAL(MVFGetConfigFile(), GetDataDir() / BTCFORK_CONF_FILENAME);
 }
 
