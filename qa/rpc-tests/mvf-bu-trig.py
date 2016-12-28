@@ -27,7 +27,7 @@ class MVF_TRIG_Test(BitcoinTestFramework):
         self.btcfork_conf = {}
         for n in range(0,4):
             self.nodelog[n] = os.path.join(self.options.tmpdir,"node%d" % n,"regtest","debug.log")
-            self.btcfork_conf[n] = os.path.join(self.options.tmpdir,"node%d" % n,"btcfork.conf")
+            self.btcfork_conf[n] = os.path.join(self.options.tmpdir,"node%d" % n,"regtest","btcfork.conf")
 
     def start_all_nodes(self):
         self.nodes = []
