@@ -180,6 +180,7 @@ void ForkSetup(const CChainParams& chainparams)
     LogPrintf("%s: MVF: active network = %s\n", __func__, activeNetworkID);
     LogPrintf("%s: MVF: active fork id = 0x%06x (%d)\n", __func__, FinalForkId, FinalForkId);
     LogPrintf("%s: MVF: active fork height = %d\n", __func__, FinalActivateForkHeight);
+    LogPrintf("%s: MVF: active difficulty drop factor = %u\n", __func__, FinalDifficultyDropFactor);
     if (GetBoolArg("-segwitfork", DEFAULT_TRIGGER_ON_SEGWIT))
         LogPrintf("%s: MVF: Segregated Witness trigger is ENABLED\n", __func__);
     else
