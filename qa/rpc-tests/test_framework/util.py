@@ -25,6 +25,18 @@ from .authproxy import AuthServiceProxy, JSONRPCException
 
 COVERAGE_DIR = None
 
+# MVF-BU begin read regtest fork params from C files
+_mvf_common_h_fh = open('src/mvf-bu.h', 'rt')
+_mvf_common_h_contents = _mvf_common_h_fh.read()
+_mvf_common_h_fh.close()
+
+BTCFORK_CONF_FILENAME = re.search(r'BTCFORK_CONF_FILENAME = "(.*)";', _mvf_common_h_contents).group(1)
+HARDFORK_HEIGHT_REGTEST_DEFAULT = int(re.search(r'HARDFORK_HEIGHT_REGTEST = (\d+)', _mvf_common_h_contents).group(1))
+HARDFORK_PORT_REGTEST_DEFAULT = int(re.search(r'HARDFORK_PORT_REGTEST = (\d+)', _mvf_common_h_contents).group(1))
+HARDFORK_SIGHASH_ID_DEFAULT = int(re.search(r'HARDFORK_SIGHASH_ID = (0x[0-9a-fA-F]+)', _mvf_common_h_contents).group(1), 16)
+HARDFORK_DROPFACTOR_REGTEST_DEFAULT = int(re.search(r'HARDFORK_DROPFACTOR_REGTEST = (\d+)', _mvf_common_h_contents).group(1))
+# MVF-BU end
+
 
 def enable_coverage(dirname):
     """Maintain a log of which RPC calls are made during testing."""

@@ -2,6 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 // MVF-BU common declarations
+
 #pragma once
 #ifndef BITCOIN_MVF_BU_H
 #define BITCOIN_MVF_BU_H
@@ -20,6 +21,7 @@ extern std::map<std::string, std::string> btcforkMapArgs;
 extern std::map<std::string, std::vector<std::string> > btcforkMapMultiArgs;
 
 extern int FinalActivateForkHeight;             // MVHF-BU-DES-TRIG-4
+extern unsigned FinalDifficultyDropFactor;      // MVF-BU TODO: MVHF-BU-DES-DIAD-?
 extern bool wasMVFHardForkPreviouslyActivated;  // MVHF-BU-DES-TRIG-5
 extern bool isMVFHardForkActive;                // MVHF-BU-DES-TRIG-5
 extern int FinalForkId;                         // MVHF-BU-DES-CSIG-1
@@ -30,10 +32,18 @@ extern std::string autoWalletBackupSuffix;      // MVHF-BU-DES-WABU-1
 // so that a user can quickly see if fork clients are compatible
 extern std::string post_fork_consensus_id;
 
+// CAUTION! certain constant definitions from this file are parsed
+// and extracted by the Python test framework (util.py).
+// Usually there should be notes documenting where values have to
+// respect a certain format, but please tread carefully with the
+// formatting and do not just refactor the C++ names without
+// modifying the Python code.
+
 // default values that can be easily put into an enum
 enum {
 // MVHF-BU-DES-TRIG-1 - trigger related parameter defaults
 // MVF-BU TODO: choose values with some consideration instead of dummy values
+// must be digit-only numerals (no operators) since they are read in by Python test framework
 HARDFORK_HEIGHT_MAINNET =  666666,   // operational network trigger height
 HARDFORK_HEIGHT_TESTNET = 9999999,   // public test network trigger height
 HARDFORK_HEIGHT_NOLNET  = 8888888,   // BU public no-limit test network  trigger height
@@ -43,9 +53,17 @@ HARDFORK_HEIGHT_BFGTEST = 9999999,   // btcforks genesis test network trigger he
 // MVHF-BU-DES-DIAD-3 / MVHF-BU-DES-DIAD-4
 // period (in blocks) from fork activation until retargeting returns to normal
 HARDFORK_RETARGET_BLOCKS = 180*144,    // MVF-BU TODO: Revert after testing to 180*144 (25920) blocks
+// default drop factors for various networks (MVF-BU TODO: design reference)
+// must be digit-only numerals  (no operators) since they are read in by Python test framework
+MAX_HARDFORK_DROPFACTOR = 1000000,     // maximum drop factor
+HARDFORK_DROPFACTOR_MAINNET = 100000,  // default difficulty drop on operational network (mainnet)
+HARDFORK_DROPFACTOR_TESTNET = 10000,   // default difficulty drop on public test network (testnet)
+HARDFORK_DROPFACTOR_NOLNET = 10000,    // default difficulty drop on BU public no-limit test network (nolnet)
+HARDFORK_DROPFACTOR_REGTEST = 4,       // default difficulty drop on local regression test network (regtestnet)
 
 // MVHF-BU-DES-NSEP-1 - network separation parameter defaults
 // MVF-BU TODO: re-check that these port values could be used
+// must be digit-only numerals (no operators) since they are read in by Python test framework
 HARDFORK_PORT_MAINNET = 9442,        // default post-fork port on operational network (mainnet)
 HARDFORK_PORT_TESTNET = 9443,        // default post-fork port on public test network (testnet)
 HARDFORK_PORT_NOLNET  = 9444,        // default post-fork port on BU public no-limit test network (nolnet)
@@ -53,6 +71,7 @@ HARDFORK_PORT_REGTEST = 19555,       // default post-fork port on local regressi
 HARDFORK_PORT_BFGTEST = 19988,       // default post-fork port on btcforks genesis test network (bfgtest)
 
 // MVHF-BU-DES-CSIG-1 - signature change parameter defaults
+// must be hex numerals (0x prefix) since they are read in and converted from hex by Python test framework
 HARDFORK_SIGHASH_ID = 0x777000,      // 3 byte fork id that is left-shifted by 8 bits and then ORed with the SIGHASHes
 MAX_HARDFORK_SIGHASH_ID = 0xFFFFFF,  // fork id may not exceed maximum representable in 3 bytes
 };
