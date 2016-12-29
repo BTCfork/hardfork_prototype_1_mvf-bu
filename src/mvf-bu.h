@@ -60,6 +60,7 @@ HARDFORK_DROPFACTOR_MAINNET = 100000,  // default difficulty drop on operational
 HARDFORK_DROPFACTOR_TESTNET = 10000,   // default difficulty drop on public test network (testnet)
 HARDFORK_DROPFACTOR_NOLNET = 10000,    // default difficulty drop on BU public no-limit test network (nolnet)
 HARDFORK_DROPFACTOR_REGTEST = 4,       // default difficulty drop on local regression test network (regtestnet)
+HARDFORK_DROPFACTOR_BFGTEST = 1000,    // default difficulty drop on btcforks genesis test network (bfgtest)
 
 // MVHF-BU-DES-NSEP-1 - network separation parameter defaults
 // MVF-BU TODO: re-check that these port values could be used
