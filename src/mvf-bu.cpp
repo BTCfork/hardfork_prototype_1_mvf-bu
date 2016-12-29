@@ -108,6 +108,7 @@ void ForkSetup(const CChainParams& chainparams)
     else if (activeNetworkID == CBaseChainParams::UNL) {
         minForkHeightForNetwork = HARDFORK_HEIGHT_NOLNET;
         defaultDropFactorForNetwork = HARDFORK_DROPFACTOR_NOLNET;
+    }
     else if (activeNetworkID == CBaseChainParams::BFGTEST) {
         minForkHeightForNetwork = HARDFORK_HEIGHT_BFGTEST;
         defaultDropFactorForNetwork = HARDFORK_DROPFACTOR_BFGTEST;
