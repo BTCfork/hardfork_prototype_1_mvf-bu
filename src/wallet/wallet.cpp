@@ -1051,6 +1051,7 @@ bool CWallet::BackupWalletAuto(const std::string& strDest, int BackupBlock)
     // check if backup from previous block exists
     boost::filesystem::path pathBackupWalletPrev = MVFexpandWalletAutoBackupPath(strDest, strWalletFile, BackupBlock-1, false);
     std::string strBackupFile = pathBackupWalletPrev.string();
+    LogPrintf("MVF: BackupWalletAuto: checking for existence of backup from previous block at location: %s\n",strBackupFile.c_str());
     if (boost::filesystem::exists(strBackupFile)) {
 		LogPrintf("MVF: Wallet was already backed on previous block: %s\n",strBackupFile);
         return true;

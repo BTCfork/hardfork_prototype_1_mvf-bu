@@ -279,6 +279,9 @@ void ActivateFork(int actualForkHeight, bool doBackup)
             // auto backup was already made pre-fork - emit parameters
             btcforkfile << "autobackupblock=" << GetArg("-autobackupblock", FinalActivateForkHeight - 1) << "\n";
             LogPrintf("%s: MVF: height-based auto backup block = %d\n", __func__, GetArg("-autobackupblock", FinalActivateForkHeight - 1));
+            fAutoBackupDone = true;  // added because otherwise backup can sometimes be re-done
+            // the above fAutoBackupDone omission never triggered a walletbackupauto test failure on MVF-BU,
+            // probably due to differences in block transmission - see PR#29 on MVF-C.O.R.E
         }
 
         // close fork parameter file

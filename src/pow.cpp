@@ -142,7 +142,7 @@ unsigned int GetMVFNextWorkRequired(const CBlockIndex* pindexLast, const CBlockH
             }
             return pindexLast->nBits;
         }
-        LogPrintf("MVF RETARGET");
+        LogPrintf("MVF RETARGET\n");
         return CalculateMVFNextWorkRequired(pindexLast, pindexFirst->GetBlockTime(), params);
 
     } // end fork reset
