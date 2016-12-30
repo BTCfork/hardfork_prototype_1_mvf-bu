@@ -176,6 +176,7 @@ void ForkSetup(const CChainParams& chainparams)
     LogPrintf("%s: MVF: active network = %s\n", __func__, activeNetworkID);
     LogPrintf("%s: MVF: active fork id = 0x%06x (%d)\n", __func__, FinalForkId, FinalForkId);
     LogPrintf("%s: MVF: active fork height = %d\n", __func__, FinalActivateForkHeight);
+    LogPrintf("%s: MVF: active difficulty drop factor = %u\n", __func__, FinalDifficultyDropFactor);
     if (GetBoolArg("-segwitfork", DEFAULT_TRIGGER_ON_SEGWIT))
         LogPrintf("%s: MVF: Segregated Witness trigger is ENABLED\n", __func__);
     else
@@ -274,6 +275,9 @@ void ActivateFork(int actualForkHeight, bool doBackup)
             // auto backup was already made pre-fork - emit parameters
             btcforkfile << "autobackupblock=" << GetArg("-autobackupblock", FinalActivateForkHeight - 1) << "\n";
             LogPrintf("%s: MVF: height-based auto backup block = %d\n", __func__, GetArg("-autobackupblock", FinalActivateForkHeight - 1));
+            fAutoBackupDone = true;  // added because otherwise backup can sometimes be re-done
+            // the above fAutoBackupDone omission never triggered a walletbackupauto test failure on MVF-BU,
+            // probably due to differences in block transmission - see PR#29 on MVF-C.O.R.E
         }
 
         // close fork parameter file
