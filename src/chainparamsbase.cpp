@@ -15,12 +15,14 @@ const std::string CBaseChainParams::MAIN = "main";
 const std::string CBaseChainParams::UNL = "nol";
 const std::string CBaseChainParams::TESTNET = "test";
 const std::string CBaseChainParams::REGTEST = "regtest";
+const std::string CBaseChainParams::BFGTEST = "bfgtest";  // MVF-BU
 
 void AppendParamsHelpMessages(std::string& strUsage, bool debugHelp)
 {
     strUsage += HelpMessageGroup(_("Chain selection options:"));
     strUsage += HelpMessageOpt("-testnet", _("Use the test chain"));
     strUsage += HelpMessageOpt("-chain_nol", _("Use the no-limit blockchain"));
+    strUsage += HelpMessageOpt("-bfgtest", _("Use the btcforks genesis test chain"));  // MVF-BU
     if (debugHelp) {
         strUsage += HelpMessageOpt("-regtest", "Enter regression test mode, which uses a special chain in which blocks can be solved instantly. "
                                    "This is intended for regression testing tools and app development.");
@@ -53,6 +55,22 @@ public:
     }
 };
 static CBaseUnlParams unlParams;
+
+// MVF-BU begin
+/**
+ * BFG network
+ */
+class CBaseBFGTestParams : public CBaseChainParams
+{
+public:
+    CBaseBFGTestParams()
+    {
+        nRPCPort = 19887;
+        strDataDir = "bfgtest";
+    }
+};
+static CBaseBFGTestParams bfgTestParams;
+// MVF-BU end
 
 /**
  * Testnet (v3)
@@ -100,6 +118,10 @@ CBaseChainParams& BaseParams(const std::string& chain)
         return testNetParams;
     else if (chain == CBaseChainParams::REGTEST)
         return regTestParams;
+    // MVF-BU begin
+    else if (chain == CBaseChainParams::BFGTEST)
+        return bfgTestParams;
+    // MVF-BU end
     else
         throw std::runtime_error(strprintf("%s: Unknown chain %s.", __func__, chain));
 }
@@ -114,6 +136,7 @@ std::string ChainNameFromCommandLine()
     bool fRegTest = GetBoolArg("-regtest", false);
     bool fTestNet = GetBoolArg("-testnet", false);
     bool fUnl = GetBoolArg("-chain_nol", false);
+    bool fBFGTest = GetBoolArg("-bfgtest", false);  // MVF-BU
 
     if (fTestNet && fRegTest)
         throw std::runtime_error("Invalid combination of -regtest and -testnet.");
@@ -123,6 +146,10 @@ std::string ChainNameFromCommandLine()
         return CBaseChainParams::TESTNET;
     if (fUnl)
         return CBaseChainParams::UNL;
+    // MVF-BU begin
+    if (fBFGTest)
+        return CBaseChainParams::BFGTEST;
+    // MVF-BU end
     return CBaseChainParams::MAIN;
 }
 

@@ -21,6 +21,7 @@ public:
     static const std::string UNL;
     static const std::string TESTNET;
     static const std::string REGTEST;
+    static const std::string BFGTEST;  // MVF-BU
 
     const std::string& DataDir() const { return strDataDir; }
     int RPCPort() const { return nRPCPort; }

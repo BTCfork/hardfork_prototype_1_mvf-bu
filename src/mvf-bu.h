@@ -48,6 +48,7 @@ HARDFORK_HEIGHT_MAINNET =  666666,   // operational network trigger height
 HARDFORK_HEIGHT_TESTNET = 9999999,   // public test network trigger height
 HARDFORK_HEIGHT_NOLNET  = 8888888,   // BU public no-limit test network  trigger height
 HARDFORK_HEIGHT_REGTEST = 9999999,   // regression test network (local)  trigger height
+HARDFORK_HEIGHT_BFGTEST = 9999999,   // btcforks genesis test network trigger height
 
 // MVHF-BU-DES-DIAD-3 / MVHF-BU-DES-DIAD-4
 // period (in blocks) from fork activation until retargeting returns to normal
@@ -59,6 +60,7 @@ HARDFORK_DROPFACTOR_MAINNET = 100000,  // default difficulty drop on operational
 HARDFORK_DROPFACTOR_TESTNET = 10000,   // default difficulty drop on public test network (testnet)
 HARDFORK_DROPFACTOR_NOLNET = 10000,    // default difficulty drop on BU public no-limit test network (nolnet)
 HARDFORK_DROPFACTOR_REGTEST = 4,       // default difficulty drop on local regression test network (regtestnet)
+HARDFORK_DROPFACTOR_BFGTEST = 1000,    // default difficulty drop on btcforks genesis test network (bfgtest)
 
 // MVHF-BU-DES-NSEP-1 - network separation parameter defaults
 // MVF-BU TODO: re-check that these port values could be used
@@ -67,6 +69,7 @@ HARDFORK_PORT_MAINNET = 9442,        // default post-fork port on operational ne
 HARDFORK_PORT_TESTNET = 9443,        // default post-fork port on public test network (testnet)
 HARDFORK_PORT_NOLNET  = 9444,        // default post-fork port on BU public no-limit test network (nolnet)
 HARDFORK_PORT_REGTEST = 19555,       // default post-fork port on local regression test network (regtestnet)
+HARDFORK_PORT_BFGTEST = 19988,       // default post-fork port on btcforks genesis test network (bfgtest)
 
 // MVHF-BU-DES-CSIG-1 - signature change parameter defaults
 // must be hex numerals (0x prefix) since they are read in and converted from hex by Python test framework
@@ -93,6 +96,7 @@ static const CMessageHeader::MessageStartChars pchMessageStart_HardForkMainnet  
 static const uint256 HARDFORK_POWRESET_MAINNET = uint256S("00007fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),  // mainnet
                      HARDFORK_POWRESET_TESTNET = uint256S("007fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),  // testnet
                      HARDFORK_POWRESET_NOLNET  = uint256S("3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),  // nolnet
+                     HARDFORK_POWRESET_BFGTEST = uint256S("007fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),  // bfgtest
                      HARDFORK_POWRESET_REGTEST = uint256S("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");  // regtestnet
 
 // MVHF-BU-DES-DIAD-? -force-retarget option determines  whether to actively retarget on regtest after fork happens
