@@ -1,6 +1,7 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2015 The Bitcoin Core developers
 // Copyright (c) 2015-2016 The Bitcoin Unlimited developers
+// Copyright (c) 2016 The Bitcoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -12,6 +13,7 @@
 #include "primitives/transaction.h"
 #include "script/standard.h"
 #include "uint256.h"
+#include "mvf-bu-globals.h"  // MVF-BU added
 
 #include <boost/foreach.hpp>
 
@@ -27,7 +29,13 @@ bool TransactionSignatureCreator::CreateSig(std::vector<unsigned char>& vchSig, 
     if (!keystore->GetKey(address, key))
         return false;
 
-    uint256 hash = SignatureHash(scriptCode, *txTo, nIn, nHashType);
+    // MVF-BU begin CSIG
+    uint256 hash;
+    if (isMVFHardForkActive)
+        hash = SignatureHash(scriptCode, *txTo, nIn, nHashType, FinalForkId);
+    else
+        hash = SignatureHash(scriptCode, *txTo, nIn, nHashType);
+    // MVF-BU end
     if (!key.Sign(hash, vchSig))
         return false;
     vchSig.push_back((unsigned char)nHashType);

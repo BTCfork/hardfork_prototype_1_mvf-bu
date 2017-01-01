@@ -26,7 +26,7 @@ from .authproxy import AuthServiceProxy, JSONRPCException
 COVERAGE_DIR = None
 
 # MVF-BU begin read regtest fork params from C files
-_mvf_common_h_fh = open('src/mvf-bu.h', 'rt')
+_mvf_common_h_fh = open('src/mvf-bu-globals.h', 'rt')
 _mvf_common_h_contents = _mvf_common_h_fh.read()
 _mvf_common_h_fh.close()
 
