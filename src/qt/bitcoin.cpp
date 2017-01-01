@@ -666,7 +666,10 @@ int main(int argc, char *argv[])
         app.createSplashScreen(networkStyle.data());
 
     UnlimitedSetup();
-    ForkSetup(Params());  // MVF-BU
+    // MVF-BU begin
+    if (!ForkSetup(Params()))
+        StartShutdown();
+    // MVF-BU end
 
     try
     {

@@ -19,43 +19,6 @@
 
 using namespace std;
 
-// key-value maps for btcfork.conf configuration items
-map<string, string> btcforkMapArgs;
-map<string, vector<string> > btcforkMapMultiArgs;
-
-// version string identifying the consensus-relevant algorithmic changes
-// so that a user can quickly see if MVF fork clients are compatible
-// for test purposes (since they may diverge during development/testing).
-// A new value must be chosen whenever there are changes to consensus
-// relevant functionality (excepting things which are parameterized).
-// Values are surnames chosen from the name list of space travelers at
-// https://en.wikipedia.org/wiki/List_of_space_travelers_by_name
-std::string post_fork_consensus_id = "YAMAZAKI";
-
-// actual fork height, taking into account user configuration parameters (MVHF-BU-DES-TRIG-4)
-int FinalActivateForkHeight = 0;
-
-// actual difficulty drop factor, taking into account user configuration parameters (MVF-BU TODO: MVHF-BU-DES-DIAD-?)
-unsigned FinalDifficultyDropFactor = 0;
-
-// actual fork id, taking into account user configuration parameters (MVHF-BU-DES-CSIG-1)
-int FinalForkId = 0;
-
-// track whether HF has been activated before in previous run (MVHF-BU-DES-TRIG-5)
-// is set at startup based on btcfork.conf presence
-bool wasMVFHardForkPreviouslyActivated = false;
-
-// track whether HF is active (MVHF-BU-DES-TRIG-5)
-bool isMVFHardForkActive = false;
-
-// track whether auto wallet backup might still need to be done
-// this is set to true at startup if client detects fork already triggered
-// otherwise when the backup is made. (MVHF-BU-DES-WABU-1)
-bool fAutoBackupDone = false;
-
-// default suffix to append to wallet filename for auto backup (MVHF-BU-DES-WABU-1)
-std::string autoWalletBackupSuffix = "auto.@.bak";
-
 
 /** Add MVF-specific command line options (MVHF-BU-DES-TRIG-8) */
 std::string ForkCmdLineHelp()
@@ -80,7 +43,7 @@ std::string ForkCmdLineHelp()
 
 
 /** Performs fork-related setup / validation actions when the program starts */
-void ForkSetup(const CChainParams& chainparams)
+bool ForkSetup(const CChainParams& chainparams)
 {
     int minForkHeightForNetwork = 0;
     unsigned defaultDropFactorForNetwork = 1;
@@ -156,12 +119,12 @@ void ForkSetup(const CChainParams& chainparams)
     if (FinalActivateForkHeight <= 0)
     {
         LogPrintf("MVF: Error: specified fork height (%d) is less than minimum for '%s' network (%d)\n", FinalActivateForkHeight, activeNetworkID, minForkHeightForNetwork);
-        StartShutdown();
+        return false;  // caller should shut down
     }
 
     if (FinalDifficultyDropFactor < 1 || FinalDifficultyDropFactor > MAX_HARDFORK_DROPFACTOR) {
         LogPrintf("MVF: Error: specified difficulty drop (%u) is not in range 1..%u\n", FinalDifficultyDropFactor, (unsigned)MAX_HARDFORK_DROPFACTOR);
-        StartShutdown();
+        return false;  // caller should shut down
     }
 
     // check fork id for validity (MVHF-BU-DES-CSIG-2)
@@ -171,7 +134,7 @@ void ForkSetup(const CChainParams& chainparams)
     else {
         if (FinalForkId < 0 || FinalForkId > MAX_HARDFORK_SIGHASH_ID) {
             LogPrintf("MVF: Error: specified fork id (%d) is not in range 0..%u\n", FinalForkId, (unsigned)MAX_HARDFORK_SIGHASH_ID);
-            StartShutdown();
+            return false;  // caller should shut down
         }
     }
 
@@ -194,6 +157,8 @@ void ForkSetup(const CChainParams& chainparams)
 
     // we should always set the activation flag to false during setup
     isMVFHardForkActive = false;
+
+    return true;
 }
 
 /** Return full path to btcfork.conf (MVHF-BU-DES-?-?) */

@@ -1,6 +1,7 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2015 The Bitcoin Core developers
 // Copyright (c) 2015-2016 The Bitcoin Unlimited developers
+// Copyright (c) 2016 The Bitcoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -13,6 +14,7 @@
 #include "pubkey.h"
 #include "script/script.h"
 #include "uint256.h"
+#include "mvf-bu-globals.h"  // MVF-BU added
 
 using namespace std;
 
@@ -1107,7 +1109,9 @@ public:
 
 } // anon namespace
 
-uint256 SignatureHash(const CScript& scriptCode, const CTransaction& txTo, unsigned int nIn, int nHashType)
+// MVF-BU begin extend function signature with nChainId
+uint256 SignatureHash(const CScript& scriptCode, const CTransaction& txTo, unsigned int nIn, int nHashType, unsigned int nChainId)
+// MVF-BU end
 {
     static const uint256 one(uint256S("0000000000000000000000000000000000000000000000000000000000000001"));
     if (nIn >= txTo.vin.size()) {
@@ -1128,7 +1132,9 @@ uint256 SignatureHash(const CScript& scriptCode, const CTransaction& txTo, unsig
 
     // Serialize and hash
     CHashWriter ss(SER_GETHASH, 0);
-    ss << txTmp << nHashType;
+    // MVF-BU begin: apply the active forkid if we're hashing to produce a signature
+    ss << txTmp << ((nChainId << 1) | nHashType);
+    // MVF-BU end
     return ss.GetHash();
 }
 
@@ -1152,9 +1158,21 @@ bool TransactionSignatureChecker::CheckSig(const vector<unsigned char>& vchSigIn
 
     uint256 sighash = SignatureHash(scriptCode, *txTo, nIn, nHashType);
 
-    if (!VerifySignature(vchSig, pubkey, sighash))
-        return false;
-
+    // MVF-BU begin CSIG
+    uint256 sighash0 = SignatureHash(scriptCode, *txTo, nIn, nHashType);
+    if (isMVFHardForkActive) {
+        uint256 sighash1 = SignatureHash(scriptCode, *txTo, nIn, nHashType, FinalForkId);
+        // MVF-BU CSIG TODO: remove the commented out code if we decide we do
+        // not need to accept old-style signatures at all after the fork
+        //if (!VerifySignature(vchSig, pubkey, sighash0) && !VerifySignature(vchSig, pubkey, sighash1))
+        if (!VerifySignature(vchSig, pubkey, sighash1))
+            return false;
+    }
+    else {
+        if (!VerifySignature(vchSig, pubkey, sighash0))
+            return false;
+    }
+    // MVF-BU end
     return true;
 }
 
