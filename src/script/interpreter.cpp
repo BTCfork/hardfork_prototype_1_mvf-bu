@@ -1156,8 +1156,6 @@ bool TransactionSignatureChecker::CheckSig(const vector<unsigned char>& vchSigIn
     int nHashType = vchSig.back();
     vchSig.pop_back();
 
-    uint256 sighash = SignatureHash(scriptCode, *txTo, nIn, nHashType);
-
     // MVF-BU begin CSIG
     uint256 sighash0 = SignatureHash(scriptCode, *txTo, nIn, nHashType);
     if (isMVFHardForkActive) {
