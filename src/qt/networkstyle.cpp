@@ -18,6 +18,7 @@ static const struct {
 } network_styles[] = {
     {"main", QAPP_APP_NAME_DEFAULT, 0, 0, ""},
     {"test", QAPP_APP_NAME_TESTNET, 70, 30, QT_TRANSLATE_NOOP("SplashScreen", "[testnet]")},
+    {"bfgtest", QAPP_APP_NAME_BFGTEST, 70, 30, QT_TRANSLATE_NOOP("SplashScreen", "[bfgtest]")},  // MVF-BU added  (MVF-BU TODO: reference to design)
     {"regtest", QAPP_APP_NAME_TESTNET, 160, 30, "[regtest]"}
 };
 static const unsigned network_styles_count = sizeof(network_styles)/sizeof(*network_styles);
