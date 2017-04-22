@@ -66,8 +66,8 @@ static int AppInitRawTx(int argc, char* argv[])
     {
         // First part of help message is specific to this utility
         std::string strUsage = _("Bitcoin MVF-BU bitcoin-tx utility version") + " " + FormatFullVersion() + "\n\n" +  // MVF-BU client name (MVHF-BU-DES-IDME-1)
-// bu-dev not merged yet, but contains changes, needs looking at
-//        std::string strUsage = strprintf(_("%s bitcoin-tx utility version"), _(PACKAGE_NAME)) + " " + FormatFullVersion() + "\n\n" +
+        // MVF-BU TODO: consider adapting back to use same format as BU
+        // std::string strUsage = strprintf(_("%s bitcoin-tx utility version"), _(PACKAGE_NAME)) + " " + FormatFullVersion() + "\n\n" +
             _("Usage:") + "\n" +
               "  bitcoin-tx [options] <hex-tx> [commands]  " + _("Update hex-encoded bitcoin transaction") + "\n" +
               "  bitcoin-tx [options] -create [commands]   " + _("Create hex-encoded bitcoin transaction") + "\n" +

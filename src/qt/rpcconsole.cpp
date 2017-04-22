@@ -555,8 +555,8 @@ void RPCConsole::clear(bool clearHistory)
         );
 
     message(CMD_REPLY, (tr("Welcome to the Bitcoin MVF-BU RPC console.") + "<br>" +  // MVF-BU (MVHF-BU-DES-IDME-2)
-// bu-dev not merged - needs looking at
-//    message(CMD_REPLY, (tr("Welcome to the %1 RPC console.").arg(tr(PACKAGE_NAME)) + "<br>" +
+    // MVF-BU TODO: use merged PACKAGE_NAME code below rather than hardcoded as above
+    //message(CMD_REPLY, (tr("Welcome to the %1 RPC console.").arg(tr(PACKAGE_NAME)) + "<br>" +
                         tr("Use up and down arrows to navigate history, and <b>Ctrl-L</b> to clear screen.") + "<br>" +
                         tr("Type <b>help</b> for an overview of available commands.")), true);
 }

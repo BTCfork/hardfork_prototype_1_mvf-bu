@@ -81,8 +81,8 @@ bool AppInit(int argc, char* argv[])
     if (mapArgs.count("-?") || mapArgs.count("-h") ||  mapArgs.count("-help") || mapArgs.count("-version"))
     {
         std::string strUsage = _("Bitcoin MVF-BU Daemon") + " " + _("version") + " " + FormatFullVersion() + "\n";  // MVF-BU client name (MVHF-BU-DES-IDME-1)
-// bu-dev not merged but contains changes - needs looking at
-//        std::string strUsage = strprintf(_("%s Daemon"), _(PACKAGE_NAME)) + " " + _("version") + " " + FormatFullVersion() + "\n";
+        // MVF-BU TODO: consider adapting back to support same format as BU
+        //std::string strUsage = strprintf(_("%s Daemon"), _(PACKAGE_NAME)) + " " + _("version") + " " + FormatFullVersion() + "\n";
 
         if (mapArgs.count("-version"))
         {
@@ -92,8 +92,8 @@ bool AppInit(int argc, char* argv[])
         {
             strUsage += "\n" + _("Usage:") + "\n" +
                   "  bitcoind [options]                     " + _("Start Bitcoin MVF-BU Daemon") + "\n";  // MVF-BU client name (MVHF-BU-DES-IDME-1)
-// bu-dev not merged but contains changes - needs looking at
-//                  "  bitcoind [options]                     " + strprintf(_("Start %s Daemon"), _(PACKAGE_NAME)) + "\n";
+        // MVF-BU TODO: consider adapting back to support same format as BU
+        //          "  bitcoind [options]                     " + strprintf(_("Start %s Daemon"), _(PACKAGE_NAME)) + "\n";
 
             strUsage += "\n" + HelpMessage(HMM_BITCOIND);
         }

@@ -94,8 +94,8 @@ static int AppInitRPC(int argc, char* argv[])
         if (!mapArgs.count("-version")) {
             strUsage += "\n" + _("Usage:") + "\n" +
                   "  bitcoin-cli [options] <command> [params]  " + _("Send command to Bitcoin") + "\n" +   // BU remove branding
+// MVF-BU TODO: consider using PACKAGE_NAME code below rather than hardcoded above
 /*
- // upstream BU code - not merged yet but contains changes - needs looking at
         std::string strUsage = strprintf(_("%s RPC client version"), _(PACKAGE_NAME)) + " " + FormatFullVersion() + "\n";
         if (!mapArgs.count("-version")) {
             strUsage += "\n" + _("Usage:") + "\n" +

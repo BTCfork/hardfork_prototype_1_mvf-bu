@@ -39,8 +39,8 @@ HelpMessageDialog::HelpMessageDialog(QWidget *parent, bool about) :
     ui->setupUi(this);
 
     QString version = tr("Bitcoin MVF-BU") + " " + tr("version") + " " + QString::fromStdString(FormatFullVersion());  // MVF-BU client name change (MVHF-BU-SW-REQ-11-1 / MVHF-BU-DES-IDME-2)
-// bu-dev not merged - needs looking at
-//    QString version = tr(PACKAGE_NAME) + " " + tr("version") + " " + QString::fromStdString(FormatFullVersion());
+    // MVF-BU TODO: use merged PACKAGE_NAME code below rather than hardcoded as above
+    //QString version = tr(PACKAGE_NAME) + " " + tr("version") + " " + QString::fromStdString(FormatFullVersion());
     /* On x86 add a bit specifier to the version so that users can distinguish between
      * 32 and 64 bit builds. On other architectures, 32/64 bit may be more ambigious.
      */
@@ -53,8 +53,8 @@ HelpMessageDialog::HelpMessageDialog(QWidget *parent, bool about) :
     if (about)
     {
         setWindowTitle(tr("About Bitcoin MVF-BU"));  // MVF-BU client name change (MVHF-BU-SW-REQ-11-1 / MVHF-BU-DES-IDME-2)
-// bu-dev not merged - needs looking at
-//        setWindowTitle(tr("About %1").arg(tr(PACKAGE_NAME)));
+        // MVF-BU TODO: use merged PACKAGE_NAME code below rather than hardcoded as above
+        //setWindowTitle(tr("About %1").arg(tr(PACKAGE_NAME)));
 
         /// HTML-format the license message from the core
         QString licenseInfo = QString::fromStdString(LicenseInfo());

@@ -49,7 +49,7 @@ SplashScreen::SplashScreen(Qt::WindowFlags f, const NetworkStyle *networkStyle) 
     QString copyrightUnlimited   = QChar(0xA9)+QString(" 2015-%1 ").arg(COPYRIGHT_YEAR) + QString(tr("The Bitcoin Unlimited developers"));
     QString copyrightBTCfork   = QChar(0xA9)+QString(" %1 ").arg(COPYRIGHT_YEAR) + QString(tr("The Bitcoin developers"));  // MVF-BU copyright (MVHF-BU-SW-REQ-11-1 / MVHF-BU-DES-IDME-2)
 
-// bu-dev not merged - needs looking at
+// MVF-BU TODO: for reference, the BU code (may adapt back to use common format later)
 /*
     QString titleText       = tr(PACKAGE_NAME);
     QString versionText     = QString("Version %1").arg(QString::fromStdString(FormatFullVersion()));
@@ -118,7 +118,7 @@ SplashScreen::SplashScreen(Qt::WindowFlags f, const NetworkStyle *networkStyle) 
     pixPaint.drawText(pixmap.width()/devicePixelRatio-titleTextWidth-paddingRight,paddingTop+2*titleCopyrightVSpaceUnlimited-titleCopyrightVSpaceCore,copyrightBTCfork);
     // MVF-BU end
 
-// bu-dev not merged - needs looking at
+// MVF-BU TODO: for reference, the BU code (may adapt back to use common format later)
 /* 
     {
         pixPaint.setFont(QFont(font, 10*fontFactor));

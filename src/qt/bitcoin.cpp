@@ -723,8 +723,8 @@ int main(int argc, char *argv[])
     if (!boost::filesystem::is_directory(GetDataDir(false)))
     {
         QMessageBox::critical(0, QObject::tr("Bitcoin MVF-BU"),  // MVF-BU client name change (MVHF-BU-SW-REQ-11-1 / MVHF-BU-DES-IDME-2)
-// bu-dev not merged - needs looking at
-//        QMessageBox::critical(0, QObject::tr(PACKAGE_NAME),
+        // MVF-BU TODO: use merged PACKAGE_NAME code below rather than hardcoded as above
+        // QMessageBox::critical(0, QObject::tr(PACKAGE_NAME),
                               QObject::tr("Error: Specified data directory \"%1\" does not exist.").arg(QString::fromStdString(mapArgs["-datadir"])));
         return EXIT_FAILURE;
     }
@@ -732,8 +732,8 @@ int main(int argc, char *argv[])
         ReadConfigFile(mapArgs, mapMultiArgs);
     } catch (const std::exception& e) {
         QMessageBox::critical(0, QObject::tr("Bitcoin MVF-BU"),  // MVF-BU client name change (MVHF-BU-SW-REQ-11-1 / MVHF-BU-DES-IDME-2)
-// bu-dev not merged - needs looking at
-//        QMessageBox::critical(0, QObject::tr(PACKAGE_NAME),
+        // MVF-BU TODO: use merged PACKAGE_NAME code below rather than hardcoded as above
+        //QMessageBox::critical(0, QObject::tr(PACKAGE_NAME),
                               QObject::tr("Error: Cannot parse configuration file: %1. Only use key=value syntax.").arg(e.what()));
         return EXIT_FAILURE;
     }
@@ -749,9 +749,8 @@ int main(int argc, char *argv[])
         SelectParams(ChainNameFromCommandLine());
     } catch(std::exception &e) {
         QMessageBox::critical(0, QObject::tr("Bitcoin MVF-BU"), QObject::tr("Error: %1").arg(e.what()));  // MVF-BU client name change (MVHF-BU-SW-REQ-11-1 / MVHF-BU-DES-IDME-2)
-//        return 1;
-// bu-dev not merged - needs looking at
-//        QMessageBox::critical(0, QObject::tr(PACKAGE_NAME), QObject::tr("Error: %1").arg(e.what()));
+        // MVF-BU TODO: use merged PACKAGE_NAME code below rather than hardcoded as above
+        // QMessageBox::critical(0, QObject::tr(PACKAGE_NAME), QObject::tr("Error: %1").arg(e.what()));
         return EXIT_FAILURE;
     }
 #ifdef ENABLE_WALLET
@@ -817,8 +816,8 @@ int main(int argc, char *argv[])
         app.requestInitialize();
 #if defined(Q_OS_WIN) && QT_VERSION >= 0x050000
         WinShutdownMonitor::registerShutdownBlockReason(QObject::tr("Bitcoin MVF-BU didn't yet exit safely..."), (HWND)app.getMainWinId());  // MVF-BU client name change (MVHF-BU-SW-REQ-11-1 / MVHF-BU-DES-IDME-2)
-// bu-dev not merged - needs looking at
-//        WinShutdownMonitor::registerShutdownBlockReason(QObject::tr("%1 didn't yet exit safely...").arg(QObject::tr(PACKAGE_NAME)), (HWND)app.getMainWinId());
+        // MVF-BU TODO: use merged PACKAGE_NAME code below rather than hardcoded as above
+        //WinShutdownMonitor::registerShutdownBlockReason(QObject::tr("%1 didn't yet exit safely...").arg(QObject::tr(PACKAGE_NAME)), (HWND)app.getMainWinId());
 #endif
         app.exec();
         app.requestShutdown();
