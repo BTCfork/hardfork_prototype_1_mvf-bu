@@ -27,7 +27,7 @@ What is Bitcoin Unlimited?
 Bitcoin Unlimited is an implementation of the Bitcoin client software that is based on Bitcoin Core.
 However, Bitcoin Unlimited has a very different philosophy than Core.
 
-It follows a philosophy and is administered by a formal process described in the [Articles of Federation](http://www.bitcoinunlimited.info/resources/BUarticles.pdf).
+It follows a philosophy and is administered by a formal process described in the [Articles of Federation](https://www.bitcoinunlimited.info/resources/BUarticles.pdf).
 In short, we believe in market-driven decision making, emergent consensus, and giving our users choices.
 
 Quick installation Instructions
@@ -51,7 +51,7 @@ sudo apt-get install libqt4-dev libprotobuf-dev protobuf-compiler libqrencode-de
 sudo apt-get install software-properties-common
 
 ## this not needed if your wallet will use the new
-## format, ot if you're not going to use a wallet at all
+## format, or if you're not going to use a wallet at all
 sudo add-apt-repository ppa:bitcoin-unlimited/bu-ppa
 sudo apt-get update
 sudo apt-get install libdb4.8-dev libdb4.8++-dev
@@ -60,6 +60,7 @@ mkdir -p ~/src
 cd ~/src
 git clone https://github.com/BitcoinUnlimited/BitcoinUnlimited.git bu-src
 cd bu-src
+git checkout release
 ./autogen.sh
 ./configure
 make

@@ -3,16 +3,20 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#if defined(HAVE_CONFIG_H)
+#include "config/bitcoin-config.h"
+#endif
+
 #include "chainparams.h"
 #include "clientversion.h"
-#include "rpcserver.h"
+#include "rpc/server.h"
 #include "init.h"
 #include "noui.h"
 #include "scheduler.h"
 #include "util.h"
 #include "httpserver.h"
 #include "httprpc.h"
-#include "rpcserver.h"
+#include "utilstrencodings.h"
 #include "unlimited.h"
 #include "mvf-bu.h"  // MVF-BU
 
@@ -77,21 +81,25 @@ bool AppInit(int argc, char* argv[])
     if (mapArgs.count("-?") || mapArgs.count("-h") ||  mapArgs.count("-help") || mapArgs.count("-version"))
     {
         std::string strUsage = _("Bitcoin MVF-BU Daemon") + " " + _("version") + " " + FormatFullVersion() + "\n";  // MVF-BU client name (MVHF-BU-DES-IDME-1)
+// bu-dev not merged but contains changes - needs looking at
+//        std::string strUsage = strprintf(_("%s Daemon"), _(PACKAGE_NAME)) + " " + _("version") + " " + FormatFullVersion() + "\n";
 
         if (mapArgs.count("-version"))
         {
-            strUsage += LicenseInfo();
+            strUsage += FormatParagraph(LicenseInfo());
         }
         else
         {
             strUsage += "\n" + _("Usage:") + "\n" +
                   "  bitcoind [options]                     " + _("Start Bitcoin MVF-BU Daemon") + "\n";  // MVF-BU client name (MVHF-BU-DES-IDME-1)
+// bu-dev not merged but contains changes - needs looking at
+//                  "  bitcoind [options]                     " + strprintf(_("Start %s Daemon"), _(PACKAGE_NAME)) + "\n";
 
             strUsage += "\n" + HelpMessage(HMM_BITCOIND);
         }
 
         fprintf(stdout, "%s", strUsage.c_str());
-        return false;
+        return true;
     }
 
     try
@@ -125,7 +133,7 @@ bool AppInit(int argc, char* argv[])
         if (fCommandLine)
         {
             fprintf(stderr, "Error: There is no RPC client functionality in bitcoind anymore. Use the bitcoin-cli utility instead.\n");
-            exit(1);
+            return false;
         }
 #ifndef WIN32
         fDaemon = GetBoolArg("-daemon", false);
@@ -169,7 +177,7 @@ bool AppInit(int argc, char* argv[])
     }
 
     UnlimitedSetup();
-    
+
     if (!fRet)
     {
         Interrupt(threadGroup);
@@ -191,5 +199,5 @@ int main(int argc, char* argv[])
     // Connect bitcoind signal handlers
     noui_connect();
 
-    return (AppInit(argc, argv) ? 0 : 1);
+    return (AppInit(argc, argv) ? EXIT_SUCCESS : EXIT_FAILURE);
 }

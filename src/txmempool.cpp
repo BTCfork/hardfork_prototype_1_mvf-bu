@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2015 The Bitcoin Core developers
-// Copyright (c) 2015-2016 The Bitcoin Unlimited developers
+// Copyright (c) 2015-2017 The Bitcoin Unlimited developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -66,6 +66,12 @@ void CTxMemPoolEntry::UpdateFeeDelta(int64_t newFeeDelta)
 void CTxMemPoolEntry::UpdateLockPoints(const LockPoints& lp)
 {
     lockPoints = lp;
+}
+
+void CTxMemPoolEntry::UpdateRuntimeSigOps(uint64_t _runtimeSigOpCount, uint64_t _runtimeSighashBytes)
+{
+    runtimeSigOpCount = _runtimeSigOpCount;
+    runtimeSighashBytes = _runtimeSighashBytes;
 }
 
 // Update the given tx for any in-mempool descendants.
@@ -878,9 +884,9 @@ void CTxMemPool::RemoveStaged(setEntries &stage) {
 
 int CTxMemPool::Expire(int64_t time) {
     LOCK(cs);
-    indexed_transaction_set::nth_index<2>::type::iterator it = mapTx.get<2>().begin();
+    indexed_transaction_set::index<entry_time>::type::iterator it = mapTx.get<entry_time>().begin();
     setEntries toremove;
-    while (it != mapTx.get<2>().end() && it->GetTime() < time) {
+    while (it != mapTx.get<entry_time>().end() && it->GetTime() < time) {
         toremove.insert(mapTx.project<0>(it));
         it++;
     }
@@ -976,7 +982,7 @@ void CTxMemPool::TrimToSize(size_t sizelimit, std::vector<uint256>* pvNoSpendsRe
     unsigned nTxnRemoved = 0;
     CFeeRate maxFeeRateRemoved(0);
     while (DynamicMemoryUsage() > sizelimit) {
-        indexed_transaction_set::nth_index<1>::type::iterator it = mapTx.get<1>().begin();
+        indexed_transaction_set::index<descendant_score>::type::iterator it = mapTx.get<descendant_score>().begin();
 
         // We set the new mempool min fee to the feerate of the removed set, plus the
         // "minimum reasonable fee rate" (ie some value under which we consider txn
@@ -1018,6 +1024,8 @@ void CTxMemPool::TrimToSize(size_t sizelimit, std::vector<uint256>* pvNoSpendsRe
 // BU: begin
 void CTxMemPool::UpdateTransactionsPerSecond()
 {
+    boost::mutex::scoped_lock lock(cs_txPerSec);
+
     static int64_t nLastTime = GetTime();
     double nSecondsToAverage = 60; // Length of time in seconds to smooth the tx rate over
     int64_t nNow = GetTime();

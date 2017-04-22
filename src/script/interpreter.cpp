@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2015 The Bitcoin Core developers
-// Copyright (c) 2015-2016 The Bitcoin Unlimited developers
+// Copyright (c) 2015-2017 The Bitcoin Unlimited developers
 // Copyright (c) 2016 The Bitcoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -1110,7 +1110,7 @@ public:
 } // anon namespace
 
 // MVF-BU begin extend function signature with nChainId
-uint256 SignatureHash(const CScript& scriptCode, const CTransaction& txTo, unsigned int nIn, int nHashType, unsigned int nChainId)
+uint256 SignatureHash(const CScript &scriptCode, const CTransaction& txTo, unsigned int nIn, int nHashType, size_t* nHashedOut, unsigned int nChainId)
 // MVF-BU end
 {
     static const uint256 one(uint256S("0000000000000000000000000000000000000000000000000000000000000001"));
@@ -1135,6 +1135,8 @@ uint256 SignatureHash(const CScript& scriptCode, const CTransaction& txTo, unsig
     // MVF-BU begin: apply the active forkid if we're hashing to produce a signature
     ss << txTmp << ((nChainId << 1) | nHashType);
     // MVF-BU end
+    if (nHashedOut != NULL)
+        *nHashedOut = ss.GetNumBytesHashed();
     return ss.GetHash();
 }
 
@@ -1156,10 +1158,13 @@ bool TransactionSignatureChecker::CheckSig(const vector<unsigned char>& vchSigIn
     int nHashType = vchSig.back();
     vchSig.pop_back();
 
+    size_t nHashed = 0;
     // MVF-BU begin CSIG
-    uint256 sighash0 = SignatureHash(scriptCode, *txTo, nIn, nHashType);
+    uint256 sighash0 = SignatureHash(scriptCode, *txTo, nIn, nHashType, &nHashed);
+    nBytesHashed += nHashed;
+    ++nSigops;
     if (isMVFHardForkActive) {
-        uint256 sighash1 = SignatureHash(scriptCode, *txTo, nIn, nHashType, FinalForkId);
+        uint256 sighash1 = SignatureHash(scriptCode, *txTo, nIn, nHashType, &nHashed, FinalForkId);
         // MVF-BU CSIG TODO: remove the commented out code if we decide we do
         // not need to accept old-style signatures at all after the fork
         //if (!VerifySignature(vchSig, pubkey, sighash0) && !VerifySignature(vchSig, pubkey, sighash1))

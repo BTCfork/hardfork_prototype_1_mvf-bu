@@ -117,3 +117,7 @@ share/BitcoindComparisonTool.jar
 
 libbitcoinconsensus.pc
 /Debug/
+
+# IDE files
+*.sublime-project
+*.sublime-workspace

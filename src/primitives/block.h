@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2015 The Bitcoin Core developers
-// Copyright (c) 2015-2016 The Bitcoin Unlimited developers
+// Copyright (c) 2015-2017 The Bitcoin Unlimited developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -87,6 +87,7 @@ public:
         // 0.11: mutable std::vector<uint256> vMerkleTree;
     mutable bool fChecked;
     mutable bool fExcessive;  // BU: is the block "excessive" (bigger than this node prefers to accept)
+    mutable uint64_t nBlockSize; // BU: length of this block in bytes
 
     CBlock()
     {
@@ -121,6 +122,18 @@ public:
         READWRITE(vtx);
     }
 
+    uint64_t GetHeight() const  // Returns the block's height as specified in its coinbase transaction
+    {
+      const CScript& sig = vtx[0].vin[0].scriptSig;
+      int numlen = sig[0];
+      if (numlen == OP_0) return 0;
+      if ((numlen >= OP_1) && (numlen <= OP_16)) return numlen-OP_1+1;
+      std::vector<unsigned char> heightScript(numlen);
+      copy(sig.begin()+1, sig.begin()+1+numlen,heightScript.begin());
+      CScriptNum coinbaseHeight(heightScript, false,numlen);
+      return coinbaseHeight.getint();
+    }
+    
     void SetNull()
     {
         CBlockHeader::SetNull();
@@ -128,6 +141,7 @@ public:
         // vMerkleTree.clear();
         fChecked = false;
         fExcessive = false;
+        nBlockSize = 0;
     }
 
     CBlockHeader GetBlockHeader() const

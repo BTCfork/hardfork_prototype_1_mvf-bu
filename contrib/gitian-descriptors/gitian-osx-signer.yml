@@ -32,9 +32,11 @@ script: |
   SIGNED=bitcoinUnlimited-osx-signed.dmg
 
   tar -xf ${UNSIGNED}
+  OSX_VOLNAME="$(cat osx_volname)"
   ./detached-sig-apply.sh ${UNSIGNED} signature/osx
   # // MVF-BU begin change client name (MVHF-BU-DES-IDME-6)
   # // MVF-BU included fix for diskimages needing 0755 folder permissions (Core:83d6d2870fb25fc25ce20b2288a124d937bbcc69)
   ${WRAP_DIR}/genisoimage -no-cache-inodes -D -l -probe -V "Bitcoin-MVF-BU" -no-pad -r -dir-mode 0755 -apple -o uncompressed.dmg signed-app
   # // MVF-BU end
+  # bu-dev: ${WRAP_DIR}/genisoimage -no-cache-inodes -D -l -probe -V "${OSX_VOLNAME}" -no-pad -r -apple -o uncompressed.dmg signed-app
   ${WRAP_DIR}/dmg dmg uncompressed.dmg ${OUTDIR}/${SIGNED}

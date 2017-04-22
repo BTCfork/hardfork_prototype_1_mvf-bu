@@ -1,9 +1,8 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # Copyright (c) 2016 The Bitcoin Core developers
-# Copyright (c) 2016 The Bitcoin Unlimited developers
+# Copyright (c) 2016-2017 The Bitcoin Unlimited developers
 # Distributed under the MIT/X11 software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
-#
 
 from test_framework.mininode import *
 from test_framework.test_framework import BitcoinTestFramework
@@ -83,7 +82,7 @@ class VersionBitsWarningTest(BitcoinTestFramework):
         block_time = self.nodes[0].getblockheader(tip)["time"]+1
         tip = int(tip, 16)
 
-        for i in xrange(numblocks):
+        for i in range(numblocks):
             block = create_block(tip, create_coinbase(height+1), block_time)
             block.nVersion = nVersionToUse
             block.solve()
@@ -113,27 +112,37 @@ class VersionBitsWarningTest(BitcoinTestFramework):
 
         # 1. Have the node mine one period worth of blocks
         self.nodes[0].generate(VB_PERIOD)
+        assert(self.nodes[0].getblockcount() ==  144)
 
         # 2. Now build one period of blocks on the tip, with < VB_THRESHOLD
         # blocks signaling some unknown bit.
         nVersion = VB_TOP_BITS | (1<<VB_UNKNOWN_BIT)
-        self.send_blocks_with_version(test_node, VB_THRESHOLD-1, nVersion)
+        for i in range(VB_THRESHOLD-1):
+            self.send_blocks_with_version(test_node, 1, nVersion)
+            test_node.sync_with_ping()
+        assert(self.nodes[0].getblockcount() ==  251)
 
         # Fill rest of period with regular version blocks
         self.nodes[0].generate(VB_PERIOD - VB_THRESHOLD + 1)
         # Check that we're not getting any versionbit-related errors in
         # getinfo()
         assert(not self.vb_pattern.match(self.nodes[0].getinfo()["errors"]))
-
+        assert(self.nodes[0].getblockcount() ==  288)
+ 
         # 3. Now build one period of blocks with >= VB_THRESHOLD blocks signaling
         # some unknown bit
-        self.send_blocks_with_version(test_node, VB_THRESHOLD, nVersion)
+        for i in range(VB_THRESHOLD):
+            self.send_blocks_with_version(test_node, 1, nVersion)
+            test_node.sync_with_ping()
+           # time.sleep(0.05)
+        assert(self.nodes[0].getblockcount() ==  396)
         self.nodes[0].generate(VB_PERIOD - VB_THRESHOLD)
         # Might not get a versionbits-related alert yet, as we should
         # have gotten a different alert due to more than 51/100 blocks
         # being of unexpected version.
         # Check that getinfo() shows some kind of error.
         assert(len(self.nodes[0].getinfo()["errors"]) != 0)
+        assert(self.nodes[0].getblockcount() ==  432)
 
         # Mine a period worth of expected blocks so the generic block-version warning
         # is cleared, and restart the node. This should move the versionbit state
@@ -149,6 +158,7 @@ class VersionBitsWarningTest(BitcoinTestFramework):
         # Connecting one block should be enough to generate an error.
         self.nodes[0].generate(1)
         assert(len(self.nodes[0].getinfo()["errors"]) != 0)
+        assert(self.nodes[0].getblockcount() ==  577)
         stop_node(self.nodes[0], 0)
         wait_bitcoinds()
         self.test_versionbits_in_alert_file()
