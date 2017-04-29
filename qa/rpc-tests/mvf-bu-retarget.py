@@ -23,7 +23,15 @@ ORIGINAL_DIFFADJINTERVAL = 2016      # the original difficulty adjustment interv
 STANDARD_BLOCKTIME = 600             # the standard target seconds for a block
 
 def CalculateMVFNextWorkRequired(bits, actualBlockTimeSecs, targetBlockTimeSecs):
-    # Returns difficulty using the fork reset formula in pow.cpp:CalculateMVFNextWorkRequired()
+    """
+    Returns difficulty (as integer representing bit string)
+    using the fork reset formula in pow.cpp:CalculateMVFNextWorkRequired()
+
+    >>> CalculateMVFNextWorkRequired(b'1d00d86a', 600, 600)
+    486594665
+    >>> CalculateMVFNextWorkRequired(b'207fffff', 600, 600)
+    545259518
+    """
 
     bnPowLimit = bits2target_int(hex2bin(int2hex(POW_LIMIT))) # MVF-BU moved here
 
@@ -51,11 +59,11 @@ def CalculateMVFNextWorkRequired(bits, actualBlockTimeSecs, targetBlockTimeSecs)
     bnOld = bits2target_int(hex2bin(bits))     # SetCompact
     # MVF-BU begin: move division before multiplication
     # at regtest difficulty, the multiplication is prone to overflowing
-    bnNew1 = bnOld / nTargetTimespan
+    bnNew1 = bnOld // nTargetTimespan
     bnNew2 = bnNew1 * nActualTimespan
 
     # Test for overflow
-    if (bnNew2 / nActualTimespan != bnNew1 or bnNew2 > bnPowLimit):
+    if (bnNew2 // nActualTimespan != bnNew1 or bnNew2 > bnPowLimit):
         bnNew = bnPowLimit
     else :
         bnNew = bnNew2
@@ -207,14 +215,17 @@ class MVF_RETARGET_BlockHeight_Test(BitcoinTestFramework):
                     # Test difficulty during MVF retarget period
                     first_block = self.nodes[0].getblock(self.nodes[0].getblockhash(int(prev_block['height']) - int(timespanblocks)))
                     actualBlockTimeSecs = prev_block['time'] - first_block['time']
+                    #print("actualBlockTimeSecs = %s" % actualBlockTimeSecs)
                     nBits = CalculateMVFNextWorkRequired(prev_block['bits'], actualBlockTimeSecs, difficultytimespan)
                     nextBits = int2hex(nBits)
+                    ## begin debug
                     #best_diff_expected = bits2difficulty(nBits)
-                    #print "%s %.10f : %s " % (nextBits, best_diff_expected, best_block['bits'])
-
-                    #if best_block['bits'] <> nextBits : #debug
-                        #print "err bits %s %s %s " % (best_block['bits'], nextBits, diffadjinterval)
-                        #raw_input()
+                    #print("%s %.10f : %s " % (nextBits, best_diff_expected, best_block['bits']))
+                    #
+                    #if best_block['bits'] != nextBits : #debug
+                    #    print("err bits %s %s %s " % (best_block['bits'], nextBits, diffadjinterval))
+                    #    input()
+                    ## end debug
                     assert_equal(best_block['bits'], nextBits)
 
                 print("%s,%d,%d,%s,%d,%d,%d,%.10f,%s " %(
@@ -231,7 +242,7 @@ class MVF_RETARGET_BlockHeight_Test(BitcoinTestFramework):
 
                 # reset bits tracking variables
                 count_bits_used = 1
-                #raw_input()
+                #input()
             #### end if prev_block['bits'] == best_block['bits']
 
             # Get difficulty time span
@@ -251,7 +262,7 @@ class MVF_RETARGET_BlockHeight_Test(BitcoinTestFramework):
             #if int("0x%s"%prev_block['bits'],0) <> POW_LIMIT :
                 #if count_bits_used > diffadjinterval : #debug
                     #print "err count_bits_used %s : %s " % (prev_block['bits'], nextBits)
-                    #raw_input()
+                    #input()
                 #assert_less_than_equal(count_bits_used, diffadjinterval)
 
             # Setup various block time interval tests
@@ -303,7 +314,7 @@ class MVF_RETARGET_BlockHeight_Test(BitcoinTestFramework):
 
             #if diff_interval_expected <> diffadjinterval :
                 #print "err diffadjinterval %d %d %d" % (n, diff_interval_expected, diffadjinterval)
-                #raw_input()
+                #input()
             assert_equal(diff_interval_expected, diffadjinterval)
 
             # print info for every block
@@ -317,7 +328,7 @@ class MVF_RETARGET_BlockHeight_Test(BitcoinTestFramework):
                     #best_block['difficulty'],
                     #count_bits_used,
                     #first_block['height'])
-                #raw_input()
+                #input()
 
             # generate the next block
             self.nodes[0].generate(1)
@@ -327,4 +338,8 @@ class MVF_RETARGET_BlockHeight_Test(BitcoinTestFramework):
         print("Done.")
 
 if __name__ == '__main__':
+    import doctest
+    (failure_count, test_count) = doctest.testmod()
+    if failure_count:
+        sys.exit(1)
     MVF_RETARGET_BlockHeight_Test().main()
