@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # Copyright (c) 2016 The Bitcoin developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -13,7 +13,7 @@
 >>> bin2hex(bits_bytes)
 '1d00d86a'
 >>> bits2target_int(bits_bytes)
-22791060871177364286867400663010583169263383106957897897309909286912L
+22791060871177364286867400663010583169263383106957897897309909286912
 '''
 
 import binascii
@@ -67,7 +67,7 @@ def int2bin(val, pad_length = False):
 
 def bin2hex(binary):
     # convert raw binary data to a hex string. also accepts ascii chars (0 - 255)
-    return binascii.b2a_hex(binary)
+    return str(binascii.b2a_hex(binary), 'utf-8')
 
 # end code from from http://bitcoin.stackexchange.com/a/30458
 ############################################################################
@@ -137,10 +137,10 @@ def bin2int(bytestring):
     remainder = bytestring
     while len(remainder) > 0:
         if len(remainder) == 1:
-            first_byte = int(ord(remainder[0]))
+            first_byte = remainder[0]
             remainder = ''
         else:
-            first_byte, remainder = int(ord(remainder[0])), remainder[1:]
+            first_byte, remainder = remainder[0], remainder[1:]
         result = (result << 8) + first_byte
     return result
 

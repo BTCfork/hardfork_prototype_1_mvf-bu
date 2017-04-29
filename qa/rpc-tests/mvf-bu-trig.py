@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # Copyright (c) 2016 The Bitcoin developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -92,7 +92,7 @@ class MVF_TRIG_Test(BitcoinTestFramework):
     def run_test(self):
         # check that fork does not triggered before the height
         print("Generating 99 pre-fork blocks")
-        for n in xrange(len(self.nodes)):
+        for n in range(len(self.nodes)):
             self.nodes[n].generate(99)
             assert_equal(False, self.is_fork_triggered_on_node(n)
                                 or self.prior_fork_detected_on_node(n))
@@ -100,7 +100,7 @@ class MVF_TRIG_Test(BitcoinTestFramework):
 
         # check that fork triggers for nodes 0 and 1 at designated height
         # move all nodes to height 100
-        for n in xrange(len(self.nodes)):
+        for n in range(len(self.nodes)):
             self.nodes[n].generate(1)
         assert_equal(True,  self.is_fork_triggered_on_node(0))
         assert_equal(True,  self.is_config_file_consistent(0, self.expected_fork_entries[0]))
@@ -146,7 +146,7 @@ class MVF_TRIG_Test(BitcoinTestFramework):
         # test startup detection of prior fork activation.
         # by now, all 4 nodes have triggered.
         print("Stopping all nodes")
-        for n in xrange(4):
+        for n in range(4):
             assert_equal(False, self.prior_fork_detected_on_node(n))
             stop_node(self.nodes[n], n)
             # get rid of debug.log files so we can better check retrigger
@@ -155,7 +155,7 @@ class MVF_TRIG_Test(BitcoinTestFramework):
         # restart them all, check that they detected having forked on prior run
         print("Restarting all nodes")
         self.start_all_nodes()
-        for n in xrange(4):
+        for n in range(4):
             assert_equal(True, self.prior_fork_detected_on_node(n))
             assert(len(search_file(self.nodelog[n], "enabling isMVFHardForkActive")) == 1)
             assert(len(search_file(self.nodelog[n], "found marker config file")) == 1)

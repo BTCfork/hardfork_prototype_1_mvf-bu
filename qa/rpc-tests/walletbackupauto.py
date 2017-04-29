@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # Copyright (c) 2014-2015 The Bitcoin Core developers
 # Copyright (c) 2015-2016 The Bitcoin Unlimited developers
 # Copyright (c) 2016 The Bitcoin developers
@@ -143,7 +143,7 @@ class WalletBackupTest(BitcoinTestFramework):
             stop_node(self.nodes[i], i)
 
     def erase_hot_wallets(self):
-        for node in xrange(4):
+        for node in range(4):
             os.remove(os.path.join(self.options.tmpdir,"node%s" % node,"regtest","wallet.dat"))
 
     def run_test(self):
@@ -309,7 +309,7 @@ class WalletBackupTest(BitcoinTestFramework):
         # rewind node 2's chain to before backupblock
         logging.info("Stopping all nodes")
         self.stop_four()
-        for n in xrange(4):
+        for n in range(4):
             os.unlink(os.path.join(tmpdir,"node%s" % n,"regtest",BTCFORK_CONF_FILENAME))
         logging.info("Erasing blockchain on node 2 while keeping backup file")
         shutil.rmtree(self.options.tmpdir + "/node2/regtest/blocks")

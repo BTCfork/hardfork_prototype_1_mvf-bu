@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # Copyright (c) 2016 The Bitcoin developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -60,7 +60,7 @@ def CalculateMVFNextWorkRequired(bits, actualBlockTimeSecs, targetBlockTimeSecs)
     else :
         bnNew = bnNew2
 
-    newBits = "0x%s" % bin2hex(target_int2bits(bnNew)) # GetCompact
+    newBits = "0x%s" % bin2hex(target_int2bits(int(bnNew))) # GetCompact
     nBitsReset = int(newBits,0)
     return nBitsReset
 
@@ -188,7 +188,7 @@ class MVF_RETARGET_BlockHeight_Test(BitcoinTestFramework):
             # full range
             number_of_blocks_to_test_after_fork = oneRetargetPeriodAfterMVFRetargetPeriod = HARDFORK_RETARGET_BLOCKS+ORIGINAL_DIFFADJINTERVAL+1
 
-        for n in xrange(number_of_blocks_to_test_after_fork):
+        for n in range(number_of_blocks_to_test_after_fork):
             best_block = self.nodes[0].getblock(self.nodes[0].getbestblockhash(), True)
             prev_block = self.nodes[0].getblock(best_block['previousblockhash'], True)
 
@@ -205,7 +205,7 @@ class MVF_RETARGET_BlockHeight_Test(BitcoinTestFramework):
                     nextBits = "end"
                 else :
                     # Test difficulty during MVF retarget period
-                    first_block = self.nodes[0].getblock(self.nodes[0].getblockhash(prev_block['height'] - timespanblocks))
+                    first_block = self.nodes[0].getblock(self.nodes[0].getblockhash(int(prev_block['height']) - int(timespanblocks)))
                     actualBlockTimeSecs = prev_block['time'] - first_block['time']
                     nBits = CalculateMVFNextWorkRequired(prev_block['bits'], actualBlockTimeSecs, difficultytimespan)
                     nextBits = int2hex(nBits)
@@ -322,7 +322,7 @@ class MVF_RETARGET_BlockHeight_Test(BitcoinTestFramework):
             # generate the next block
             self.nodes[0].generate(1)
 
-        #### end for n in xrange
+        #### end for n in range
 
         print("Done.")
 
