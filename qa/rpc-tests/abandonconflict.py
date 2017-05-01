@@ -1,22 +1,19 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # Copyright (c) 2014-2015 The Bitcoin Core developers
-# Copyright (c) 2015-2016 The Bitcoin Unlimited developers
+# Copyright (c) 2015-2017 The Bitcoin Unlimited developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 
 from test_framework.test_framework import BitcoinTestFramework
 from test_framework.util import *
-try:
-    import urllib.parse as urlparse
-except ImportError:
-    import urlparse
+import urllib.parse
 
 class AbandonConflictTest(BitcoinTestFramework):
 
     def setup_network(self):
         self.nodes = []
-        self.nodes.append(start_node(0, self.options.tmpdir, ["-debug","-logtimemicros","-minrelaytxfee=0.00001"]))
+        self.nodes.append(start_node(0, self.options.tmpdir, ["-debug","-logtimemicros","-minlimitertxfee=1.0"]))
         self.nodes.append(start_node(1, self.options.tmpdir, ["-debug","-logtimemicros"]))
         connect_nodes(self.nodes[0], 1)
 
@@ -35,7 +32,7 @@ class AbandonConflictTest(BitcoinTestFramework):
         assert(balance - newbalance < Decimal("0.001")) #no more than fees lost
         balance = newbalance
 
-        url = urlparse.urlparse(self.nodes[1].url)
+        url = urllib.parse.urlparse(self.nodes[1].url)
         self.nodes[0].disconnectnode(url.hostname+":"+str(p2p_port(1)))
 
         # Identify the 10btc outputs
@@ -75,7 +72,7 @@ class AbandonConflictTest(BitcoinTestFramework):
         # TODO: redo with eviction
         # Note had to make sure tx did not have AllowFree priority
         stop_node(self.nodes[0],0)
-        self.nodes[0]=start_node(0, self.options.tmpdir, ["-debug","-logtimemicros","-minrelaytxfee=0.0001"])
+        self.nodes[0]=start_node(0, self.options.tmpdir, ["-debug","-logtimemicros","-minlimitertxfee=10.0"])
 
         # Verify txs no longer in mempool
         assert(len(self.nodes[0].getrawmempool()) == 0)
@@ -101,7 +98,7 @@ class AbandonConflictTest(BitcoinTestFramework):
 
         # Verify that even with a low min relay fee, the tx is not reaccepted from wallet on startup once abandoned
         stop_node(self.nodes[0],0)
-        self.nodes[0]=start_node(0, self.options.tmpdir, ["-debug","-logtimemicros","-minrelaytxfee=0.00001"])
+        self.nodes[0]=start_node(0, self.options.tmpdir, ["-debug","-logtimemicros","-minlimitertxfee=1.0"])
         assert(len(self.nodes[0].getrawmempool()) == 0)
         assert(self.nodes[0].getbalance() == balance)
 
@@ -121,7 +118,7 @@ class AbandonConflictTest(BitcoinTestFramework):
 
         # Remove using high relay fee again
         stop_node(self.nodes[0],0)
-        self.nodes[0]=start_node(0, self.options.tmpdir, ["-debug","-logtimemicros","-minrelaytxfee=0.0001"])
+        self.nodes[0]=start_node(0, self.options.tmpdir, ["-debug","-logtimemicros","-minlimitertxfee=10.0"])
         assert(len(self.nodes[0].getrawmempool()) == 0)
         newbalance = self.nodes[0].getbalance()
         assert(newbalance == balance - Decimal("24.9996"))
@@ -152,9 +149,9 @@ class AbandonConflictTest(BitcoinTestFramework):
         self.nodes[0].invalidateblock(self.nodes[0].getbestblockhash())
         newbalance = self.nodes[0].getbalance()
         #assert(newbalance == balance - Decimal("10"))
-        print "If balance has not declined after invalidateblock then out of mempool wallet tx which is no longer"
-        print "conflicted has not resumed causing its inputs to be seen as spent.  See Issue #7315"
-        print balance , " -> " , newbalance , " ?"
+        print("If balance has not declined after invalidateblock then out of mempool wallet tx which is no longer")
+        print("conflicted has not resumed causing its inputs to be seen as spent.  See Issue #7315")
+        print(str(balance) + " -> " + str(newbalance) + " ?")
 
 if __name__ == '__main__':
     AbandonConflictTest().main()

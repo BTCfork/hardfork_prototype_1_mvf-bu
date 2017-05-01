@@ -1,14 +1,11 @@
-#!/usr/bin/env python2
-#
-# Distributed under the MIT/X11 software license, see the accompanying
+#!/usr/bin/env python3
+# Copyright (c) 2015-2016 The Bitcoin Core developers
+# Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
-#
-import pdb
-from mininode import *
-from blockstore import BlockStore, TxStore
-from util import p2p_port
+from .mininode import *
+from .blockstore import BlockStore, TxStore
+from .util import p2p_port
 import time
-
 '''
 This is a tool for comparing two or more bitcoinds to each other
 using a script provided.
@@ -28,25 +25,11 @@ generator that returns TestInstance objects.  See below for definition.
 
 global mininode_lock
 
-def wait_until(predicate, attempts=float('inf'), timeout=float('inf')):
-    attempt = 0
-    elapsed = 0
-
-    while attempt < attempts and elapsed < timeout:
-        with mininode_lock:
-            if predicate():
-                return True
-        attempt += 1
-        elapsed += 0.05
-        time.sleep(0.05)
-
-    return False
-
 class RejectResult(object):
     '''
     Outcome that expects rejection of a transaction or block.
     '''
-    def __init__(self, code, reason=''):
+    def __init__(self, code, reason=b''):
         self.code = code
         self.reason = reason
     def match(self, other):
@@ -112,9 +95,9 @@ class TestNode(NodeConnCB):
             raise AssertionError("Got pong for unknown ping [%s]" % repr(message))
 
     def on_reject(self, conn, message):
-        if message.message == 'tx':
+        if message.message == b'tx':
             self.tx_reject_map[message.data] = RejectResult(message.code, message.reason)
-        if message.message == 'block':
+        if message.message == b'block':
             self.block_reject_map[message.data] = RejectResult(message.code, message.reason)
 
     def send_inv(self, obj):
@@ -222,7 +205,6 @@ class TestManager(object):
                 blockhash in node.block_request_map and node.block_request_map[blockhash]
                 for node in self.test_nodes
             )
-        time.sleep(1)  # The BU xthin preferential thinblock timer will delay sync so we need to wait longer for sync
         # --> error if not requested
         if not wait_until(blocks_requested, attempts=20*num_blocks):
             # print [ c.cb.block_request_map for c in self.connections ]
@@ -266,28 +248,45 @@ class TestManager(object):
     # with the expected outcome (if given)
     def check_results(self, blockhash, outcome):
         with mininode_lock:
+
             for c in self.connections:
                 if outcome is None:
                     if c.cb.bestblockhash != self.connections[0].cb.bestblockhash:
-                        print "Node ", c.addr, " has best block ", hex(c.cb.bestblockhash), ". Expecting ", hex(self.connections[0].cb.bestblockhash)
-                        # pdb.set_trace()
+                        print("Node ", c.addr, " has best block ", hex(c.cb.bestblockhash), ". Expecting ", hex(self.connections[0].cb.bestblockhash))
                         return False
                 elif isinstance(outcome, RejectResult): # Check that block was rejected w/ code
                     if c.cb.bestblockhash == blockhash:
                         return False
                     if blockhash not in c.cb.block_reject_map:
-                        print 'Block not in reject map: %064x' % (blockhash)
+                        print('Block not in reject map: %064x' % (blockhash))
                         return False
                     if not outcome.match(c.cb.block_reject_map[blockhash]):
-                        print 'Block rejected with %s instead of expected %s: %064x' % (c.cb.block_reject_map[blockhash], outcome, blockhash)
+                        print('Block rejected with %s instead of expected %s: %064x' % (c.cb.block_reject_map[blockhash], outcome, blockhash))
                         return False
                 elif ((c.cb.bestblockhash == blockhash) != outcome):
-                    print "Node ", c.addr, " has best block ", hex(c.cb.bestblockhash), ". Expecting ", hex(blockhash), outcome
-                    print "Quick   RPC returns", c.rpc.getbestblockhash()
-                    time.sleep(5)
-                    print "Delayed RPC returns", c.rpc.getbestblockhash()
-		    # pdb.set_trace()
-                    return False
+                    print("Node ", c.addr, " has best block ", hex(c.cb.bestblockhash), ". Expecting ", hex(blockhash), outcome)
+                    hsh = c.rpc.getbestblockhash()
+                    print("Quick   RPC returns", hsh)
+                    t = 0
+                    # give 20 seconds to sync, this is a pretty generous number.  How much time might it take
+                    # an underpowered test node running 4-6 copies of bitcoind to sync them?  
+                    while t < 10 and hsh != hex(blockhash)[2:]:  # hex(blockhash) returns "0x..." whereas hsh does not have the "0x"
+                        t += 1
+                        time.sleep(2) 
+                        hsh = c.rpc.getbestblockhash()
+                    if t == 10:
+                        print("Delayed RPC returns", hsh)
+
+                    rpcblock =  c.rpc.getbestblockhash()
+                    block = hex(blockhash)[2:]
+                    #sometimes a leading zero or two are missing from the blockhash. Replace these.
+                    while (len(block) < 64):
+                        block = '0' + block
+                    if rpcblock == block:
+                        return True
+                    else:
+                        return False
+
             return True
 
     # Either check that the mempools all agree with each other, or that
@@ -308,10 +307,10 @@ class TestManager(object):
                     if txhash in c.cb.lastInv:
                         return False
                     if txhash not in c.cb.tx_reject_map:
-                        print 'Tx not in reject map: %064x' % (txhash)
+                        print('Tx not in reject map: %064x' % (txhash))
                         return False
                     if not outcome.match(c.cb.tx_reject_map[txhash]):
-                        print 'Tx rejected with %s instead of expected %s: %064x' % (c.cb.tx_reject_map[txhash], outcome, txhash)
+                        print('Tx rejected with %s instead of expected %s: %064x' % (c.cb.tx_reject_map[txhash], outcome, txhash))
                         return False
                 elif ((txhash in c.cb.lastInv) != outcome):
                     # print c.rpc.getrawmempool(), c.cb.lastInv
@@ -414,7 +413,7 @@ class TestManager(object):
                 if (not self.check_mempool(tx.sha256, tx_outcome)):
                     raise AssertionError("Mempool test failed at test %d" % test_number)
 
-            print "Test %d: PASS" % test_number, [ c.rpc.getblockcount() for c in self.connections ]
+            print("Test %d: PASS" % test_number, [ c.rpc.getblockcount() for c in self.connections ])
             test_number += 1
 
         [ c.disconnect_node() for c in self.connections ]

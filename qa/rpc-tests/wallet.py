@@ -1,9 +1,8 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # Copyright (c) 2014-2015 The Bitcoin Core developers
-# Copyright (c) 2015-2016 The Bitcoin Unlimited developers
+# Copyright (c) 2015-2017 The Bitcoin Unlimited developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
-
 
 from test_framework.test_framework import BitcoinTestFramework
 from test_framework.util import *
@@ -21,7 +20,7 @@ class WalletTest (BitcoinTestFramework):
             raise AssertionError("Fee of %s BTC too high! (Should be %s BTC)"%(str(fee), str(target_fee)))
         return curr_balance
 
-    def setup_chain(self):
+    def setup_chain(self,bitcoinConfDict=None, wallets=None):
         print("Initializing test directory "+self.options.tmpdir)
         initialize_chain_clean(self.options.tmpdir, 4)
 
@@ -34,7 +33,13 @@ class WalletTest (BitcoinTestFramework):
         self.sync_all()
 
     def run_test (self):
-        print "Mining blocks..."
+
+        # Check that there's no UTXO on none of the nodes
+        assert_equal(len(self.nodes[0].listunspent()), 0)
+        assert_equal(len(self.nodes[1].listunspent()), 0)
+        assert_equal(len(self.nodes[2].listunspent()), 0)
+
+        print("Mining blocks...")
 
         self.nodes[0].generate(1)
 
@@ -50,6 +55,11 @@ class WalletTest (BitcoinTestFramework):
         assert_equal(self.nodes[1].getbalance(), 50)
         assert_equal(self.nodes[2].getbalance(), 0)
 
+        # Check that only first and second nodes have UTXOs
+        assert_equal(len(self.nodes[0].listunspent()), 1)
+        assert_equal(len(self.nodes[1].listunspent()), 1)
+        assert_equal(len(self.nodes[2].listunspent()), 0)
+
         # Send 21 BTC from 0 to 2 using sendtoaddress call.
         # Second transaction will be child of first, and will require a fee
         self.nodes[0].sendtoaddress(self.nodes[2].getnewaddress(), 11)
@@ -61,6 +71,15 @@ class WalletTest (BitcoinTestFramework):
         # Have node0 mine a block, thus it will collect its own fee.
         self.nodes[0].generate(1)
         self.sync_all()
+
+        # Exercise locking of unspent outputs
+        unspent_0 = self.nodes[2].listunspent()[0]
+        unspent_0 = {"txid": unspent_0["txid"], "vout": unspent_0["vout"]}
+        self.nodes[2].lockunspent(False, [unspent_0])
+        assert_raises(JSONRPCException, self.nodes[2].sendtoaddress, self.nodes[2].getnewaddress(), 20)
+        assert_equal([unspent_0], self.nodes[2].listlockunspent())
+        self.nodes[2].lockunspent(True, [unspent_0])
+        assert_equal(len(self.nodes[2].listlockunspent()), 0)
 
         # Have node1 generate 100 blocks (so node0 can recover the fee)
         self.nodes[1].generate(100)
@@ -151,6 +170,10 @@ class WalletTest (BitcoinTestFramework):
 
         assert(txid1 in self.nodes[3].getrawmempool())
 
+        # Exercise balance rpcs
+        assert_equal(self.nodes[0].getwalletinfo()["unconfirmed_balance"], 1)
+        assert_equal(self.nodes[0].getunconfirmedbalance(), 1)
+
         #check if we can list zero value tx as available coins
         #1. create rawtx
         #2. hex-changed one output to 0.0
@@ -235,28 +258,65 @@ class WalletTest (BitcoinTestFramework):
         txObj = self.nodes[0].gettransaction(txId)
         assert_equal(txObj['amount'], Decimal('-0.0001'))
 
-        #this should fail
-        errorString = ""
         try:
             txId  = self.nodes[0].sendtoaddress(self.nodes[2].getnewaddress(), "1f-4")
-        except JSONRPCException,e:
-            errorString = e.error['message']
+        except JSONRPCException as e:
+            assert("Invalid amount" in e.error['message'])
+        else:
+            raise AssertionError("Must not parse invalid amounts")
 
-        assert_equal("Invalid amount" in errorString, True)
 
-        errorString = ""
         try:
-            self.nodes[0].generate("2") #use a string to as block amount parameter must fail because it's not interpreted as amount
-        except JSONRPCException,e:
-            errorString = e.error['message']
+            self.nodes[0].generate("2")
+            raise AssertionError("Must not accept strings as numeric")
+        except JSONRPCException as e:
+            assert("not an integer" in e.error['message'])
 
-        assert_equal("not an integer" in errorString, True)
+        # Import address and private key to check correct behavior of spendable unspents
+        # 1. Send some coins to generate new UTXO
+        address_to_import = self.nodes[2].getnewaddress()
+        txid = self.nodes[0].sendtoaddress(address_to_import, 1)
+        self.nodes[0].generate(1)
+        self.sync_all()
+
+        # 2. Import address from node2 to node1
+        self.nodes[1].importaddress(address_to_import)
+
+        # 3. Validate that the imported address is watch-only on node1
+        assert(self.nodes[1].validateaddress(address_to_import)["iswatchonly"])
+
+        # 4. Check that the unspents after import are not spendable
+        assert_array_result(self.nodes[1].listunspent(),
+                           {"address": address_to_import},
+                           {"spendable": False})
+
+        # 5. Import private key of the previously imported address on node1
+        priv_key = self.nodes[2].dumpprivkey(address_to_import)
+        self.nodes[1].importprivkey(priv_key)
+
+        # 6. Check that the unspents are now spendable on node1
+        assert_array_result(self.nodes[1].listunspent(),
+                           {"address": address_to_import},
+                           {"spendable": True})
+
+        # Mine a block from node0 to an address from node1
+        cbAddr = self.nodes[1].getnewaddress()
+        blkHash = self.nodes[0].generatetoaddress(1, cbAddr)[0]
+        cbTxId = self.nodes[0].getblock(blkHash)['tx'][0]
+        self.sync_all()
+
+        # Check that the txid and balance is found by node1
+        try:
+            self.nodes[1].gettransaction(cbTxId)
+        except JSONRPCException as e:
+            assert("Invalid or non-wallet transaction id" not in e.error['message'])
 
         #check if wallet or blochchain maintenance changes the balance
         self.sync_all()
-        self.nodes[0].generate(1)
+        blocks = self.nodes[0].generate(2)
         self.sync_all()
         balance_nodes = [self.nodes[i].getbalance() for i in range(3)]
+        block_count = self.nodes[0].getblockcount()
 
         maintenance = [
             '-rescan',
@@ -266,15 +326,21 @@ class WalletTest (BitcoinTestFramework):
             '-salvagewallet',
         ]
         for m in maintenance:
+            print("check " + m)
             stop_nodes(self.nodes)
             wait_bitcoinds()
             self.nodes = start_nodes(3, self.options.tmpdir, [[m]] * 3)
-            connect_nodes_bi(self.nodes,0,1)
-            connect_nodes_bi(self.nodes,1,2)
-            connect_nodes_bi(self.nodes,0,2)
-            self.sync_all()
+            while m == '-reindex' and [block_count] * 3 != [self.nodes[i].getblockcount() for i in range(3)]:
+                # reindex will leave rpc warm up "early"; Wait for it to finish
+                time.sleep(0.1)
             assert_equal(balance_nodes, [self.nodes[i].getbalance() for i in range(3)])
 
+        # Exercise listsinceblock with the last two blocks
+        coinbase_tx_1 = self.nodes[0].listsinceblock(blocks[0])
+        assert_equal(coinbase_tx_1["lastblock"], blocks[1])
+        assert_equal(len(coinbase_tx_1["transactions"]), 1)
+        assert_equal(coinbase_tx_1["transactions"][0]["blockhash"], blocks[1])
+        assert_equal(len(self.nodes[0].listsinceblock(blocks[1])["transactions"]), 0)
 
 if __name__ == '__main__':
     WalletTest ().main ()

@@ -1,5 +1,5 @@
 // Copyright (c) 2011-2015 The Bitcoin Core developers
-// Copyright (c) 2015-2016 The Bitcoin Unlimited developers
+// Copyright (c) 2015-2017 The Bitcoin Unlimited developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -12,6 +12,7 @@
 #include "net.h"
 
 #include <QWidget>
+#include <QCompleter>
 
 class ClientModel;
 class PlatformStyle;
@@ -78,7 +79,10 @@ private Q_SLOTS:
     void clearSelectedNode();
 
 public Q_SLOTS:
-    void clear();
+    void clear(bool clearHistory = true);
+    void fontBigger();
+    void fontSmaller();
+    void setFontSize(int newSize);
     /** Append the message to the message widget */
     void message(int category, const QString &message, bool html = false);
     /** Set number of connections shown in the UI */
@@ -87,7 +91,9 @@ public Q_SLOTS:
     void setNumBlocks(int count, const QDateTime& blockDate, double nVerificationProgress);
     /** Set size (number of transactions and memory usage) of the mempool in the UI */
     void setMempoolSize(long numberOfTxs, size_t dynUsage);
-    /** BU: Set tx's per second in the UI */
+    /** Set number of transactions in ophan pool in the UI */
+    void setOrphanPoolSize(long numberOfTxs);
+    /** Set tx's per second in the UI */
     void setTransactionsPerSecond(double nTxPerSec);
     /** Go forward or back in history */
     void browseHistory(int offset);
@@ -137,6 +143,8 @@ private:
     RPCTimerInterface *rpcTimerInterface;
     QMenu *peersTableContextMenu;
     QMenu *banTableContextMenu;
+    int consoleFontSize;
+    QCompleter *autoCompleter;
 };
 
 #endif // BITCOIN_QT_RPCCONSOLE_H

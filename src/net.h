@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2015 The Bitcoin Core developers
-// Copyright (c) 2015-2016 The Bitcoin Unlimited developers
+// Copyright (c) 2015-2017 The Bitcoin Unlimited developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -51,7 +51,7 @@ static const unsigned int MAX_ADDR_TO_SEND = 1000;
 /** The maximum # of bytes to receive at once */
 static const int64_t MAX_RECV_CHUNK = 256 * 1024;
 /** Maximum length of incoming protocol messages (no message over 2 MiB is currently acceptable). */
-//static const unsigned int MAX_PROTOCOL_MESSAGE_LENGTH = 2 * 1024 * 1024;  // BU: currently allowing 10*excessiveBlockSize as the max message
+//static const unsigned int MAX_PROTOCOL_MESSAGE_LENGTH = 2 * 1024 * 1024;  // BU: currently allowing DEFAULT_MAX_MESSAGE_SIZE_MULTIPLIER*excessiveBlockSize as the max message.
 /** Maximum length of strSubVer in `version` message */
 static const unsigned int MAX_SUBVERSION_LENGTH = 256;
 /** -listen default */
@@ -70,6 +70,10 @@ static const size_t SETASKFOR_MAX_SZ = 2 * MAX_INV_SZ;
 static const unsigned int DEFAULT_MAX_PEER_CONNECTIONS = 125;
 /** BU: The maximum numer of outbound peer connections */
 static const unsigned int DEFAULT_MAX_OUTBOUND_CONNECTIONS = 8;
+/** BU: The minimum number of xthin nodes to connect */
+static const uint8_t MIN_XTHIN_NODES = 4;
+/** BU: The maximum disconnects while searching for xthin nodes to connect */
+static const unsigned int MAX_DISCONNECTS = 500;
 /** The default for -maxuploadtarget. 0 = Unlimited */
 static const uint64_t DEFAULT_MAX_UPLOAD_TARGET = 0;
 /** Default for blocks only*/
@@ -149,8 +153,8 @@ enum
     LOCAL_MAX
 };
 
-bool IsPeerAddrLocalGood(CNode* pnode);
-void AdvertizeLocal(CNode* pnode);
+bool IsPeerAddrLocalGood(CNode *pnode);
+void AdvertiseLocal(CNode *pnode);
 void SetLimited(enum Network net, bool fLimited = true);
 bool IsLimited(enum Network net);
 bool IsLimited(const CNetAddr& addr);
@@ -161,8 +165,8 @@ bool SeenLocal(const CService& addr);
 bool IsLocal(const CService& addr);
 bool GetLocal(CService& addr, const CNetAddr* paddrPeer = NULL);
 bool IsReachable(enum Network net);
-bool IsReachable(const CNetAddr& addr);
-CAddress GetLocalAddress(const CNetAddr* paddrPeer = NULL);
+bool IsReachable(const CNetAddr &addr);
+CAddress GetLocalAddress(const CNetAddr *paddrPeer = NULL);
 
 
 extern bool fDiscover;
@@ -173,13 +177,14 @@ extern CAddrMan addrman;
 
 /** Maximum number of connections to simultaneously allow (aka connection slots) */
 extern int nMaxConnections;
-
+/** The minimum number of xthin nodes to connect to */
+extern int nMinXthinNodes;
 extern std::vector<CNode*> vNodes;
 extern CCriticalSection cs_vNodes;
 extern std::map<CInv, CDataStream> mapRelay;
 extern std::deque<std::pair<int64_t, CInv> > vRelayExpiration;
 extern CCriticalSection cs_mapRelay;
-extern limitedmap<CInv, int64_t> mapAlreadyAskedFor;
+extern limitedmap<uint256, int64_t> mapAlreadyAskedFor;
 
 extern std::vector<std::string> vAddedNodes;
 extern CCriticalSection cs_vAddedNodes;
@@ -376,7 +381,8 @@ public:
     bool fOneShot;
     bool fClient;
     bool fInbound;
-    bool fNetworkNode;
+    bool fAutoOutbound; // any outbound node not connected with -addnode, connect-thinblock or -connect
+    bool fNetworkNode; // any outbound node
     bool fSuccessfullyConnected;
     bool fDisconnect;
     // We use fRelayTxes for two purposes -
@@ -844,7 +850,6 @@ public:
     bool Read(banmap_t& banSet);
 };
 
-void DumpBanlist();
 
 /** Return a timestamp in the future (in microseconds) for exponentially distributed events. */
 int64_t PoissonNextSend(int64_t nNow, int average_interval_seconds);

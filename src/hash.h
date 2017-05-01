@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2015 The Bitcoin Core developers
-// Copyright (c) 2015-2016 The Bitcoin Unlimited developers
+// Copyright (c) 2015-2017 The Bitcoin Unlimited developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -40,6 +40,9 @@ public:
         sha.Reset();
         return *this;
     }
+
+    /** Return the total number of bytes hashed since the last Reset() (or object construction) */
+    size_t GetNumBytesHashed() const { return sha.GetNumBytesHashed(); }
 };
 
 /** A hasher class for Bitcoin's 160-bit hash (SHA-256 + RIPEMD-160). */
@@ -149,6 +152,11 @@ public:
         uint256 result;
         ctx.Finalize((unsigned char*)&result);
         return result;
+    }
+
+    /** Return the total number of bytes hashed by this object */
+    size_t GetNumBytesHashed() const {
+        return ctx.GetNumBytesHashed();
     }
 
     template<typename T>

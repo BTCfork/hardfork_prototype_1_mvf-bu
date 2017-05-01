@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2015 The Bitcoin Core developers
-// Copyright (c) 2015-2016 The Bitcoin Unlimited developers
+// Copyright (c) 2015-2017 The Bitcoin Unlimited developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -18,6 +18,8 @@
 #undef foreach
 #include "boost/multi_index_container.hpp"
 #include "boost/multi_index/ordered_index.hpp"
+#include <boost/thread/locks.hpp>
+#include <boost/thread/mutex.hpp>
 
 class CAutoFile;
 class CBlockIndex;
@@ -86,6 +88,8 @@ private:
     CAmount inChainInputValue; //! Sum of all txin values that are already in blockchain
     bool spendsCoinbase; //! keep track of transactions that spend a coinbase
     unsigned int sigOpCount; //! Legacy sig ops plus P2SH sig op count
+    uint64_t runtimeSigOpCount; //! Runtime signature operation count
+    uint64_t runtimeSighashBytes; //! Runtime bytes hashed for signature operations
     int64_t feeDelta; //! Used for determining the priority of the transaction for mining in a block
     LockPoints lockPoints; //! Track the height and time at which tx was final
 
@@ -117,6 +121,8 @@ public:
     unsigned int GetHeight() const { return entryHeight; }
     bool WasClearAtEntry() const { return hadNoDependencies; }
     unsigned int GetSigOpCount() const { return sigOpCount; }
+    uint64_t GetRuntimeSigOpCount() const { return runtimeSigOpCount; }
+    uint64_t GetRuntimeSighashBytes() const { return runtimeSighashBytes; }
     int64_t GetModifiedFee() const { return nFee + feeDelta; }
     size_t DynamicMemoryUsage() const { return nUsageSize; }
     const LockPoints& GetLockPoints() const { return lockPoints; }
@@ -128,6 +134,8 @@ public:
     void UpdateFeeDelta(int64_t feeDelta);
     // Update the LockPoints after a reorg
     void UpdateLockPoints(const LockPoints& lp);
+    // Update runtime validation resource usage
+    void UpdateRuntimeSigOps(uint64_t _runtimeSigOpCount, uint64_t _runtimeSighashBytes);
 
     /** We can set the entry to be dirty if doing the full calculation of in-
      *  mempool descendants will be too expensive, which can potentially happen
@@ -259,6 +267,11 @@ public:
     }
 };
 
+// Multi_index tag names
+struct descendant_score {};
+struct entry_time {};
+struct mining_score {};
+
 class CBlockPolicyEstimator;
 
 /** An inpoint - a combination of a transaction and an index n into its vin */
@@ -370,6 +383,7 @@ private:
 
     void trackPackageRemoved(const CFeeRate& rate);
 
+    boost::mutex cs_txPerSec;
     double nTxPerSec; //BU: tx's per second accepted into the mempool
 
 public:
@@ -383,16 +397,19 @@ public:
             boost::multi_index::ordered_unique<mempoolentry_txid>,
             // sorted by fee rate
             boost::multi_index::ordered_non_unique<
+                boost::multi_index::tag<descendant_score>,
                 boost::multi_index::identity<CTxMemPoolEntry>,
                 CompareTxMemPoolEntryByDescendantScore
             >,
             // sorted by entry time
             boost::multi_index::ordered_non_unique<
+                boost::multi_index::tag<entry_time>,
                 boost::multi_index::identity<CTxMemPoolEntry>,
                 CompareTxMemPoolEntryByEntryTime
                 >,
             // sorted by score (for mining prioritization)
             boost::multi_index::ordered_unique<
+                boost::multi_index::tag<mining_score>,
                 boost::multi_index::identity<CTxMemPoolEntry>,
                 CompareTxMemPoolEntryByScore
             >
@@ -550,7 +567,7 @@ public:
     // BU: begin
     double TransactionsPerSecond()
     {
-        LOCK(cs);
+        boost::mutex::scoped_lock lock(cs_txPerSec);
         return nTxPerSec;
     }
     // BU: end

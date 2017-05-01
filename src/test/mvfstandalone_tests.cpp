@@ -8,6 +8,8 @@
 
 #include "mvf-bu.h"
 #include "mvf-btcfork_conf_parser.h"
+#include "util.h"
+#include "test/testutil.h"
 #include "test/test_bitcoin.h"
 
 #ifdef ENABLE_WALLET
