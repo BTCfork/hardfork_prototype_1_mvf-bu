@@ -57,7 +57,8 @@ bool IsTrafficShapingEnabled();
 bool MiningAndExcessiveBlockValidatorRule(const unsigned int newExcessiveBlockSize,
     const unsigned int newMiningBlockSize)
 {
-    // The mined block size must be less then or equal too the excessive block size.
+    // The mined block size must be less then or equal too the excessive block
+    // size.
     return (newMiningBlockSize <= newExcessiveBlockSize);
 }
 
@@ -111,15 +112,18 @@ std::string OutboundConnectionValidator(const int &value, int *item, bool valida
         }
         if (value < *item)
         {
-            return "This field cannot be reduced at run time since that would kick out existing connections";
+            return "This field cannot be reduced at run time since that would kick "
+                   "out existing connections";
         }
     }
     else // Do anything to "take" the new value
     {
-        if (value < *item) // note that now value is the old value and *item has been set to the new.
+        if (value < *item) // note that now value is the old value and *item has
+        // been set to the new.
         {
             int diff = *item - value;
-            if (semOutboundAddNode) // Add the additional slots to the outbound semaphore
+            if (semOutboundAddNode) // Add the additional slots to the outbound
+                // semaphore
                 for (int i = 0; i < diff; i++)
                     semOutboundAddNode->post();
         }
@@ -163,7 +167,6 @@ int32_t UnlimitedComputeBlockVersion(const CBlockIndex *pindexPrev, const Consen
 
     return nVersion;
 }
-
 
 void UpdateSendStats(CNode *pfrom, const char *strCommand, int msgSize, int64_t nTime)
 {
@@ -237,7 +240,8 @@ void HandleExpeditedRequest(CDataStream &vRecv, CNode *pfrom)
                         *it = pfrom;
                     else
                         xpeditedBlk.push_back(pfrom);
-                    pfrom->AddRef(); // add a reference because we have added this pointer into the expedited array
+                    pfrom->AddRef(); // add a reference because we have added this pointer
+                    // into the expedited array
                 }
                 else
                 {
@@ -279,7 +283,8 @@ void HandleExpeditedRequest(CDataStream &vRecv, CNode *pfrom)
                 }
                 else
                 {
-                    LogPrint("blk", "Expedited transactions requested from peer %s (%d), but I am full.\n",
+                    LogPrint("blk", "Expedited transactions requested from peer %s (%d), "
+                                    "but I am full.\n",
                         pfrom->addrName.c_str(), pfrom->id);
                 }
             }
@@ -321,14 +326,13 @@ bool HandleExpeditedBlock(CDataStream &vRecv, CNode *pfrom)
             if (blkidx)
                 status = blkidx->nStatus;
         }
-        bool newBlock =
-            ((blkidx == NULL) ||
-                (!(blkidx->nStatus &
-                    BLOCK_HAVE_DATA))); // If I have never seen the block or just seen an INV, treat the block as new
-        int nSizeThinBlock = ::GetSerializeSize(
-            thinBlock, SER_NETWORK, PROTOCOL_VERSION); // TODO replace with size of vRecv for efficiency
-        LogPrint("thin",
-            "Received %s expedited thinblock %s from peer %s (%d). Hop %d. Size %d bytes. (status %d,0x%x)\n",
+        bool newBlock = ((blkidx == NULL) || (!(blkidx->nStatus & BLOCK_HAVE_DATA))); // If I have never seen the
+        // block or just seen an INV,
+        // treat the block as new
+        int nSizeThinBlock = ::GetSerializeSize(thinBlock, SER_NETWORK,
+            PROTOCOL_VERSION); // TODO replace with size of vRecv for efficiency
+        LogPrint("thin", "Received %s expedited thinblock %s from peer %s (%d). "
+                         "Hop %d. Size %d bytes. (status %d,0x%x)\n",
             newBlock ? "new" : "repeated", inv.hash.ToString(), pfrom->addrName.c_str(), pfrom->id, hops,
             nSizeThinBlock, status, status);
 
@@ -345,7 +349,8 @@ bool HandleExpeditedBlock(CDataStream &vRecv, CNode *pfrom)
         CValidationState state;
         if (!CheckBlockHeader(thinBlock.header, state, true)) // block header is bad
         {
-            // demerit the sender, it should have checked the header before expedited relay
+            // demerit the sender, it should have checked the header before expedited
+            // relay
             return false;
         }
         // TODO:  Start headers-only mining now
@@ -355,8 +360,9 @@ bool HandleExpeditedBlock(CDataStream &vRecv, CNode *pfrom)
     }
     else
     {
-        LogPrint("thin", "Received unknown (0x%x) expedited message from peer %s (%d). Hop %d.\n", msgType,
-            pfrom->addrName.c_str(), pfrom->id, hops);
+        LogPrint("thin", "Received unknown (0x%x) expedited message from peer %s "
+                         "(%d). Hop %d.\n",
+            msgType, pfrom->addrName.c_str(), pfrom->id, hops);
         return false;
     }
     return true;
@@ -388,7 +394,8 @@ void SendExpeditedBlock(CXThinBlock &thinBlock, unsigned char hops, const CNode 
         }
     }
 
-#if 0 // Probably better to have the upstream explicitly request blocks from the downstream.
+#if 0 // Probably better to have the upstream explicitly request blocks from the
+      // downstream.
   // Upstream
   // TODO, if it came from an upstream block I really want to delay for a short period and then check if we got it and then send.  But this solves some of the issue
   if (!cameFromUpstream)
@@ -423,7 +430,6 @@ void SendExpeditedBlock(const CBlock &block, const CNode *skip)
     // BlockMap::iterator it = mapBlockIndex.find(block.GetHash());
     // if (it != mapBlockIndex.end()) return;
 
-
     if (!IsRecentlyExpeditedAndStore(block.GetHash()))
     {
         CXThinBlock thinBlock(block);
@@ -431,7 +437,8 @@ void SendExpeditedBlock(const CBlock &block, const CNode *skip)
     }
     else
     {
-        // LogPrint("thin", "No need to send expedited block %s\n", block.GetHash().ToString());
+        // LogPrint("thin", "No need to send expedited block %s\n",
+        // block.GetHash().ToString());
     }
 }
 
@@ -442,23 +449,26 @@ std::string UnlimitedCmdLineHelp()
     strUsage += HelpMessageOpt("-blockversion=<n>", _("Generated block version number.  Value must be an integer"));
     strUsage +=
         HelpMessageOpt("-excessiveblocksize=<n>", _("Blocks above this size in bytes are considered excessive"));
-    strUsage += HelpMessageOpt("-excessiveacceptdepth=<n>",
-        _("Excessive blocks are accepted anyway if this many blocks are mined on top of them"));
-    strUsage += HelpMessageOpt(
-        "-receiveburst", _("The maximum rate that data can be received in kB/s.  If there has been a period of lower "
-                           "than average data rates, the client may receive extra data to bring the average back to "
-                           "'-receiveavg' but the data rate will not exceed this parameter."));
-    strUsage += HelpMessageOpt(
-        "-sendburst", _("The maximum rate that data can be sent in kB/s.  If there has been a period of lower than "
-                        "average data rates, the client may send extra data to bring the average back to '-receiveavg' "
-                        "but the data rate will not exceed this parameter."));
+    strUsage += HelpMessageOpt("-excessiveacceptdepth=<n>", _("Excessive blocks are accepted anyway if this "
+                                                              "many blocks are mined on top of them"));
+    strUsage += HelpMessageOpt("-receiveburst", _("The maximum rate that data can be received in kB/s.  If there has "
+                                                  "been a period of lower "
+                                                  "than average data rates, the client may receive extra data to bring "
+                                                  "the average back to "
+                                                  "'-receiveavg' but the data rate will not exceed this parameter."));
+    strUsage += HelpMessageOpt("-sendburst", _("The maximum rate that data can be sent in kB/s.  If "
+                                               "there has been a period of lower than "
+                                               "average data rates, the client may send extra data to "
+                                               "bring the average back to '-receiveavg' "
+                                               "but the data rate will not exceed this parameter."));
     strUsage += HelpMessageOpt("-receiveavg", _("The average rate that data can be received in kB/s"));
     strUsage += HelpMessageOpt("-sendavg", _("The maximum rate that data can be sent in kB/s"));
     strUsage += HelpMessageOpt(
         "-use-thinblocks=<n>", strprintf(_("Turn Thinblocks on or off (off: 0, on: 1, default: %d)"), 1));
-    strUsage += HelpMessageOpt("-connect-thinblock=<ip:port>",
-        _("Connect to a thinblock node(s). Blocks will only be downloaded from a thinblock peer.  If no connections "
-          "are possible then regular blocks will then be downloaded form any other connected peers."));
+    strUsage += HelpMessageOpt("-connect-thinblock=<ip:port>", _("Connect to a thinblock node(s). Blocks will only be "
+                                                                 "downloaded from a thinblock peer.  If no connections "
+                                                                 "are possible then regular blocks will then be "
+                                                                 "downloaded form any other connected peers."));
     strUsage +=
         HelpMessageOpt("-minlimitertxfee=<amt>", strprintf(_("Fees (in satoshi/byte) smaller than this are considered "
                                                              "zero fee and subject to -limitfreerelay (default: %s)"),
@@ -467,34 +477,37 @@ std::string UnlimitedCmdLineHelp()
         "-min-xthin-nodes=<n>", strprintf(_("Minimum number of xthin nodes to automatically find and connect "
                                             "(default: %d)"),
                                     4));
-    strUsage += HelpMessageOpt("-maxlimitertxfee=<amt>",
-        strprintf(_("Fees (in satoshi/byte) larger than this are always relayed (default: %s)"),
-                                   DEFAULT_MAXLIMITERTXFEE));
-    strUsage += HelpMessageOpt(
-        "-bitnodes", _("Query for peer addresses via Bitnodes API, if low on addresses (default: 1 unless -connect)"));
+    strUsage += HelpMessageOpt("-maxlimitertxfee=<amt>", strprintf(_("Fees (in satoshi/byte) larger than this are "
+                                                                     "always relayed (default: %s)"),
+                                                             DEFAULT_MAXLIMITERTXFEE));
+    strUsage += HelpMessageOpt("-bitnodes", _("Query for peer addresses via Bitnodes API, if low on "
+                                              "addresses (default: 1 unless -connect)"));
     strUsage += HelpMessageOpt("-forcebitnodes",
         strprintf(_("Always query for peer addresses via Bitnodes API (default: %u)"), DEFAULT_FORCEBITNODES));
     strUsage += HelpMessageOpt("-usednsseed=<host>", _("Add a custom DNS seed to use.  If at least one custom DNS seed "
                                                        "is set, the default DNS seeds will be ignored."));
+    strUsage += HelpMessageOpt("-expeditedblock=<host>", _("Request expedited blocks from this host "
+                                                           "whenever we are connected to it"));
+    strUsage += HelpMessageOpt("-maxexpeditedblockrecipients=<n>", _("The maximum number of nodes this node will "
+                                                                     "forward expedited blocks to"));
+    strUsage += HelpMessageOpt("-maxexpeditedtxrecipients=<n>", _("The maximum number of nodes this node will "
+                                                                  "forward expedited transactions to"));
     strUsage += HelpMessageOpt(
-        "-expeditedblock=<host>", _("Request expedited blocks from this host whenever we are connected to it"));
-    strUsage += HelpMessageOpt("-maxexpeditedblockrecipients=<n>",
-        _("The maximum number of nodes this node will forward expedited blocks to"));
-    strUsage += HelpMessageOpt("-maxexpeditedtxrecipients=<n>",
-        _("The maximum number of nodes this node will forward expedited transactions to"));
-    strUsage += HelpMessageOpt("-maxoutconnections=<n>",
-        strprintf(_("Initiate at most <n> connections to peers (default: %u).  If this number is higher than "
-                    "--maxconnections, it will be reduced to --maxconnections."),
-                                   DEFAULT_MAX_OUTBOUND_CONNECTIONS));
-    strUsage += HelpMessageOpt(
-        "-parallel=<n>", strprintf(_("Turn Parallel Block Validation on or off (off: 0, on: 1, default: %d)"), 1));
+        "-maxoutconnections=<n>", strprintf(_("Initiate at most <n> connections to peers (default: %u).  "
+                                              "If this number is higher than "
+                                              "--maxconnections, it will be reduced to --maxconnections."),
+                                      DEFAULT_MAX_OUTBOUND_CONNECTIONS));
+    strUsage += HelpMessageOpt("-parallel=<n>", strprintf(_("Turn Parallel Block Validation on or "
+                                                            "off (off: 0, on: 1, default: %d)"),
+                                                    1));
     strUsage += HelpMessageOpt("-gen", strprintf(_("Generate coins (default: %u)"), DEFAULT_GENERATE));
-    strUsage += HelpMessageOpt("-genproclimit=<n>",
-        strprintf(_("Set the number of threads for coin generation if enabled (-1 = all cores, default: %d)"),
-                                   DEFAULT_GENERATE_THREADS));
-    strUsage += HelpMessageOpt("-ophanpoolexpiry=<n>",
-        strprintf(_("Do not keep transactions in the orphanpool longer than <n> hours (default: %u)"),
-                                   DEFAULT_ORPHANPOOL_EXPIRY));
+    strUsage +=
+        HelpMessageOpt("-genproclimit=<n>", strprintf(_("Set the number of threads for coin generation if enabled "
+                                                        "(-1 = all cores, default: %d)"),
+                                                DEFAULT_GENERATE_THREADS));
+    strUsage += HelpMessageOpt("-ophanpoolexpiry=<n>", strprintf(_("Do not keep transactions in the orphanpool "
+                                                                   "longer than <n> hours (default: %u)"),
+                                                           DEFAULT_ORPHANPOOL_EXPIRY));
     strUsage += TweakCmdLineHelp();
     return strUsage;
 }
@@ -537,15 +550,20 @@ UniValue expedited(const UniValue &params, bool fHelp)
     string strCommand;
     if (fHelp || params.size() < 2)
         throw runtime_error("expedited block|tx \"node IP addr\" on|off\n"
-                            "\nRequest expedited forwarding of blocks and/or transactions from a node.\nExpedited "
-                            "forwarding sends blocks or transactions to a node before the node requests them.  This "
+                            "\nRequest expedited forwarding of blocks and/or transactions from a "
+                            "node.\nExpedited "
+                            "forwarding sends blocks or transactions to a node before the node "
+                            "requests them.  This "
                             "reduces latency, potentially at the expense of bandwidth.\n"
                             "\nArguments:\n"
-                            "1. \"block | tx\"        (string, required) choose block to send expedited blocks, tx to "
+                            "1. \"block | tx\"        (string, required) choose block to send "
+                            "expedited blocks, tx to "
                             "send expedited transactions\n"
-                            "2. \"node ip addr\"     (string, required) The node's IP address or IP and port (see "
+                            "2. \"node ip addr\"     (string, required) The node's IP address or "
+                            "IP and port (see "
                             "getpeerinfo for nodes)\n"
-                            "3. \"on | off\"     (string, required) Turn expedited service on or off\n"
+                            "3. \"on | off\"     (string, required) Turn expedited service on or "
+                            "off\n"
                             "\nExamples:\n" +
                             HelpExampleCli("expedited", "block \"192.168.0.6:8333\" on") +
                             HelpExampleRpc("expedited", "\"block\", \"192.168.0.6:8333\", \"on\""));
@@ -599,7 +617,8 @@ UniValue expedited(const UniValue &params, bool fHelp)
         }
     }
 
-    // Push the expedited message even if its a repeat to allow the operator to reissue the CLI command to trigger
+    // Push the expedited message even if its a repeat to allow the operator to
+    // reissue the CLI command to trigger
     // another message.
     node->PushMessage(NetMsgType::XPEDITEDREQUEST, flags);
     return NullUniValue;
@@ -612,14 +631,16 @@ UniValue pushtx(const UniValue &params, bool fHelp)
         throw runtime_error("pushtx \"node\"\n"
                             "\nPush uncommitted transactions to a node.\n"
                             "\nArguments:\n"
-                            "1. \"node\"     (string, required) The node (see getpeerinfo for nodes)\n"
+                            "1. \"node\"     (string, required) The node (see "
+                            "getpeerinfo for nodes)\n"
                             "\nExamples:\n" +
                             HelpExampleCli("pushtx", "\"192.168.0.6:8333\" ") +
                             HelpExampleRpc("pushtx", "\"192.168.0.6:8333\", "));
 
     string strNode = params[0].get_str();
 
-    // BU: Add lock on cs_vNodes as FindNode now requries it to prevent potential use-after-free errors
+    // BU: Add lock on cs_vNodes as FindNode now requries it to prevent potential
+    // use-after-free errors
     CNode *node = NULL;
     {
         LOCK(cs_vNodes);
@@ -630,14 +651,17 @@ UniValue pushtx(const UniValue &params, bool fHelp)
             throw runtime_error("Unknown node");
         }
 
-        // BU: Since we are passing node to another function, add a ref to prevent use-after-free
-        //    This allows us to release the lock on cs_vNodes earlier while still protecting node from deletion
+        // BU: Since we are passing node to another function, add a ref to prevent
+        // use-after-free
+        //    This allows us to release the lock on cs_vNodes earlier while still
+        //    protecting node from deletion
         node->AddRef();
     }
 
     UnlimitedPushTxns(node);
 
-    // BU: Remember to release the reference we took on node to protect from use-after-free
+    // BU: Remember to release the reference we took on node to protect from
+    // use-after-free
     node->Release();
 
     return NullUniValue;
@@ -694,11 +718,13 @@ void UnlimitedSetup(void)
     blockVersion = GetArg("-blockversion", blockVersion);
     excessiveBlockSize = GetArg("-excessiveblocksize", excessiveBlockSize);
     excessiveAcceptDepth = GetArg("-excessiveacceptdepth", excessiveAcceptDepth);
-    LoadTweaks(); // The above options are deprecated so the same parameter defined as a tweak will override them
+    LoadTweaks(); // The above options are deprecated so the same parameter
+    // defined as a tweak will override them
 
     if (maxGeneratedBlock > excessiveBlockSize)
     {
-        LogPrintf("Reducing the maximum mined block from the configured %d to your excessive block size %d.  Otherwise "
+        LogPrintf("Reducing the maximum mined block from the configured %d to your "
+                  "excessive block size %d.  Otherwise "
                   "you would orphan your own blocks.\n",
             maxGeneratedBlock, excessiveBlockSize);
         maxGeneratedBlock = excessiveBlockSize;
@@ -707,7 +733,8 @@ void UnlimitedSetup(void)
     settingsToUserAgentString();
     //  Init network shapers
     int64_t rb = GetArg("-receiveburst", DEFAULT_MAX_RECV_BURST);
-    // parameter is in KBytes/sec, leaky bucket is in bytes/sec.  But if it is "off" then don't multiply
+    // parameter is in KBytes/sec, leaky bucket is in bytes/sec.  But if it is
+    // "off" then don't multiply
     if (rb != std::numeric_limits<long long>::max())
         rb *= 1024;
     int64_t ra = GetArg("-receiveavg", DEFAULT_AVE_RECV);
@@ -747,11 +774,13 @@ void UnlimitedSetup(void)
 
     if (nMaxConnections < nMaxOutConnections)
     {
-        // uiInterface.ThreadSafeMessageBox((strprintf(_("Reducing -maxoutconnections from %d to %d, because this value
-        // is higher than max available connections."), nUserMaxOutConnections, nMaxConnections)),"",
+        // uiInterface.ThreadSafeMessageBox((strprintf(_("Reducing
+        // -maxoutconnections from %d to %d, because this value
+        // is higher than max available connections."), nUserMaxOutConnections,
+        // nMaxConnections)),"",
         // CClientUIInterface::MSG_WARNING);
-        LogPrintf(
-            "Reducing -maxoutconnections from %d to %d, because this value is higher than max available connections.\n",
+        LogPrintf("Reducing -maxoutconnections from %d to %d, because this value "
+                  "is higher than max available connections.\n",
             nUserMaxOutConnections, nMaxConnections);
         nMaxOutConnections = nMaxConnections;
     }
@@ -777,7 +806,6 @@ extern void UnlimitedLogBlock(const CBlock &block, const std::string &hash, uint
 #endif
 }
 
-
 std::string LicenseInfo()
 {
     return FormatParagraph(strprintf(_("Copyright (C) 2015-%i The Bitcoin Unlimited Developers"), COPYRIGHT_YEAR)) +
@@ -785,13 +813,18 @@ std::string LicenseInfo()
            FormatParagraph(strprintf(_("Portions Copyright (C) 2009-%i The Bitcoin Core Developers"), COPYRIGHT_YEAR)) +
            "\n\n" +
            FormatParagraph(strprintf(_("Portions Copyright (C) 2014-%i The Bitcoin XT Developers"), COPYRIGHT_YEAR)) +
-           FormatParagraph(strprintf(_("Portions Copyright (C) %i The Bitcoin Developers"), COPYRIGHT_YEAR)) +  // MVF-BU copyright (MVHF-BU-DES-IDME-1)
-           "\n\n" + "\n" + FormatParagraph(_("This is experimental software.")) + "\n" + "\n" +
-           FormatParagraph(_("Distributed under the MIT software license, see the accompanying file COPYING or "
+           // MVF-BU copyright (MVHF-BU-DES-IDME-1)
+           FormatParagraph(strprintf(_("Portions Copyright (C) %i The Bitcoin Developers"), COPYRIGHT_YEAR)) + "\n\n" +
+           "\n" + FormatParagraph(_("This is experimental software.")) + "\n" + "\n" +
+           FormatParagraph(_("Distributed under the MIT software license, see the "
+                             "accompanying file COPYING or "
                              "<http://www.opensource.org/licenses/mit-license.php>.")) +
-           "\n" + "\n" + FormatParagraph(_("This product includes software developed by the OpenSSL Project for use in "
-                                           "the OpenSSL Toolkit <https://www.openssl.org/> and cryptographic software "
-                                           "written by Eric Young and UPnP software written by Thomas Bernard.")) +
+           "\n" + "\n" + FormatParagraph(_("This product includes software developed by the "
+                                           "OpenSSL Project for use in "
+                                           "the OpenSSL Toolkit <https://www.openssl.org/> and "
+                                           "cryptographic software "
+                                           "written by Eric Young and UPnP software written by "
+                                           "Thomas Bernard.")) +
            "\n";
 }
 
@@ -847,15 +880,17 @@ static bool ProcessBlockFound(const CBlock *pblock, const CChainParams &chainpar
     // Inform about the new block
     GetMainSignals().BlockFound(pblock->GetHash());
 
-
     {
-        // We take a cs_main lock here even though it will also be aquired in ProcessNewBlock.  We want
-        // to make sure we give priority to our own blocks.  This is in order to prevent any other Parallel
+        // We take a cs_main lock here even though it will also be aquired in
+        // ProcessNewBlock.  We want
+        // to make sure we give priority to our own blocks.  This is in order to
+        // prevent any other Parallel
         // Blocks to validate when we've just mined one of our own blocks.
         LOCK(cs_main);
 
         // In we are mining our own block or not running in parallel for any reason
-        // we must terminate any block validation threads that are currently running,
+        // we must terminate any block validation threads that are currently
+        // running,
         // Unless they have more work than our own block.
         // TODO: we need a better way to determine if a reorg is in progress.
         PV.StopAllValidationThreads(pblock->GetBlockHeader().nBits);
@@ -868,7 +903,6 @@ static bool ProcessBlockFound(const CBlock *pblock, const CChainParams &chainpar
 
     return true;
 }
-
 
 void static BitcoinMiner(const CChainParams &chainparams)
 {
@@ -893,7 +927,8 @@ void static BitcoinMiner(const CChainParams &chainparams)
         {
             if (chainparams.MiningRequiresPeers())
             {
-                // Busy-wait for the network to come online so we don't waste time mining
+                // Busy-wait for the network to come online so we don't waste time
+                // mining
                 // on an obsolete chain. In regtest mode we expect to fly solo.
                 do
                 {
@@ -922,7 +957,8 @@ void static BitcoinMiner(const CChainParams &chainparams)
                 BlockAssembler(chainparams).CreateNewBlock(coinbaseScript->reserveScript));
             if (!pblocktemplate.get())
             {
-                LogPrintf("Error in BitcoinMiner: Keypool ran out, please call keypoolrefill before restarting the "
+                LogPrintf("Error in BitcoinMiner: Keypool ran out, please call "
+                          "keypoolrefill before restarting the "
                           "mining thread\n");
                 return;
             }
@@ -1032,14 +1068,15 @@ UniValue getgenerate(const UniValue &params, bool fHelp)
 {
     if (fHelp || params.size() != 0)
         throw runtime_error("getgenerate\n"
-                            "\nReturn if the server is set to generate coins or not. The default is false.\n"
+                            "\nReturn if the server is set to generate coins or "
+                            "not. The default is false.\n"
                             "It is set with the command line argument -gen (or " +
-                            std::string(BITCOIN_CONF_FILENAME) +
-                            " setting gen)\n"
-                            "It can also be set with the setgenerate call.\n"
-                            "\nResult\n"
-                            "true|false      (boolean) If the server is set to generate coins or not\n"
-                            "\nExamples:\n" +
+                            std::string(BITCOIN_CONF_FILENAME) + " setting gen)\n"
+                                                                 "It can also be set with the setgenerate call.\n"
+                                                                 "\nResult\n"
+                                                                 "true|false      (boolean) If the server is set to "
+                                                                 "generate coins or not\n"
+                                                                 "\nExamples:\n" +
                             HelpExampleCli("getgenerate", "") + HelpExampleRpc("getgenerate", ""));
 
     LOCK(cs_main);
@@ -1050,20 +1087,22 @@ UniValue getgenerate(const UniValue &params, bool fHelp)
 UniValue setgenerate(const UniValue &params, bool fHelp)
 {
     if (fHelp || params.size() < 1 || params.size() > 2)
-        throw runtime_error(
-            "setgenerate generate ( genproclimit )\n"
-            "\nSet 'generate' true or false to turn generation on or off.\n"
-            "Generation is limited to 'genproclimit' processors, -1 is unlimited.\n"
-            "See the getgenerate call for the current setting.\n"
-            "\nArguments:\n"
-            "1. generate         (boolean, required) Set to true to turn on generation, off to turn off.\n"
-            "2. genproclimit     (numeric, optional) Set the processor limit for when generation is on. Can be -1 for "
-            "unlimited.\n"
-            "\nExamples:\n"
-            "\nSet the generation on with a limit of one processor\n" +
-            HelpExampleCli("setgenerate", "true 1") + "\nCheck the setting\n" + HelpExampleCli("getgenerate", "") +
-            "\nTurn off generation\n" + HelpExampleCli("setgenerate", "false") + "\nUsing json rpc\n" +
-            HelpExampleRpc("setgenerate", "true, 1"));
+        throw runtime_error("setgenerate generate ( genproclimit )\n"
+                            "\nSet 'generate' true or false to turn generation on or off.\n"
+                            "Generation is limited to 'genproclimit' processors, -1 is unlimited.\n"
+                            "See the getgenerate call for the current setting.\n"
+                            "\nArguments:\n"
+                            "1. generate         (boolean, required) Set to true to turn on "
+                            "generation, off to turn off.\n"
+                            "2. genproclimit     (numeric, optional) Set the processor limit for "
+                            "when generation is on. Can be -1 for "
+                            "unlimited.\n"
+                            "\nExamples:\n"
+                            "\nSet the generation on with a limit of one processor\n" +
+                            HelpExampleCli("setgenerate", "true 1") + "\nCheck the setting\n" +
+                            HelpExampleCli("getgenerate", "") + "\nTurn off generation\n" +
+                            HelpExampleCli("setgenerate", "false") + "\nUsing json rpc\n" +
+                            HelpExampleRpc("setgenerate", "true, 1"));
 
     if (Params().MineBlocksOnDemand())
         throw JSONRPCError(RPC_METHOD_NOT_FOUND, "Use the generate method instead of setgenerate on this network");
@@ -1117,8 +1156,10 @@ int isChainExcessive(const CBlockIndex *blk, unsigned int goBack)
             recentExcessive = true;
     }
 
-    // Once an excessive block is built upon the chain is not excessive even if more large blocks appear.
-    // So look back to make sure that this is the "first" excessive block for a while
+    // Once an excessive block is built upon the chain is not excessive even if
+    // more large blocks appear.
+    // So look back to make sure that this is the "first" excessive block for a
+    // while
     for (unsigned int i = 0; i < EXCESSIVE_BLOCK_CHAIN_RESET; i++, blk = blk->pprev)
     {
         if (!blk)
@@ -1151,9 +1192,9 @@ bool CheckExcessive(const CBlock &block, uint64_t blockSize, uint64_t nSigOps, u
         }
 
         // check proportional sigops
-        uint64_t blockMbSize =
-            1 + ((blockSize - 1) /
-                    1000000); // block size in megabytes rounded up. 1-1000000 -> 1, 1000001-2000000 -> 2, etc.
+        uint64_t blockMbSize = 1 + ((blockSize - 1) / 1000000); // block size in megabytes rounded up.
+        // 1-1000000 -> 1, 1000001-2000000 ->
+        // 2, etc.
         if (nSigOps > blockSigopsPerMb.value * blockMbSize)
         {
             LogPrintf("Excessive block: ver:%x time:%d size: %" PRIu64 " Tx:%" PRIu64
@@ -1164,7 +1205,8 @@ bool CheckExcessive(const CBlock &block, uint64_t blockSize, uint64_t nSigOps, u
     }
     else
     {
-        // Within a 1MB block transactions can be 1MB, so nothing to check WRT transaction size
+        // Within a 1MB block transactions can be 1MB, so nothing to check WRT
+        // transaction size
 
         // Check max sigops
         if (nSigOps > BLOCKSTREAM_CORE_MAX_BLOCK_SIGOPS)
@@ -1185,7 +1227,8 @@ extern UniValue getminercomment(const UniValue &params, bool fHelp)
 {
     if (fHelp || params.size() != 0)
         throw runtime_error("getminercomment\n"
-                            "\nReturn the comment that will be put into each mined block's coinbase\n transaction "
+                            "\nReturn the comment that will be put into each mined "
+                            "block's coinbase\n transaction "
                             "after the Bitcoin Unlimited parameters."
                             "\nResult\n"
                             "  minerComment (string) miner comment\n"
@@ -1199,8 +1242,10 @@ extern UniValue setminercomment(const UniValue &params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
         throw runtime_error("setminercomment\n"
-                            "\nSet the comment that will be put into each mined block's coinbase\n transaction after "
-                            "the Bitcoin Unlimited parameters.\n Comments that are too long will be truncated."
+                            "\nSet the comment that will be put into each mined block's coinbase\n "
+                            "transaction after "
+                            "the Bitcoin Unlimited parameters.\n Comments that are too long will "
+                            "be truncated."
                             "\nExamples:\n" +
                             HelpExampleCli("setminercomment", "\"bitcoin is fundamentally emergent consensus\"") +
                             HelpExampleRpc("setminercomment", "\"bitcoin is fundamentally emergent consensus\""));
@@ -1216,7 +1261,8 @@ UniValue getexcessiveblock(const UniValue &params, bool fHelp)
                             "\nReturn the excessive block size and accept depth."
                             "\nResult\n"
                             "  excessiveBlockSize (integer) block size in bytes\n"
-                            "  excessiveAcceptDepth (integer) if the chain gets this much deeper than the excessive "
+                            "  excessiveAcceptDepth (integer) if the chain gets this much deeper "
+                            "than the excessive "
                             "block, then accept the chain as active (if it has the most work)\n"
                             "\nExamples:\n" +
                             HelpExampleCli("getexcessiveblock", "") + HelpExampleRpc("getexcessiveblock", ""));
@@ -1231,14 +1277,19 @@ UniValue setexcessiveblock(const UniValue &params, bool fHelp)
 {
     if (fHelp || params.size() < 2 || params.size() >= 3)
         throw runtime_error("setexcessiveblock blockSize acceptDepth\n"
-                            "\nSet the excessive block size and accept depth.  Excessive blocks will not be used in "
-                            "the active chain or relayed until they are several blocks deep in the blockchain.  This "
-                            "discourages the propagation of blocks that you consider excessively large.  However, if "
-                            "the mining majority of the network builds upon the block then you will eventually accept "
+                            "\nSet the excessive block size and accept depth.  "
+                            "Excessive blocks will not be used in "
+                            "the active chain or relayed until they are several "
+                            "blocks deep in the blockchain.  This "
+                            "discourages the propagation of blocks that you "
+                            "consider excessively large.  However, if "
+                            "the mining majority of the network builds upon the "
+                            "block then you will eventually accept "
                             "it, maintaining consensus."
                             "\nResult\n"
                             "  blockSize (integer) excessive block size in bytes\n"
-                            "  acceptDepth (integer) if the chain gets this much deeper than the excessive block, then "
+                            "  acceptDepth (integer) if the chain gets this much "
+                            "deeper than the excessive block, then "
                             "accept the chain as active (if it has the most work)\n"
                             "\nExamples:\n" +
                             HelpExampleCli("getexcessiveblock", "") + HelpExampleRpc("getexcessiveblock", ""));
@@ -1276,7 +1327,6 @@ UniValue setexcessiveblock(const UniValue &params, bool fHelp)
     return UniValue(ret.str());
 }
 
-
 UniValue getminingmaxblock(const UniValue &params, bool fHelp)
 {
     if (fHelp || params.size() != 0)
@@ -1290,20 +1340,20 @@ UniValue getminingmaxblock(const UniValue &params, bool fHelp)
     return maxGeneratedBlock;
 }
 
-
 UniValue setminingmaxblock(const UniValue &params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
-        throw runtime_error(
-            "setminingmaxblock blocksize\n"
-            "\nSet the maximum number of bytes to include in a generated (mined) block.  This command does not turn "
-            "generation on/off.\n"
-            "\nArguments:\n"
-            "1. blocksize         (integer, required) the maximum number of bytes to include in a block.\n"
-            "\nExamples:\n"
-            "\nSet the generated block size limit to 8 MB\n" +
-            HelpExampleCli("setminingmaxblock", "8000000") + "\nCheck the setting\n" +
-            HelpExampleCli("getminingmaxblock", ""));
+        throw runtime_error("setminingmaxblock blocksize\n"
+                            "\nSet the maximum number of bytes to include in a "
+                            "generated (mined) block.  This command does not turn "
+                            "generation on/off.\n"
+                            "\nArguments:\n"
+                            "1. blocksize         (integer, required) the maximum "
+                            "number of bytes to include in a block.\n"
+                            "\nExamples:\n"
+                            "\nSet the generated block size limit to 8 MB\n" +
+                            HelpExampleCli("setminingmaxblock", "8000000") + "\nCheck the setting\n" +
+                            HelpExampleCli("getminingmaxblock", ""));
 
     uint64_t arg = 0;
     if (params[0].isNum())
@@ -1316,7 +1366,8 @@ UniValue setminingmaxblock(const UniValue &params, bool fHelp)
         arg = boost::lexical_cast<uint64_t>(temp);
     }
 
-    // I don't want to waste time testing edge conditions where no txns can fit in a block, so limit the minimum block
+    // I don't want to waste time testing edge conditions where no txns can fit in
+    // a block, so limit the minimum block
     // size
     // This also fixes issues user issues where people provide the value as MB
     if (arg < 100)
@@ -1347,7 +1398,8 @@ UniValue setblockversion(const UniValue &params, bool fHelp)
         throw runtime_error("setblockversion blockVersionNumber\n"
                             "\nSet the block version number.\n"
                             "\nArguments:\n"
-                            "1. blockVersionNumber         (integer, hex integer, 'BIP109', 'BASE' or 'default'.  "
+                            "1. blockVersionNumber         (integer, hex integer, "
+                            "'BIP109', 'BASE' or 'default'.  "
                             "Required) The block version number.\n"
                             "\nExamples:\n"
                             "\nVote for 2MB blocks\n" +
@@ -1409,21 +1461,26 @@ UniValue gettrafficshaping(const UniValue &params, bool fHelp)
     }
 
     if (fHelp || (params.size() != 0))
-        throw runtime_error(
-            "gettrafficshaping"
-            "\nReturns the current settings for the network send and receive bandwidth and burst in kilobytes per "
-            "second.\n"
-            "\nArguments: None\n"
-            "\nResult:\n"
-            "  {\n"
-            "    \"sendBurst\" : 40,   (string) The maximum send bandwidth in Kbytes/sec\n"
-            "    \"sendAve\" : 30,   (string) The average send bandwidth in Kbytes/sec\n"
-            "    \"recvBurst\" : 20,   (string) The maximum receive bandwidth in Kbytes/sec\n"
-            "    \"recvAve\" : 10,   (string) The average receive bandwidth in Kbytes/sec\n"
-            "  }\n"
-            "\n NOTE: if the send and/or recv parameters do not exist, shaping in that direction is disabled.\n"
-            "\nExamples:\n" +
-            HelpExampleCli("gettrafficshaping", "") + HelpExampleRpc("gettrafficshaping", ""));
+        throw runtime_error("gettrafficshaping"
+                            "\nReturns the current settings for the network send "
+                            "and receive bandwidth and burst in kilobytes per "
+                            "second.\n"
+                            "\nArguments: None\n"
+                            "\nResult:\n"
+                            "  {\n"
+                            "    \"sendBurst\" : 40,   (string) The maximum send "
+                            "bandwidth in Kbytes/sec\n"
+                            "    \"sendAve\" : 30,   (string) The average send "
+                            "bandwidth in Kbytes/sec\n"
+                            "    \"recvBurst\" : 20,   (string) The maximum "
+                            "receive bandwidth in Kbytes/sec\n"
+                            "    \"recvAve\" : 10,   (string) The average receive "
+                            "bandwidth in Kbytes/sec\n"
+                            "  }\n"
+                            "\n NOTE: if the send and/or recv parameters do not "
+                            "exist, shaping in that direction is disabled.\n"
+                            "\nExamples:\n" +
+                            HelpExampleCli("gettrafficshaping", "") + HelpExampleRpc("gettrafficshaping", ""));
 
     UniValue ret(UniValue::VOBJ);
     int64_t max, avg;
@@ -1469,18 +1526,21 @@ UniValue settrafficshaping(const UniValue &params, bool fHelp)
         badArg = true;
 
     if (fHelp || badArg || bucket == NULL)
-        throw runtime_error(
-            "settrafficshaping \"send|receive\" \"burstKB\" \"averageKB\""
-            "\nSets the network send or receive bandwidth and burst in kilobytes per second.\n"
-            "\nArguments:\n"
-            "1. \"send|receive\"     (string, required) Are you setting the transmit or receive bandwidth\n"
-            "2. \"burst\"  (integer, required) Specify the maximum burst size in Kbytes/sec (actual max will be 1 "
-            "packet larger than this number)\n"
-            "2. \"average\"  (integer, required) Specify the average throughput in Kbytes/sec\n"
-            "\nExamples:\n" +
-            HelpExampleCli("settrafficshaping", "\"receive\" 10000 1024") +
-            HelpExampleCli("settrafficshaping", "\"receive\" disable") +
-            HelpExampleRpc("settrafficshaping", "\"receive\" 10000 1024"));
+        throw runtime_error("settrafficshaping \"send|receive\" \"burstKB\" \"averageKB\""
+                            "\nSets the network send or receive bandwidth and burst in kilobytes "
+                            "per second.\n"
+                            "\nArguments:\n"
+                            "1. \"send|receive\"     (string, required) Are you setting the "
+                            "transmit or receive bandwidth\n"
+                            "2. \"burst\"  (integer, required) Specify the maximum burst size in "
+                            "Kbytes/sec (actual max will be 1 "
+                            "packet larger than this number)\n"
+                            "2. \"average\"  (integer, required) Specify the average throughput in "
+                            "Kbytes/sec\n"
+                            "\nExamples:\n" +
+                            HelpExampleCli("settrafficshaping", "\"receive\" 10000 1024") +
+                            HelpExampleCli("settrafficshaping", "\"receive\" disable") +
+                            HelpExampleRpc("settrafficshaping", "\"receive\" 10000 1024"));
 
     if (disable)
     {
@@ -1517,8 +1577,10 @@ UniValue settrafficshaping(const UniValue &params, bool fHelp)
     return NullUniValue;
 }
 
-// fIsInitialBlockDownload is updated only during startup and whenever we receive a header.
-// This way we avoid having to lock cs_main so often which tends to be a bottleneck.
+// fIsInitialBlockDownload is updated only during startup and whenever we
+// receive a header.
+// This way we avoid having to lock cs_main so often which tends to be a
+// bottleneck.
 void IsInitialBlockDownloadInit()
 {
     const CChainParams &chainParams = Params();
@@ -1555,8 +1617,10 @@ void IsInitialBlockDownloadInit()
 }
 
 bool IsInitialBlockDownload() { return fIsInitialBlockDownload.load(); }
-// fIsChainNearlySyncd is updated only during startup and whenever we receive a header.
-// This way we avoid having to lock cs_main so often which tends to be a bottleneck.
+// fIsChainNearlySyncd is updated only during startup and whenever we receive a
+// header.
+// This way we avoid having to lock cs_main so often which tends to be a
+// bottleneck.
 void IsChainNearlySyncdInit()
 {
     LOCK(cs_main);
@@ -1623,7 +1687,8 @@ bool CheckAndRequestExpeditedBlocks(CNode *pfrom)
         {
             string strListeningPeerIP;
             string strPeerIP = pfrom->addr.ToString();
-            // Add the peer's listening port if it was provided (only misbehaving clients do not provide it)
+            // Add the peer's listening port if it was provided (only misbehaving
+            // clients do not provide it)
             if (pfrom->addrFromPort != 0)
             {
                 int pos1 = strAddr.rfind(":");
@@ -1650,14 +1715,16 @@ bool CheckAndRequestExpeditedBlocks(CNode *pfrom)
             {
                 if (!IsThinBlocksEnabled())
                 {
-                    LogPrintf("You do not have Thinblocks enabled.  You can not request expedited blocks from peer %s "
+                    LogPrintf("You do not have Thinblocks enabled.  You can not request "
+                              "expedited blocks from peer %s "
                               "(%d).\n",
                         strListeningPeerIP, pfrom->id);
                     return false;
                 }
                 else if (!pfrom->ThinBlockCapable())
                 {
-                    LogPrintf("Thinblocks is not enabled on remote peer.  You can not request expedited blocks from "
+                    LogPrintf("Thinblocks is not enabled on remote peer.  You can not "
+                              "request expedited blocks from "
                               "peer %s (%d).\n",
                         strListeningPeerIP, pfrom->id);
                     return false;
@@ -1675,7 +1742,8 @@ bool CheckAndRequestExpeditedBlocks(CNode *pfrom)
     return false;
 }
 
-// Similar to TestBlockValidity but is very conservative in parameters (used in mining)
+// Similar to TestBlockValidity but is very conservative in parameters (used in
+// mining)
 bool TestConservativeBlockValidity(CValidationState &state,
     const CChainParams &chainparams,
     const CBlock &block,
@@ -1772,14 +1840,19 @@ UniValue getstat(const UniValue &params, bool fHelp)
     }
     if (fHelp || (params.size() < 1))
         throw runtime_error("getstat"
-                            "\nReturns the current settings for the network send and receive bandwidth and burst in "
+                            "\nReturns the current settings for the network send and receive "
+                            "bandwidth and burst in "
                             "kilobytes per second.\n"
                             "\nArguments: \n"
-                            "1. \"statistic\"     (string, required) Specify what statistic you want\n"
-                            "2. \"series\"  (string, optional) Specify what data series you want.  Options are "
-                            "\"total\", \"now\",\"all\", \"sec10\", \"min5\", \"hourly\", \"daily\",\"monthly\".  "
+                            "1. \"statistic\"     (string, required) Specify what statistic you "
+                            "want\n"
+                            "2. \"series\"  (string, optional) Specify what data series you want.  "
+                            "Options are "
+                            "\"total\", \"now\",\"all\", \"sec10\", \"min5\", \"hourly\", "
+                            "\"daily\",\"monthly\".  "
                             "Default is all.\n"
-                            "3. \"count\"  (string, optional) Specify the number of samples you want.\n"
+                            "3. \"count\"  (string, optional) Specify the number of samples you "
+                            "want.\n"
 
                             "\nResult:\n"
                             "  {\n"
