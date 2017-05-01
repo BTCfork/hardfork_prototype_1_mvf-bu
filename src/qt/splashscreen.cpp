@@ -34,7 +34,8 @@ SplashScreen::SplashScreen(Qt::WindowFlags f, const NetworkStyle *networkStyle) 
     int paddingRight            = 50;
     int paddingTop              = 50;
     int titleVersionVSpace      = 17;
-    int titleCopyrightVSpace    = 40;
+    int titleCopyrightVSpaceCore = 40;
+    int titleCopyrightVSpaceUnlimited = 54;
 
     float fontFactor            = 1.0;
     float devicePixelRatio      = 1.0;
