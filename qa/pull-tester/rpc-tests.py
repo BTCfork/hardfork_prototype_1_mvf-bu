@@ -167,12 +167,10 @@ if ENABLE_ZMQ:
 #Tests
 testScripts = [ RpcTest(t) for t in [
     'bip68-112-113-p2p',
-    'parallel',
     'wallet',
     'mvf-bu-retarget --quick', # MVF-BU: quick version for Travis
     'mvf-bu-csig', # MVF-BU
     'mvf-bu-trig',  # MVF-BU
-    'excessive',
     'listtransactions',
     'receivedby',
     'mempool_resurrect_test',
@@ -210,6 +208,7 @@ testScripts = [ RpcTest(t) for t in [
 ] ]
 
 testScriptsExt = [ RpcTest(t) for t in [
+    'parallel',
     'txPerf',
     'excessive --extended',
     'bip9-softforks',
