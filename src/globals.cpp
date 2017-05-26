@@ -22,6 +22,7 @@
 #include "parallel.h"
 #include "policy/policy.h"
 #include "primitives/block.h"
+#include "requestManager.h"
 #include "rpc/server.h"
 #include "stat.h"
 #include "thinblock.h"
@@ -30,19 +31,19 @@
 #include "tweak.h"
 #include "txmempool.h"
 #include "ui_interface.h"
-#include "unlimited.h"
 #include "util.h"
 #include "utilstrencodings.h"
 #include "validationinterface.h"
 #include "version.h"
 
+#include <atomic>
 #include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
 #include <inttypes.h>
 #include <iomanip>
+#include <list>
 #include <queue>
-
 
 using namespace std;
 
@@ -51,6 +52,9 @@ boost::mutex dd_mutex;
 std::map<std::pair<void *, void *>, LockStack> lockorders;
 boost::thread_specific_ptr<LockStack> lockstack;
 #endif
+
+
+std::atomic<bool> fIsInitialBlockDownload{false};
 
 // main.cpp CriticalSections:
 CCriticalSection cs_LastBlockFile;
@@ -94,6 +98,9 @@ CCriticalSection cs_mapInboundConnectionTracker;
 CCriticalSection cs_vOneShots;
 
 CCriticalSection cs_statMap;
+
+// critical sections from expedited.cpp
+CCriticalSection cs_xpedited;
 
 // semaphore for parallel validation threads
 CCriticalSection cs_semPV;
@@ -139,6 +146,7 @@ CTxMemPool mempool(::minRelayTxFee);
 boost::posix_time::milliseconds statMinInterval(10000);
 boost::asio::io_service stat_io_service;
 
+std::list<CStatBase *> mallocedStats;
 CStatMap statistics;
 CTweakMap tweaks;
 

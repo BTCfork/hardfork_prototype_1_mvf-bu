@@ -96,6 +96,7 @@ framework_opts = ('--tracerpc',
                   '--testbinary',
                   '--refbinary')
 test_script_opts = ('--mineblock',
+                    '--extensive',
                     '--quick')
 
 def option_passed(option_without_dashes):
@@ -164,10 +165,13 @@ if ENABLE_ZMQ:
             "to run zmq tests, see dependency info in /qa/README.md.")
         raise e
 
-#Tests
+# Tests
 testScripts = [ RpcTest(t) for t in [
     'bip68-112-113-p2p',
+    'validateblocktemplate',
+    Disabled('parallel', "Moved to extended-only for CI focus on MVF"), # MVF-BU: disabled
     'wallet',
+    Disabled('excessive', "Moved to extended-only for CI focus on MVF"), # MVF-BU: disabled
     'mvf-bu-retarget --quick', # MVF-BU: quick version for Travis
     'mvf-bu-csig', # MVF-BU
     'mvf-bu-trig',  # MVF-BU
@@ -190,14 +194,14 @@ testScripts = [ RpcTest(t) for t in [
     'fundrawtransaction',
     'signrawtransactions',
     'walletbackup',
-    'walletbackupauto',  # MVF-BU
+    'walletbackupauto',  # MVF-BU added
     'nodehandling',
     'reindex',
     'decodescript',
     Disabled('p2p-fullblocktest', "TODO"),
     'blockchain',
     'disablewallet',
-    Disabled('sendheaders', "BU requests INVs not headers -- in the future we may add support for headers, at least by treating them like INVs)"),
+    'sendheaders',
     'keypool',
     Disabled('prioritise_transaction', "TODO"),
     Disabled('invalidblockrequest', "TODO"),
@@ -205,12 +209,14 @@ testScripts = [ RpcTest(t) for t in [
     'abandonconflict',
     'p2p-versionbits-warning',
     'importprunedfunds',
+    'thinblocks'
 ] ]
 
 testScriptsExt = [ RpcTest(t) for t in [
+    'mvf-bu-retarget',  # MVF-BU: long version of test
     'parallel',
     'txPerf',
-    'excessive --extended',
+    'excessive --extensive',
     'bip9-softforks',
     'bip65-cltv',
     'bip65-cltv-p2p',
@@ -224,7 +230,6 @@ testScriptsExt = [ RpcTest(t) for t in [
     Disabled('pruning', "too much disk"),
     'forknotify',
     'invalidateblock',
-    'mvf-bu-retarget',  # MVF-BU: long version of test
     Disabled('rpcbind_test', "temporary, bug in libevent, see #6655"),
     'smartfees',
     'maxblocksinflight',
@@ -241,10 +246,10 @@ if ENABLE_ZMQ == 1:
 
 def show_wrapper_options():
     """ print command line options specific to wrapper """
-    print( "Wrapper options:")
+    print("Wrapper options:")
     print()
-    print( "  -extended/--extended  run the extended set of tests")
-    print( "  -only-extended / -extended-only\n" + \
+    print("  -extended/--extended  run the extended set of tests")
+    print("  -only-extended / -extended-only\n" + \
           "  --only-extended / --extended-only\n" + \
           "                        run ONLY the extended tests")
     print("  -list / --list        only list test names")
@@ -323,11 +328,6 @@ def runtests():
                         print("Error: %s is not a known test." % o)
                         sys.exit(1)
 
-        #if len(tests_to_run):
-        #    print "tests explicitly specified:"
-        #    for t in tests_to_run:
-        #        print t
-
         # if no explicit tests specified, use the lists
         if not len(tests_to_run):
             if run_only_extended:
@@ -336,9 +336,6 @@ def runtests():
                 tests_to_run += testScripts
                 if run_extended:
                     tests_to_run += testScriptsExt
-
-        #print "tests after general collection:"
-        #print tests_to_run
 
         # weed out the disabled / skipped tests and print them beforehand
         # this allows earlier intervention in case a test is unexpectedly
@@ -355,9 +352,6 @@ def runtests():
                 else:
                     trimmed_tests_to_run.append(t)
             tests_to_run = trimmed_tests_to_run
-
-        #print "tests after trimming disabled/skipped:"
-        #print tests_to_run
 
         # now run the tests
         p = re.compile(" -h| --help| -help")
@@ -392,8 +386,8 @@ def runtests():
                         rpcTestDir + repr(t) + flags, shell=True)
                     test_passed[fullscriptcmd] = True
                 except subprocess.CalledProcessError as e:
+                    print( e )
                     test_failure_info[fullscriptcmd] = e
-                    #print "CalledProcessError for test %s: %s" % (scriptname, e)
 
                 # exit if help was called
                 if showHelp:
