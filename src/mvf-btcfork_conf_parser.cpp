@@ -1,4 +1,4 @@
-// Copyright (c) 2016 The Bitcoin developers
+// Copyright (c) 2016-2017 The Bitcoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 // MVF-BU common objects and functions
@@ -8,16 +8,6 @@
 
 #include "mvf-bu.h"
 #include "mvf-btcfork_conf_parser.h"
-
-/* not sure if we need the following for Clang compatibility (copied this from util.cpp just in case)
-namespace boost {
-
-namespace program_options {
-std::string to_internal(const std::string&);
-}
-
-} // namespace boost
-*/
 
 using namespace std;
 
