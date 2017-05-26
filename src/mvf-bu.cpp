@@ -21,9 +21,9 @@ using namespace std;
 
 
 /** Add MVF-specific command line options (MVHF-BU-DES-TRIG-8) */
-std::string ForkCmdLineHelp()
+string ForkCmdLineHelp()
 {
-    std::string strUsage;
+    string strUsage;
     strUsage += HelpMessageGroup(_("Bitcoin MVF-BU Options:"));
 
     // automatic wallet backup parameters (MVHF-BU-DES-WABU-1)
@@ -77,7 +77,7 @@ bool ForkSetup(const CChainParams& chainparams)
         defaultDropFactorForNetwork = HARDFORK_DROPFACTOR_BFGTEST;
     }
     else {
-        throw std::runtime_error(strprintf("%s: Unknown chain %s.", __func__, activeNetworkID));
+        throw runtime_error(strprintf("%s: Unknown chain %s.", __func__, activeNetworkID));
     }
 
     FinalActivateForkHeight = GetArg("-forkheight", minForkHeightForNetwork);
@@ -102,7 +102,7 @@ bool ForkSetup(const CChainParams& chainparams)
                 FinalForkId = atoi(btcforkMapArgs["-forkid"]);
                 mapArgs["-forkid"] = btcforkMapArgs["-forkid"];
             }
-        } catch (const std::exception& e) {
+        } catch (const exception& e) {
             LogPrintf("MVF: Error reading %s configuration file: %s\n", BTCFORK_CONF_FILENAME, e.what());
             fprintf(stderr,"MVF: Error reading %s configuration file: %s\n", BTCFORK_CONF_FILENAME, e.what());
         }
@@ -198,7 +198,7 @@ void ActivateFork(int actualForkHeight, bool doBackup)
         }
         // try to write the btcfork.conf (MVHF-BU-DES-TRIG-10)
         LogPrintf("%s: MVF: writing %s\n", __func__, pathBTCforkConfigFile.string().c_str());
-        std::ofstream btcforkfile(pathBTCforkConfigFile.string().c_str(), std::ios::out);
+        ofstream btcforkfile(pathBTCforkConfigFile.string().c_str(), ios::out);
         btcforkfile << "forkheight=" << FinalActivateForkHeight << "\n";
         btcforkfile << "forkid=" << FinalForkId << "\n";
 
@@ -211,7 +211,7 @@ void ActivateFork(int actualForkHeight, bool doBackup)
         // MVF-BU TODO: reduce code duplication between this block and main.cpp:UpdateTip()
         if (doBackup && !fAutoBackupDone)
         {
-            std::string strWalletBackupFile = GetArg("-autobackupwalletpath", "");
+            string strWalletBackupFile = GetArg("-autobackupwalletpath", "");
             int BackupBlock = actualForkHeight;
 
             //LogPrintf("MVF DEBUG: autobackupwalletpath=%s\n",strWalletBackupFile);
@@ -233,7 +233,7 @@ void ActivateFork(int actualForkHeight, bool doBackup)
                     // MVF-BU TODO: investigate if this is safe in terms of wallet flushing/closing or if more needs to be done
                     btcforkfile << "error: unable to perform automatic backup - exiting" << "\n";
                     btcforkfile.close();
-                    throw std::runtime_error("CWallet::BackupWalletAuto() : Auto wallet backup failed!");
+                    throw runtime_error("CWallet::BackupWalletAuto() : Auto wallet backup failed!");
                 }
             }
             btcforkfile << "autobackupblock=" << FinalActivateForkHeight << "\n";
@@ -272,7 +272,7 @@ void DeactivateFork(void)
 
 
 /** returns the finalized path of the auto wallet backup file (MVHF-BU-DES-WABU-2) */
-std::string MVFexpandWalletAutoBackupPath(const std::string& strDest, const std::string& strWalletFile, int BackupBlock, bool createDirs)
+string MVFexpandWalletAutoBackupPath(const string& strDest, const string& strWalletFile, int BackupBlock, bool createDirs)
 {
     boost::filesystem::path pathBackupWallet = strDest;
 
@@ -301,7 +301,7 @@ std::string MVFexpandWalletAutoBackupPath(const std::string& strDest, const std:
             boost::filesystem::create_directories(pathBackupWallet.branch_path());
     }
 
-    std::string strBackupFile = pathBackupWallet.string();
+    string strBackupFile = pathBackupWallet.string();
 
     // replace # with BackupBlock number
     boost::replace_all(strBackupFile,"@", boost::to_string_stub(BackupBlock));
@@ -311,28 +311,28 @@ std::string MVFexpandWalletAutoBackupPath(const std::string& strDest, const std:
 }
 
 // get / set functions for btcforkMapArgs
-std::string MVFGetArg(const std::string& strArg, const std::string& strDefault)
+string MVFGetArg(const string& strArg, const string& strDefault)
 {
     if (btcforkMapArgs.count(strArg))
         return btcforkMapArgs[strArg];
     return strDefault;
 }
 
-int64_t MVFGetArg(const std::string& strArg, int64_t nDefault)
+int64_t MVFGetArg(const string& strArg, int64_t nDefault)
 {
     if (btcforkMapArgs.count(strArg))
         return atoi64(btcforkMapArgs[strArg]);
     return nDefault;
 }
 
-bool MVFGetBoolArg(const std::string& strArg, bool fDefault)
+bool MVFGetBoolArg(const string& strArg, bool fDefault)
 {
     if (btcforkMapArgs.count(strArg))
         return InterpretBool(btcforkMapArgs[strArg]);
     return fDefault;
 }
 
-bool MFVSoftSetArg(const std::string& strArg, const std::string& strValue)
+bool MFVSoftSetArg(const string& strArg, const string& strValue)
 {
     if (btcforkMapArgs.count(strArg))
         return false;
@@ -340,10 +340,10 @@ bool MFVSoftSetArg(const std::string& strArg, const std::string& strValue)
     return true;
 }
 
-bool MFVSoftSetBoolArg(const std::string& strArg, bool fValue)
+bool MFVSoftSetBoolArg(const string& strArg, bool fValue)
 {
     if (fValue)
-        return SoftSetArg(strArg, std::string("1"));
+        return SoftSetArg(strArg, string("1"));
     else
-        return SoftSetArg(strArg, std::string("0"));
+        return SoftSetArg(strArg, string("0"));
 }
