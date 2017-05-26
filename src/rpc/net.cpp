@@ -204,7 +204,7 @@ UniValue addnode(const UniValue& params, bool fHelp)
         CAddress addr;
         //NOTE: Using RPC "addnode <node> onetry" ignores both the "maxconnections"
         //      and "maxoutconnections" limits and can cause both to be exceeded.
-        OpenNetworkConnection(addr, NULL, strNode.c_str());
+        OpenNetworkConnection(addr, false, NULL, strNode.c_str());
         return NullUniValue;
     }
 
@@ -322,7 +322,7 @@ UniValue getaddednodeinfo(const UniValue& params, bool fHelp)
     list<pair<string, vector<CService> > > laddedAddreses(0);
     BOOST_FOREACH(const std::string& strAddNode, laddedNodes) {
         vector<CService> vservNode(0);
-        if(Lookup(strAddNode.c_str(), vservNode, Params().GetDefaultPort(), fNameLookup, 0))
+        if(Lookup(strAddNode.c_str(), vservNode, Params().GetDefaultPort(), 0, fNameLookup))
             laddedAddreses.push_back(make_pair(strAddNode, vservNode));
         else
         {
@@ -437,14 +437,14 @@ static UniValue GetThinBlockStats()
     obj.push_back(Pair("enabled", enabled));
     if (enabled) {
         obj.push_back(Pair("summary", thindata.ToString()));
-        obj.push_back(Pair("summary", thindata.MempoolLimiterBytesSavedToString()));
-        obj.push_back(Pair("summary", thindata.InBoundPercentToString()));
-        obj.push_back(Pair("summary", thindata.OutBoundPercentToString()));
-        obj.push_back(Pair("summary", thindata.ResponseTimeToString()));
-        obj.push_back(Pair("summary", thindata.ValidationTimeToString()));
-        obj.push_back(Pair("summary", thindata.OutBoundBloomFiltersToString()));
-        obj.push_back(Pair("summary", thindata.InBoundBloomFiltersToString()));
-        obj.push_back(Pair("summary", thindata.ReRequestedTxToString()));
+        obj.push_back(Pair("mempool_limiter", thindata.MempoolLimiterBytesSavedToString()));
+        obj.push_back(Pair("inbound_percent", thindata.InBoundPercentToString()));
+        obj.push_back(Pair("outbound_percent", thindata.OutBoundPercentToString()));
+        obj.push_back(Pair("response_time", thindata.ResponseTimeToString()));
+        obj.push_back(Pair("validation_time", thindata.ValidationTimeToString()));
+        obj.push_back(Pair("outbound_bloom_filters", thindata.OutBoundBloomFiltersToString()));
+        obj.push_back(Pair("inbound_bloom_filters", thindata.InBoundBloomFiltersToString()));
+        obj.push_back(Pair("rerequested", thindata.ReRequestedTxToString()));
     }
     return obj;
 }
