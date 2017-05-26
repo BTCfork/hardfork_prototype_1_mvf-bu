@@ -19,7 +19,7 @@ map<string, vector<string> > btcforkMapMultiArgs;
 // Values are surnames chosen from the name list of space travelers at
 // https://en.wikipedia.org/wiki/List_of_space_travelers_by_name
 // already used: AKIYAMA (add current one to the list when replacing)
-std::string post_fork_consensus_id = "YAMAZAKI";
+string post_fork_consensus_id = "YAMAZAKI";
 
 // actual fork height, taking into account user configuration parameters (MVHF-BU-DES-TRIG-4)
 int FinalActivateForkHeight = 0;
@@ -42,5 +42,5 @@ bool isMVFHardForkActive = false;
 bool fAutoBackupDone = false;
 
 // default suffix to append to wallet filename for auto backup (MVHF-BU-DES-WABU-1)
-std::string autoWalletBackupSuffix = "auto.@.bak";
+string autoWalletBackupSuffix = "auto.@.bak";
 
