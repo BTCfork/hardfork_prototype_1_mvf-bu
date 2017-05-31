@@ -21,6 +21,7 @@ using namespace std;
 
 
 /** Add MVF-specific command line options (MVHF-BU-DES-TRIG-8) */
+/*
 string ForkCmdLineHelp()
 {
     string strUsage;
@@ -40,6 +41,7 @@ string ForkCmdLineHelp()
     strUsage += HelpMessageOpt("-diffdrop=<n>", strprintf(_("Difficulty drop factor on active network (integer). Value must be between 1 (no drop) and %u. Defaults: mainnet:%u,testnet=%u,regtest=%u"), (unsigned)MAX_HARDFORK_DROPFACTOR, (unsigned)HARDFORK_DROPFACTOR_MAINNET, (unsigned)HARDFORK_DROPFACTOR_TESTNET, (unsigned)HARDFORK_DROPFACTOR_REGTEST));    
     return strUsage;
 }
+*/
 
 
 /** Performs fork-related setup / validation actions when the program starts */

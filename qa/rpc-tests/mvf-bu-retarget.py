@@ -116,7 +116,7 @@ class MVF_RETARGET_BlockHeight_Test(BitcoinTestFramework):
         self.nodes = []
         self.is_network_split = False
         self.nodes.append(start_node(0, self.options.tmpdir
-            ,["-forkheight=%s"%FORK_BLOCK, "-rpcthreads=100","-blockversion=%s" % "0x20000000" ]
+            ,["-forkheight=%s"%FORK_BLOCK, "-rpcthreads=100","-blockversion=%d" % 0x20000000 ]
             ))
 
     def is_fork_triggered_on_node(self, node=0):
@@ -145,7 +145,7 @@ class MVF_RETARGET_BlockHeight_Test(BitcoinTestFramework):
         stop_node(self.nodes[0],0)
         print("Restarting node 0 with -force-retarget")
         self.nodes[0] = start_node(0, self.options.tmpdir
-            ,["-forkheight=%s"%FORK_BLOCK, "-force-retarget", "-rpcthreads=100","-blockversion=%s" % "0x20000000" ]
+            ,["-forkheight=%s"%FORK_BLOCK, "-force-retarget", "-rpcthreads=100","-blockversion=%d" % 0x20000000 ]
             )
 
         # Read difficulty before the fork
