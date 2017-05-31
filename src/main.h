@@ -131,6 +131,8 @@ static const bool DEFAULT_TESTSAFEMODE = false;
 /** Maximum number of headers to announce when relaying blocks with headers message.*/
 static const unsigned int MAX_BLOCKS_TO_ANNOUNCE = 8;
 
+static const bool DEFAULT_PEERBLOOMFILTERS = true;
+
 struct BlockHasher
 {
     size_t operator()(const uint256 &hash) const { return hash.GetCheapHash(); }
@@ -654,6 +656,7 @@ struct COrphanTx
     CTransaction tx;
     NodeId fromPeer;
     int64_t nEntryTime; // BU - Xtreme Thinblocks: used for aging orphans out of the cache
+    uint64_t nOrphanTxSize;
 };
 // BU: begin creating separate critical section for orphan cache and untangling from cs_main.
 extern CCriticalSection cs_orphancache;

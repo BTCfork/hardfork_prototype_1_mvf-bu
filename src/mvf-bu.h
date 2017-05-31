@@ -13,7 +13,7 @@
 
 class CChainParams;
 
-extern std::string ForkCmdLineHelp();  // fork-specific command line option help (MVHF-BU-DES-TRIG-8)
+//extern std::string ForkCmdLineHelp();  // fork-specific command line option help (MVHF-BU-DES-TRIG-8)
 extern boost::filesystem::path MVFGetConfigFile();  // get the full path to the btcfork.conf file
 extern bool ForkSetup(const CChainParams& chainparams);  // actions to perform at program setup (parameter validation etc.)
 extern void ActivateFork(int actualForkHeight, bool doBackup=true);  // actions to perform at fork triggering (MVHF-BU-DES-TRIG-6)

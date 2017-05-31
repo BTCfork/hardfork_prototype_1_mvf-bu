@@ -13,6 +13,7 @@
 #include "addrman.h"
 #include "chainparams.h"
 #include "clientversion.h"
+#include "connmgr.h"
 #include "consensus/consensus.h"
 #include "crypto/common.h"
 #include "crypto/common.h"
@@ -120,9 +121,6 @@ extern CCriticalSection cs_vAddedNodes;
 extern vector<std::string> vUseDNSSeeds;
 extern CCriticalSection cs_vUseDNSSeeds;
 // BITCOINUNLIMITED END
-
-NodeId nLastNodeId = 0;
-extern CCriticalSection cs_nLastNodeId;
 
 extern CSemaphore *semOutbound;
 extern CSemaphore *semOutboundAddNode; // BU: separate semaphore for -addnodes
@@ -344,48 +342,38 @@ uint64_t CNode::nMaxOutboundTotalBytesSentInCycle = 0;
 uint64_t CNode::nMaxOutboundTimeframe = 60 * 60 * 24; // 1 day
 uint64_t CNode::nMaxOutboundCycleStartTime = 0;
 
-CNode *FindNode(const CNetAddr &ip)
+// BU: FindNode() functions enforce holding of cs_vNodes lock to prevent use-after-free errors
+static CNode *FindNode(const CNetAddr &ip)
 {
-    // BU: Enforce cs_vNodes lock held external to FindNode function calls to prevent use-after-free errors
     AssertLockHeld(cs_vNodes);
-    // LOCK(cs_vNodes);
     BOOST_FOREACH (CNode *pnode, vNodes)
         if ((CNetAddr)pnode->addr == ip)
             return (pnode);
     return NULL;
 }
 
-CNode *FindNode(const CSubNet &subNet)
+static CNode *FindNode(const std::string &addrName)
 {
-    // BU: Enforce cs_vNodes lock held external to FindNode function calls to prevent use-after-free errors
     AssertLockHeld(cs_vNodes);
-    // LOCK(cs_vNodes);
-    BOOST_FOREACH (CNode *pnode, vNodes)
-        if (subNet.Match((CNetAddr)pnode->addr))
-            return (pnode);
-    return NULL;
-}
-
-CNode *FindNode(const std::string &addrName)
-{
-    // BU: Enforce cs_vNodes lock held external to FindNode function calls to prevent use-after-free errors
-    AssertLockHeld(cs_vNodes);
-    // LOCK(cs_vNodes);
     BOOST_FOREACH (CNode *pnode, vNodes)
         if (pnode->addrName == addrName)
             return (pnode);
     return NULL;
 }
 
-CNode *FindNode(const CService &addr)
+static CNode *FindNode(const CService &addr)
 {
-    // BU: Enforce cs_vNodes lock held external to FindNode function calls to prevent use-after-free errors
     AssertLockHeld(cs_vNodes);
-    // LOCK(cs_vNodes);
     BOOST_FOREACH (CNode *pnode, vNodes)
         if ((CService)pnode->addr == addr)
             return (pnode);
     return NULL;
+}
+
+CNodeRef FindNodeRef(const std::string &addrName)
+{
+    LOCK(cs_vNodes);
+    return CNodeRef(FindNode(addrName));
 }
 
 int DisconnectSubNetNodes(const CSubNet &subNet)
@@ -912,46 +900,6 @@ int SocketSendData(CNode *pnode)
 }
 
 extern list<CNode *> vNodesDisconnected;
-
-class CNodeRef
-{
-public:
-    CNodeRef(CNode *pnode) : _pnode(pnode)
-    {
-        LOCK(cs_vNodes);
-        _pnode->AddRef();
-    }
-
-    ~CNodeRef()
-    {
-        LOCK(cs_vNodes);
-        _pnode->Release();
-    }
-
-    CNode &operator*() const { return *_pnode; };
-    CNode *operator->() const { return _pnode; };
-    CNodeRef &operator=(const CNodeRef &other)
-    {
-        if (this != &other)
-        {
-            LOCK(cs_vNodes);
-
-            _pnode->Release();
-            _pnode = other._pnode;
-            _pnode->AddRef();
-        }
-        return *this;
-    }
-
-    CNodeRef(const CNodeRef &other) : _pnode(other._pnode)
-    {
-        LOCK(cs_vNodes);
-        _pnode->AddRef();
-    }
-
-private:
-    CNode *_pnode;
-};
 
 #if 0 // Not currenly used
 static bool ReverseCompareNodeMinPingTime(const CNodeRef &a, const CNodeRef &b)
@@ -2952,7 +2900,8 @@ bool CAddrDB::Read(CAddrMan &addr, CDataStream &ssPeers)
 unsigned int ReceiveFloodSize() { return 1000 * GetArg("-maxreceivebuffer", DEFAULT_MAXRECEIVEBUFFER); }
 unsigned int SendBufferSize() { return 1000 * GetArg("-maxsendbuffer", DEFAULT_MAXSENDBUFFER); }
 CNode::CNode(SOCKET hSocketIn, const CAddress &addrIn, const std::string &addrNameIn, bool fInboundIn)
-    : ssSend(SER_NETWORK, INIT_PROTO_VERSION), addrKnown(5000, 0.001), filterInventoryKnown(50000, 0.000001)
+    : ssSend(SER_NETWORK, INIT_PROTO_VERSION), id(CConnMgr::nextNodeId()), addrKnown(5000, 0.001),
+      filterInventoryKnown(50000, 0.000001)
 {
     nServices = 0;
     hSocket = hSocketIn;
@@ -2991,6 +2940,7 @@ CNode::CNode(SOCKET hSocketIn, const CAddress &addrIn, const std::string &addrNa
     nNextAddrSend = 0;
     nNextInvSend = 0;
     fRelayTxes = false;
+    fSentAddr = false;
     pfilter = new CBloomFilter();
     pThinBlockFilter = new CBloomFilter(); // BUIP010 - Xtreme Thinblocks
     nPingNonceSent = 0;
@@ -3020,11 +2970,6 @@ CNode::CNode(SOCKET hSocketIn, const CAddress &addrIn, const std::string &addrNa
 
     sendGap.init("node/" + xmledName + "/sendGap", STAT_OP_MAX);
     recvGap.init("node/" + xmledName + "/recvGap", STAT_OP_MAX);
-
-    {
-        LOCK(cs_nLastNodeId);
-        id = nLastNodeId++;
-    }
 
     if (fLogIPs)
         LogPrint("net", "Added connection to %s peer=%d\n", addrName, id);

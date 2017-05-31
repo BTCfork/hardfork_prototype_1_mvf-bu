@@ -17,18 +17,6 @@ const std::string CBaseChainParams::TESTNET = "test";
 const std::string CBaseChainParams::REGTEST = "regtest";
 const std::string CBaseChainParams::BFGTEST = "bfgtest";  // MVF-BU
 
-void AppendParamsHelpMessages(std::string& strUsage, bool debugHelp)
-{
-    strUsage += HelpMessageGroup(_("Chain selection options:"));
-    strUsage += HelpMessageOpt("-testnet", _("Use the test chain"));
-    strUsage += HelpMessageOpt("-chain_nol", _("Use the no-limit blockchain"));
-    strUsage += HelpMessageOpt("-bfgtest", _("Use the btcforks genesis test chain"));  // MVF-BU
-    if (debugHelp) {
-        strUsage += HelpMessageOpt("-regtest", "Enter regression test mode, which uses a special chain in which blocks can be solved instantly. "
-                                   "This is intended for regression testing tools and app development.");
-    }
-}
-
 /**
  * Main network
  */

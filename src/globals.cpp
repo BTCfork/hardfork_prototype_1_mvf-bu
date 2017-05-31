@@ -93,7 +93,6 @@ CCriticalSection CNode::cs_totalBytesSent;
 CCriticalSection cs_setservAddNodeAddresses;
 CCriticalSection cs_vAddedNodes;
 CCriticalSection cs_vUseDNSSeeds;
-CCriticalSection cs_nLastNodeId;
 CCriticalSection cs_mapInboundConnectionTracker;
 CCriticalSection cs_vOneShots;
 
@@ -123,15 +122,6 @@ uint32_t blockVersion = 0; // Overrides the mined block version if non-zero
 std::vector<std::string> BUComments = std::vector<std::string>();
 std::string minerComment;
 
-// Variables for traffic shaping
-/** Default value for the maximum amount of data that can be received in a burst */
-const int64_t DEFAULT_MAX_RECV_BURST = std::numeric_limits<long long>::max();
-/** Default value for the maximum amount of data that can be sent in a burst */
-const int64_t DEFAULT_MAX_SEND_BURST = std::numeric_limits<long long>::max();
-/** Default value for the average amount of data received per second */
-const int64_t DEFAULT_AVE_RECV = std::numeric_limits<long long>::max();
-/** Default value for the average amount of data sent per second */
-const int64_t DEFAULT_AVE_SEND = std::numeric_limits<long long>::max();
 CLeakyBucket receiveShaper(DEFAULT_MAX_RECV_BURST, DEFAULT_AVE_RECV);
 CLeakyBucket sendShaper(DEFAULT_MAX_SEND_BURST, DEFAULT_AVE_SEND);
 boost::chrono::steady_clock CLeakyBucket::clock;

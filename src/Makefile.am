@@ -58,6 +58,7 @@ EXTRA_LIBRARIES += \
 lib_LTLIBRARIES = $(LIBBITCOINCONSENSUS)
 
 bin_PROGRAMS =
+noinst_PROGRAMS =
 TESTS =
 BENCHMARKS =
 
@@ -73,6 +74,7 @@ endif
 # bitcoin core #
 BITCOIN_CORE_H = \
   addrman.h \
+  allowed_args.h \
   base58.h \
   bitnodes.h \
   bloom.h \
@@ -90,6 +92,7 @@ BITCOIN_CORE_H = \
   compat/endian.h \
   compat/sanity.h \
   compressor.h \
+  connmgr.h \
   consensus/consensus.h \
   core_io.h \
   core_memusage.h \
@@ -178,6 +181,7 @@ libbitcoin_server_a_SOURCES = \
   bloom.cpp \
   chain.cpp \
   checkpoints.cpp \
+  connmgr.cpp \
   expedited.cpp \
   httprpc.cpp \
   httpserver.cpp \
@@ -325,6 +329,7 @@ libbitcoin_util_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
 libbitcoin_util_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 libbitcoin_util_a_SOURCES = \
   support/pagelocker.cpp \
+  allowed_args.cpp \
   chainparamsbase.cpp \
   clientversion.cpp \
   compat/glibc_sanity.cpp \

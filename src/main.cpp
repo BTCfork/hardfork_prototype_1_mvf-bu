@@ -98,8 +98,8 @@ extern CCriticalSection cs_orphancache;
 extern std::map<uint256, COrphanTx> mapOrphanTransactions GUARDED_BY(cs_orphancache);
 extern std::map<uint256, std::set<uint256> > mapOrphanTransactionsByPrev GUARDED_BY(cs_orphancache);
 
-void EraseOrphansFor(NodeId peer) EXCLUSIVE_LOCKS_REQUIRED(cs_orphancache);
 int64_t nLastOrphanCheck = GetTime(); // Used in EraseOrphansByTime()
+static uint64_t nBytesOrphanPool = 0; // Current in memory size of the orphan pool.
 
 // BU: start block download at low numbers in case our peers are slow when we start
 /** Number of blocks that can be requested at any given time from a single peer. */
@@ -386,8 +386,6 @@ void FinalizeNode(NodeId nodeid)
     {
         mapBlocksInFlight.erase(entry.hash);
     }
-    // EraseOrphansFor(nodeid);  BUIP010 Xtreme Thinblocks - We do not want to delete orphans at any time.  We handle
-    // them when we accept a block
     nPreferredDownload -= state->fPreferredDownload;
     nPeersWithValidatedDownloads -= (state->nBlocksInFlightValidHeaders != 0);
     DbgAssert(nPeersWithValidatedDownloads >= 0, nPeersWithValidatedDownloads = 0);
@@ -795,39 +793,32 @@ bool AddOrphanTx(const CTransaction &tx, NodeId peer) EXCLUSIVE_LOCKS_REQUIRED(c
 {
     AssertLockHeld(cs_orphancache);
 
+    if (mapOrphanTransactions.empty())
+        nBytesOrphanPool = 0;
+
     uint256 hash = tx.GetHash();
     if (mapOrphanTransactions.count(hash))
         return false;
 
-    // Ignore big transactions, to avoid a
-    // send-big-orphans memory exhaustion attack. If a peer has a legitimate
-    // large transaction with a missing parent then we assume
-    // it will rebroadcast it later, after the parent transaction(s)
-    // have been mined or received.
-    // 10,000 orphans, each of which is at most 5,000 bytes big is
-    // at most 500 megabytes of orphans:
-
-    // BU - Xtreme Thinblocks - begin section
-    // BU - we do not limit the size of orphans.  There is no danger to having memory overrun since the
-    //      orphan cache is limited to only 5000 entries by default. Only 500MB of memory could be consumed
-    //      if there were some kind of orphan memory exhaustion attack.
-    //      Dropping any tx means they need to be included in the thin block when it it mined, which is inefficient.
+    // Ignore orphans larger than the largest txn size allowed.
     unsigned int sz = tx.GetSerializeSize(SER_NETWORK, CTransaction::CURRENT_VERSION);
     if (sz > MAX_STANDARD_TX_SIZE)
     {
         LogPrint("mempool", "ignoring large orphan tx (size: %u, hash: %s)\n", sz, hash.ToString());
         return false;
     }
-    // BU - Xtreme Thinblocks - end section
 
+    uint64_t txSize = RecursiveDynamicUsage(tx);
     mapOrphanTransactions[hash].tx = tx;
     mapOrphanTransactions[hash].fromPeer = peer;
     mapOrphanTransactions[hash].nEntryTime = GetTime(); // BU - Xtreme Thinblocks;
+    mapOrphanTransactions[hash].nOrphanTxSize = txSize;
     BOOST_FOREACH (const CTxIn &txin, tx.vin)
         mapOrphanTransactionsByPrev[txin.prevout.hash].insert(hash);
 
-    LogPrint("mempool", "stored orphan tx %s (mapsz %u prevsz %u)\n", hash.ToString(), mapOrphanTransactions.size(),
-        mapOrphanTransactionsByPrev.size());
+    nBytesOrphanPool += txSize;
+    LogPrint("mempool", "stored orphan tx %s bytes:%ld (mapsz %u prevsz %u), orphan pool bytes:%ld\n", hash.ToString(),
+        txSize, mapOrphanTransactions.size(), mapOrphanTransactionsByPrev.size(), nBytesOrphanPool);
     return true;
 }
 
@@ -847,26 +838,11 @@ void EraseOrphanTx(uint256 hash) EXCLUSIVE_LOCKS_REQUIRED(cs_orphancache)
         if (itPrev->second.empty())
             mapOrphanTransactionsByPrev.erase(itPrev);
     }
+
+    nBytesOrphanPool -= it->second.nOrphanTxSize;
+    LogPrint("mempool", "Erased orphan tx %s of size %ld bytes, orphan pool bytes:%ld\n",
+        it->second.tx.GetHash().ToString(), it->second.nOrphanTxSize, nBytesOrphanPool);
     mapOrphanTransactions.erase(it);
-}
-
-void EraseOrphansFor(NodeId peer) EXCLUSIVE_LOCKS_REQUIRED(cs_orphancache)
-{
-    AssertLockHeld(cs_orphancache);
-
-    int nErased = 0;
-    std::map<uint256, COrphanTx>::iterator iter = mapOrphanTransactions.begin();
-    while (iter != mapOrphanTransactions.end())
-    {
-        std::map<uint256, COrphanTx>::iterator maybeErase = iter++; // increment to avoid iterator becoming invalid
-        if (maybeErase->second.fromPeer == peer)
-        {
-            EraseOrphanTx(maybeErase->second.tx.GetHash());
-            ++nErased;
-        }
-    }
-    if (nErased > 0)
-        LogPrint("mempool", "Erased %d orphan tx from peer %d\n", nErased, peer);
 }
 
 // BU - Xtreme Thinblocks: begin
@@ -887,9 +863,9 @@ void EraseOrphansByTime() EXCLUSIVE_LOCKS_REQUIRED(cs_orphancache)
         if (nEntryTime < nOrphanTxCutoffTime)
         {
             uint256 txHash = mi->second.tx.GetHash();
-            EraseOrphanTx(txHash);
             LogPrint(
                 "mempool", "Erased old orphan tx %s of age %d seconds\n", txHash.ToString(), GetTime() - nEntryTime);
+            EraseOrphanTx(txHash);
         }
     }
 
@@ -897,12 +873,15 @@ void EraseOrphansByTime() EXCLUSIVE_LOCKS_REQUIRED(cs_orphancache)
 }
 // BU - Xtreme Thinblocks: end
 
-unsigned int LimitOrphanTxSize(unsigned int nMaxOrphans) EXCLUSIVE_LOCKS_REQUIRED(cs_orphancache)
+unsigned int LimitOrphanTxSize(unsigned int nMaxOrphans, uint64_t nMaxBytes) EXCLUSIVE_LOCKS_REQUIRED(cs_orphancache)
 {
     AssertLockHeld(cs_orphancache);
 
+    // Limit the orphan pool size by either number of transactions or the max orphan pool size allowed.
+    // Limiting by pool size to 1/10th the size of the maxmempool alone is not enough because the total number
+    // of txns in the pool can adversely effect the size of the bloom filter in a get_xthin message.
     unsigned int nEvicted = 0;
-    while (mapOrphanTransactions.size() > nMaxOrphans)
+    while (mapOrphanTransactions.size() > nMaxOrphans || nBytesOrphanPool > nMaxBytes)
     {
         // Evict a random orphan:
         uint256 randomhash = GetRandHash();
@@ -3053,9 +3032,9 @@ void static UpdateTip(CBlockIndex *pindexNew)
     nTimeBestReceived = GetTime();
     mempool.AddTransactionsUpdated(1);
 
-    LogPrintf("%s: new best=%s  height=%d  log2_work=%.8g  tx=%lu  date=%s progress=%f  cache=%.1fMiB(%utx)\n",
-        __func__, chainActive.Tip()->GetBlockHash().ToString(), chainActive.Height(),
-        std::log(chainActive.Tip()->nChainWork.getdouble()) / std::log(2.0), (unsigned long)chainActive.Tip()->nChainTx,
+    LogPrintf("%s: new best=%s  height=%d bits=%d log2_work=%.8g  tx=%lu  date=%s progress=%f  cache=%.1fMiB(%utx)\n",
+        __func__, chainActive.Tip()->GetBlockHash().ToString(), chainActive.Height(), chainActive.Tip()->nBits,
+        log(chainActive.Tip()->nChainWork.getdouble()) / log(2.0), (unsigned long)chainActive.Tip()->nChainTx,
         DateTimeStrFormat("%Y-%m-%d %H:%M:%S", chainActive.Tip()->GetBlockTime()),
         Checkpoints::GuessVerificationProgress(chainParams.Checkpoints(), chainActive.Tip()),
         pcoinsTip->DynamicMemoryUsage() * (1.0 / (1 << 20)), pcoinsTip->GetCacheSize());
@@ -4979,6 +4958,7 @@ void UnloadBlockIndex()
         LOCK(cs_orphancache);
         mapOrphanTransactions.clear();
         mapOrphanTransactionsByPrev.clear();
+        nBytesOrphanPool = 0;
     }
 
     LOCK(cs_main);
@@ -5811,7 +5791,7 @@ bool ProcessMessage(CNode *pfrom, std::string strCommand, CDataStream &vRecv, in
             Misbehaving(pfrom->GetId(), 100);
             return false;
         }
-        else if (GetBoolArg("-enforcenodebloom", false))
+        else
         {
             pfrom->fDisconnect = true;
             return false;
@@ -5905,13 +5885,13 @@ bool ProcessMessage(CNode *pfrom, std::string strCommand, CDataStream &vRecv, in
                 CAddress addr = GetLocalAddress(&pfrom->addr);
                 if (addr.IsRoutable())
                 {
-                    LogPrintf("ProcessMessages: advertising address %s\n", addr.ToString());
+                    LogPrint("net", "ProcessMessages: advertising address %s\n", addr.ToString());
                     pfrom->PushAddress(addr);
                 }
                 else if (IsPeerAddrLocalGood(pfrom))
                 {
                     addr.SetIP(pfrom->addrLocal);
-                    LogPrintf("ProcessMessages: advertising address %s\n", addr.ToString());
+                    LogPrint("net", "ProcessMessages: advertising address %s\n", addr.ToString());
                     pfrom->PushAddress(addr);
                 }
             }
@@ -6446,9 +6426,11 @@ bool ProcessMessage(CNode *pfrom, std::string strCommand, CDataStream &vRecv, in
             AddOrphanTx(tx, pfrom->GetId());
 
             // DoS prevention: do not allow mapOrphanTransactions to grow unbounded
-            unsigned int nMaxOrphanTx =
+            static unsigned int nMaxOrphanTx =
                 (unsigned int)std::max((int64_t)0, GetArg("-maxorphantx", DEFAULT_MAX_ORPHAN_TRANSACTIONS));
-            unsigned int nEvicted = LimitOrphanTxSize(nMaxOrphanTx);
+            static uint64_t nMaxOrphanPoolSize =
+                (uint64_t)std::max((int64_t)0, (GetArg("-maxmempool", DEFAULT_MAX_MEMPOOL_SIZE) * 1000000 / 10));
+            unsigned int nEvicted = LimitOrphanTxSize(nMaxOrphanTx, nMaxOrphanPoolSize);
             if (nEvicted > 0)
                 LogPrint("mempool", "mapOrphan overflow, removed %u tx\n", nEvicted);
         }
@@ -6836,6 +6818,15 @@ bool ProcessMessage(CNode *pfrom, std::string strCommand, CDataStream &vRecv, in
             LogPrint("net", "Ignoring \"getaddr\" from outbound connection. peer=%d\n", pfrom->id);
             return true;
         }
+
+        // Only send one GetAddr response per connection to reduce resource waste
+        //  and discourage addr stamping of INV announcements.
+        if (pfrom->fSentAddr)
+        {
+            LogPrint("net", "Ignoring repeated \"getaddr\". peer=%d\n", pfrom->id);
+            return true;
+        }
+        pfrom->fSentAddr = true;
 
         pfrom->vAddrToSend.clear();
         std::vector<CAddress> vAddr = addrman.GetAddr();
