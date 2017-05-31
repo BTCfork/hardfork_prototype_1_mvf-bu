@@ -15,8 +15,8 @@
 
 unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock, const Consensus::Params& params)
 {
-    // MVF-BU begin difficulty re-targeting
-    if (params.MVFisWithinRetargetPeriod(pindexLast->nHeight+1))
+    // MVF-BU begin difficulty re-targeting if diff reset was made (drop factor != 1)
+    if (FinalDifficultyDropFactor != 1 && params.MVFisWithinRetargetPeriod(pindexLast->nHeight+1))
         return GetMVFNextWorkRequired(pindexLast, pblock, params);
     // MVF-BU end
 
